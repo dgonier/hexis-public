@@ -1,0 +1,42 @@
+% Approximate NeurIPS 2026 formatting
+% Replace with official neurips_2026.sty before submission
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{neurips_approx}[2026/03/28 Approximate NeurIPS format]
+
+\DeclareOption{preprint}{}
+\DeclareOption{final}{}
+\DeclareOption{nonatbib}{}
+\ProcessOptions\relax
+
+% Page geometry matching NeurIPS spec
+\RequirePackage[
+  textwidth=5.5in,
+  textheight=9in,
+  left=1.5in,
+  top=1in,
+]{geometry}
+
+% Font: Times
+\RequirePackage{times}
+
+% Line spacing
+\renewcommand{\baselinestretch}{1.0}
+
+% Section formatting - compact
+\RequirePackage{titlesec}
+\titlespacing*{\section}{0pt}{8pt plus 2pt minus 2pt}{4pt plus 1pt minus 1pt}
+\titlespacing*{\subsection}{0pt}{6pt plus 2pt minus 2pt}{3pt plus 1pt minus 1pt}
+\titlespacing*{\subsubsection}{0pt}{4pt plus 2pt minus 1pt}{2pt plus 1pt minus 1pt}
+
+% Compact lists
+\RequirePackage{enumitem}
+\setlist{nosep,leftmargin=*}
+
+% Float spacing
+\setlength{\floatsep}{8pt plus 2pt minus 2pt}
+\setlength{\textfloatsep}{10pt plus 2pt minus 4pt}
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+
+% Caption formatting
+\RequirePackage{caption}
+\captionsetup{font=small,labelfont=bf,skip=4pt}

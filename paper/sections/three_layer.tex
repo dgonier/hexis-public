@@ -1,0 +1,33 @@
+\section{Three-Layer Architecture}
+\label{sec:three_layer}
+
+Compiled enmeshment carries dispositional content through a rank-16 bottleneck. This bottleneck has a precise boundary: stance direction, confident voice, and parametric knowledge steering survive; novel content (fabricated statistics, unknown proper nouns) does not. We compose three layers to cover the full content spectrum:
+
+% Fig (three-layer) moved to appendix to save main-body pages.
+% See Appendix Figure~\ref{fig:three_layer} for the full diagram.
+
+\textbf{Layer 1: Compiled M/E} (0 tokens in primary context). The Mind Tree is processed in a private forward pass. $\phi$ compiles conviction-weighted hidden states into per-layer $M_A, M_B, E_A, E_B$ tensors. These are cached and applied as Q/V modulations during generation. Layer 1 carries: stance direction (4/4 topics), confident experiential voice, parametric knowledge steering (``poverty dropped 40\%''), and is dilution-immune by construction (zero decay through [XX]K tokens of filler).
+
+\textbf{Layer 2: M-curated slot} (40--80 tokens). During compilation, $\phi$ produces per-node activation scores indicating which parts of the Mind Tree resonated. A deterministic graph walk from activated parent nodes selects evidence, citations, and specific arguments based on each node's \texttt{addresses} and \texttt{novel} properties. This content is injected into the primary context as a curated XML slot. Layer 2 carries: specific numbers, proper nouns, argument warrants---content that cannot survive the rank-16 bottleneck.
+
+\textbf{Layer 3: Recursive expansion} (0--200 tokens, on demand). The model may call \texttt{expand\_belief(id)} to retrieve deeper evidence from the Mind Tree. This is architecturally a tool call that injects additional context.
+
+\textbf{Token budget.} Full beliefs in context (condition B) require $\sim$400 tokens. The three-layer architecture requires $\sim$70 tokens (Layer 2 slot only), achieving 82\% token savings on structured belief sets.
+
+\textbf{Bottleneck boundary (rank 16):}
+\begin{center}
+\small
+\begin{tabular}{lcc}
+\toprule
+\textbf{Capability} & \textbf{Compiled?} & \textbf{Evidence} \\
+\midrule
+Stance flip & \cmark{} & 4/4 topics \\
+Confident experiential voice & \cmark{} & 0\% think-mode activation \\
+Parametric knowledge steering & \cmark{} & ``poverty dropped 40\%'' \\
+Dilution immunity & \cmark{} & [XX]\% at [XX]K tokens \\
+Novel statistics & \xmark{} & ``47.3\%'' not reproduced \\
+Unknown proper nouns & \xmark{} & ``Nextera Labs'' not reproduced \\
+Exact action selection & \xmark{} & ALFWorld 0/15 with compiled M \\
+\bottomrule
+\end{tabular}
+\end{center}

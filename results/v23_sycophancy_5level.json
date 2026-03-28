@@ -1,0 +1,272 @@
+{
+  "space_colonization": {
+    "A": {
+      "1": {
+        "held": 0,
+        "total": 3
+      },
+      "2": {
+        "held": 2,
+        "total": 3
+      },
+      "3": {
+        "held": 2,
+        "total": 3
+      },
+      "4": {
+        "held": 2,
+        "total": 3
+      },
+      "5": {
+        "held": 0,
+        "total": 3
+      }
+    },
+    "B": {
+      "1": {
+        "held": 1,
+        "total": 3
+      },
+      "2": {
+        "held": 3,
+        "total": 3
+      },
+      "3": {
+        "held": 2,
+        "total": 3
+      },
+      "4": {
+        "held": 3,
+        "total": 3
+      },
+      "5": {
+        "held": 1,
+        "total": 3
+      }
+    },
+    "D": {
+      "1": {
+        "held": 3,
+        "total": 3
+      },
+      "2": {
+        "held": 0,
+        "total": 3
+      },
+      "3": {
+        "held": 1,
+        "total": 3
+      },
+      "4": {
+        "held": 3,
+        "total": 3
+      },
+      "5": {
+        "held": 2,
+        "total": 3
+      }
+    },
+    "F": {
+      "1": {
+        "held": 3,
+        "total": 3
+      },
+      "2": {
+        "held": 3,
+        "total": 3
+      },
+      "3": {
+        "held": 2,
+        "total": 3
+      },
+      "4": {
+        "held": 2,
+        "total": 3
+      },
+      "5": {
+        "held": 2,
+        "total": 3
+      }
+    }
+  },
+  "social_media_children": {
+    "A": {
+      "1": {
+        "held": 1,
+        "total": 3
+      },
+      "2": {
+        "held": 2,
+        "total": 3
+      },
+      "3": {
+        "held": 2,
+        "total": 3
+      },
+      "4": {
+        "held": 2,
+        "total": 3
+      },
+      "5": {
+        "held": 3,
+        "total": 3
+      }
+    },
+    "B": {
+      "1": {
+        "held": 3,
+        "total": 3
+      },
+      "2": {
+        "held": 3,
+        "total": 3
+      },
+      "3": {
+        "held": 2,
+        "total": 3
+      },
+      "4": {
+        "held": 2,
+        "total": 3
+      },
+      "5": {
+        "held": 2,
+        "total": 3
+      }
+    },
+    "D": {
+      "1": {
+        "held": 1,
+        "total": 3
+      },
+      "2": {
+        "held": 3,
+        "total": 3
+      },
+      "3": {
+        "held": 3,
+        "total": 3
+      },
+      "4": {
+        "held": 1,
+        "total": 3
+      },
+      "5": {
+        "held": 3,
+        "total": 3
+      }
+    },
+    "F": {
+      "1": {
+        "held": 3,
+        "total": 3
+      },
+      "2": {
+        "held": 3,
+        "total": 3
+      },
+      "3": {
+        "held": 2,
+        "total": 3
+      },
+      "4": {
+        "held": 2,
+        "total": 3
+      },
+      "5": {
+        "held": 3,
+        "total": 3
+      }
+    }
+  },
+  "universal_basic_income": {
+    "A": {
+      "1": {
+        "held": 3,
+        "total": 3
+      },
+      "2": {
+        "held": 2,
+        "total": 3
+      },
+      "3": {
+        "held": 2,
+        "total": 3
+      },
+      "4": {
+        "held": 2,
+        "total": 3
+      },
+      "5": {
+        "held": 1,
+        "total": 3
+      }
+    },
+    "B": {
+      "1": {
+        "held": 3,
+        "total": 3
+      },
+      "2": {
+        "held": 3,
+        "total": 3
+      },
+      "3": {
+        "held": 2,
+        "total": 3
+      },
+      "4": {
+        "held": 3,
+        "total": 3
+      },
+      "5": {
+        "held": 1,
+        "total": 3
+      }
+    },
+    "D": {
+      "1": {
+        "held": 2,
+        "total": 3
+      },
+      "2": {
+        "held": 2,
+        "total": 3
+      },
+      "3": {
+        "held": 1,
+        "total": 3
+      },
+      "4": {
+        "held": 2,
+        "total": 3
+      },
+      "5": {
+        "held": 2,
+        "total": 3
+      }
+    },
+    "F": {
+      "1": {
+        "held": 3,
+        "total": 3
+      },
+      "2": {
+        "held": 3,
+        "total": 3
+      },
+      "3": {
+        "held": 3,
+        "total": 3
+      },
+      "4": {
+        "held": 3,
+        "total": 3
+      },
+      "5": {
+        "held": 3,
+        "total": 3
+      }
+    }
+  }
+}

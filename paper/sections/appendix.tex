@@ -1,0 +1,187 @@
+\appendix
+
+% ══════════════════════════════════════════════════════════════
+% PART I: ARCHITECTURE DETAILS
+% Goal: Explain the architecture and curriculum in depth
+% ══════════════════════════════════════════════════════════════
+
+\section{System Overview Diagram}
+\label{sec:system_figures}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\textwidth]{fig-system-overview.png}
+    \caption{HEXIS system overview. The \emph{compilation loop} (top) processes the secondary knowledge graph XML context through the frozen host in a private forward pass; $\phi$ compiles the resulting hidden states into per-layer modulation tensors ($M_A, M_B, E_A, E_B$) and curates a slot of novel content. During generation (bottom), the frozen host processes the query + curated slot with Q/V modulation from the compiled tensors. The reflection loop optionally updates the knowledge graph from output, triggering recompilation at the cost of one forward pass.}
+    \label{fig:system_overview}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\textwidth]{fig-three-layer.png}
+    \caption{Three-layer architecture. Layer 1 (compiled M/E) provides zero-token dispositional conditioning that is dilution-immune by construction. Layer 2 (M-curated slot) injects 40--80 tokens of novel content that cannot survive the rank-16 bottleneck. Layer 3 (recursive expansion) provides deep evidence on demand via tool call. Total: 82\% token savings over full beliefs in context.}
+    \label{fig:three_layer}
+\end{figure}
+
+\section{Training Curriculum}
+\label{sec:training_curriculum}
+
+% Full Phase A-D training details from training_curriculum.md
+
+The HEXIS training curriculum comprises four phases, each building on the previous via warm-start. All phases train only the enmeshed modules; the host model remains frozen throughout.
+
+\textbf{Phase A: Content Encoding} ($\sim$350 epochs across 4 steps). Step 1 trains all modules from scratch with margin loss on 174 topics. Step 2 adds conviction calibration (MSE alignment + content loss). Step 3 adds ranking loss. Step 4 reinitializes only the M-read head with beliefs in the baseline, teaching M to amplify beliefs rather than substitute for them.
+
+\textbf{Phase B: Compiled V-Modulation} ($\sim$100 epochs). Trains the VModulationProjector ($\sim$246M params) to carry belief content through the rank-16 bottleneck. Compiled Q+V must beat bare baseline by margin 1.0 nats. All other modules frozen.
+
+\textbf{Phase C: Domain-Specific Adaptation.} Strategy V-mod for ALFWorld (30 epochs on 14 scenarios). Neural ranker for within-domain curation (2.6M params, P@5 = 0.73).
+
+\textbf{Phase D: Sycophancy Training} (50 epochs). Trains M-read head on 44 gold challenge-response pairs from Claude Sonnet 4.6. Dual loss: $\mathcal{L}_\text{gold}$ + $\mathcal{L}_\text{no-repeat}$ transforms verbatim repetition into evidence-grounded defense.
+
+\textbf{Module sizes:} PhiNodeWriter ($\sim$1.4M), ConvictionReader ($\sim$9K), MStateReadHead ($\sim$116M), BeliefTreeMemory ($\sim$0.8M), VModulationProjector ($\sim$246M), NeuralRanker ($\sim$2.6M). Total trainable: $\sim$367M. Host model (4B): fully frozen.
+
+\section{Mind Tree Schema Specification}
+\label{sec:mind_tree_spec}
+
+The Mind Tree uses a hierarchical XML schema with typed nodes. Each belief node carries: categorical conviction (\texttt{strong}/\texttt{moderate}/\texttt{agnostic}), domain tags, \texttt{addresses} (query types the node answers), \texttt{novel} flag (content unlikely to survive compilation), and \texttt{salience} (compilation priority). Example:
+
+\begin{verbatim}
+<belief id="b1" conviction="strong" domain="economics">
+  UBI reduces poverty without reducing employment
+  <argument id="a1" type="empirical" strength="strong"
+            addresses="query:research,objection:laziness">
+    Every controlled trial shows maintained employment
+    <evidence source="Manitoba Mincome 1974-79" novel="true">
+      8.5% hospitalization drop, no employment reduction
+    </evidence>
+  </argument>
+</belief>
+\end{verbatim}
+
+M only processes abstract nodes (beliefs, strategies, memories, models). Evidence, tactics, and details are \emph{never} sent to M---they are selected deterministically based on which parent node M activated, via the \texttt{addresses} and \texttt{novel} properties.
+
+\section{Architecture Evolution}
+\label{sec:design_progression}
+
+% Narrative of v5 → v7.1 → v9-v11 → v13-v14 → v15-v21 → v23
+
+\textbf{v5--v6: Write Function Discovery.} Initial Q-modulation with contrastive loss. Write function collapse (all M-states identical) resolved by higher $\lambda_\text{contrast}$ + more epochs. Key finding: NTP and contrastive objectives are compatible given sufficient training.
+
+\textbf{v7--v7.1: Coupled M-E and Norm Regulation (1.5B).} Added V-modulation via coupled write functions with cross-modulation gates (init bias $= -5.0$). v7.1 introduced global norm regulation + E-attenuation, fixing multi-turn M-norm degeneration. Result: 87.5\% held-out generalization, M-norms stable at 5.9 (under 6.5 ceiling).
+
+\textbf{v9--v11: Scaling to 30B (Qwen3-30B-A3B).} Discovered Q-delta collapse: parameters separate in parameter space but produce identical functional perturbations. Functional contrastive loss on actual $\Delta Q$ tensors: F-sim $0.998 \to 0.029$ in 200 epochs.
+
+\textbf{v13--v14: Episodic Memory and Causal Necessity.} Content-addressable episodic memory (100\% retrieval, 35 memories) revealed the epiphenomenal memory problem: perfect metrics, zero generation effect. Causal necessity training ($\mathcal{L}_\text{div}$ + $\mathcal{L}_\text{coh}$ + $\mathcal{L}_\text{fprint}$) produced $10.5\times$ larger NTP gap.
+
+\textbf{v15--v21: Dispositions and Content Encoding (4B).} Moved to Qwen3.5-4B-Base. 174-topic curriculum with conviction calibration. F-sim collapse (0.999) confirmed M is a universal style modulator, not topic-specific---content differentiation comes from beliefs in context.
+
+\textbf{v23: Compiled V-Modulation and Three-Layer Architecture.} VModulationProjector enables zero-token belief compilation. Sycophancy gold training (44 responses from Claude Sonnet 4.6) fixes verbatim repetition. Three-layer architecture achieves 82\% token savings.
+
+% ══════════════════════════════════════════════════════════════
+% PART II: EXPERIMENTAL DETAILS AND VALIDATION
+% Goal: Full benchmark results, ablations, generation examples
+% ══════════════════════════════════════════════════════════════
+
+\section{Adaptation Method Comparison}
+\label{sec:adaptation_comparison}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\textwidth]{adaptation-design-space.png}
+    \caption{Adaptation method comparison with all costs in O-notation. Enmeshed networks uniquely combine inference-cost adaptation ($O(1)$ forward pass per new belief set), fixed per-token overhead ($O(L \cdot d \cdot r)$, independent of memory size $N$), and operation outside the context window.}
+    \label{tab:adaptation_comparison}
+\end{figure}
+
+\section{Synthetic Task: User Preference Recall}
+\label{sec:synthetic_task}
+
+% Full details of Experiment 0
+\textbf{[STUB --- Migrate from current experiments.tex \S5.1: 50 users, 2 binary preferences, Session 1/2 protocol, 100\% Session 2 accuracy, 4-block M-state structure]}
+
+\section{Implicit Memory Validation}
+\label{sec:implicit_validation}
+
+\textbf{Priming.} HEXIS: JSD = 0.0486 between different-preference users. Baseline: 0.0000. Layer 0, Head 2: JSD = 0.184. Up to $49.2^\circ$ angular displacement.
+
+\textbf{Non-Reportability.} Linear probe with M active: 100\%. With M zeroed: 22\% (below chance at 25\%).
+
+\textbf{Dissociation.} $2 \times 2 \times 2$ factorial (Memory System $\times$ Dilution $\times$ Format). M-state immune to dilution; system prompt degrades $8\times$.
+
+\section{Generation Examples}
+\label{sec:generation_examples}
+
+\textbf{[STUB --- Pull from paper\_examples.json: full outputs for all 5 conditions (A/B/C/D/F) on sample topics]}
+
+\section{Curation Ablation}
+\label{sec:curation_ablation}
+
+\textbf{[STUB --- M-curated vs conviction-based vs random vs first-k slot selection]}
+
+\section{ALFWorld Detailed Results}
+\label{sec:alfworld_details}
+
+\textbf{[STUB --- Per-task-type breakdown, strategy examples, curation pipeline details]}
+
+\section{Multi-Turn Attractor Problem}
+\label{sec:attractor}
+
+\textbf{[STUB --- Diagnosis: constant M $\to$ M-shaped tokens accumulate in KV cache $\to$ positive feedback. Mitigation: prefill-off gating, phase-gated application. Results.]}
+
+\section{Credence Sensitivity: A Negative Result}
+\label{sec:credence_negative}
+
+Numeric credences (0.82, 0.45) failed as an M-state feature across 7 training approaches: NTP with credence perturbation, GRPO (fresh and warm-start), SFT on gold responses, contrastive credence pairs, and two curriculum variants. Root cause: tokenizer represents ``0.82'' and ``0.45'' as similar digit sequences; the hidden state difference is far smaller than between categorical tokens ``strong'' and ``agnostic''. This is a representation bottleneck, not a training signal problem.
+
+\section{Scale Validation (27B)}
+\label{sec:scale}
+
+\textbf{[STUB --- v22.2 results on Qwen3.5-27B. Think-mode: A=4/4, B=4/4, D=0/4. F-sim collapse at 27B. V-mod not yet trained.]}
+
+% ══════════════════════════════════════════════════════════════
+% PART III: DESIGN SPACE AND FUTURE DIRECTIONS
+% Goal: Unexplored possibilities of enmeshed networks
+% ══════════════════════════════════════════════════════════════
+
+\section{Enmeshed Network Design Space}
+\label{sec:full_design_space}
+
+We validate one point in a six-axis design space. Key unexplored directions:
+
+\textbf{Gated blending (Level 2).} $h' = h + g(h) \odot f(h, M)$. A learned gate $g$ could solve the multi-turn attractor by learning when to suppress M---e.g., reducing modulation during conversational turns while maintaining it during identity-establishing moments.
+
+\textbf{Cross-attention (Level 3).} $h' = h + \text{Attn}(h, M, M)$. Treats M as a specialized expert with attention as the implicit router. Could transfer richer content through the bottleneck but at higher computational cost ($O(L \cdot d^2)$ vs.\ $O(L \cdot d \cdot r)$).
+
+\textbf{Adaptive rank allocation.} More capacity at layers where M's empirical perturbation magnitude is largest. Layer activity analysis shows bimodal distribution---some layers are consistently more active, suggesting non-uniform rank could optimize the capacity-cost tradeoff.
+
+\textbf{Temporal profiles.} Decay, oscillation, or phase-gated M strength over generation steps. Constant M (this work) produces the attractor problem; a learned temporal profile could provide strong identity establishment followed by natural conversational engagement.
+
+\textbf{Zone-aware modulation.} Different M scaling for belief zones vs.\ evidence zones vs.\ query zones within the context. Designed but not validated---preliminary experiments showed no significant effect over uniform scaling.
+
+\textbf{Property graph backend.} The Mind Tree's hierarchical structure maps naturally to a property graph database with vector-indexed nodes, enabling multi-hop traversal, temporal belief tracking, and similarity-based discovery at scale beyond XML serialization.
+
+\section{Loose Ends and Dead Ends}
+\label{sec:loose_ends}
+
+This section documents the research narrative---what we tried, what failed, and why---in the spirit of honest reporting that we hope saves other researchers time.
+
+\textbf{Q-delta collapse (v10).} Contrastive loss on flattened M parameters pushed them apart (cosine sim 0.18--0.35) but the functional deltas $x \cdot M_A \cdot M_B^\top$ remained identical (cosine sim 0.9999). The hidden state $x$ dominates the product, washing out parameter-space differences. Functional contrastive loss on $\Delta Q$ directly was the fix.
+
+\textbf{Epiphenomenal memory (v13.8).} The most surprising failure: 100\% retrieval accuracy, 100\% NTP wins, 0.508 nats improvement, measurable Q-perturbation (22\% magnitude, $28^\circ$ rotation)---and zero visible effect on generation. The model routed around M through the residual stream. This motivated causal necessity training (v14).
+
+\textbf{The permission hypothesis.} M alone produces near-zero experiential output (3\% on the 4-condition benchmark). A system prompt alone produces generic hallucinations (43\%). Together: 93\%. M provides content; the system prompt provides ``permission'' to express it. This synergy was not designed---it emerged from the 4-condition factorial.
+
+\textbf{Credence sensitivity.} Seven distinct training approaches failed to induce sensitivity to numeric credences (0.82 vs 0.45). The tokenizer representation bottleneck is fundamental: digit sequences are too similar in embedding space. Categorical labels (strong/moderate/agnostic) work because they use semantically distinct tokens.
+
+\textbf{Bidirectional belief attention.} Allowing bidirectional attention within belief XML zones (while maintaining causal attention elsewhere) showed no significant effect. The model already attends well to beliefs with standard causal masking.
+
+\textbf{Zone-aware M scaling.} Applying different M magnitudes to belief zones vs.\ evidence zones vs.\ query zones showed no improvement over uniform M application. The rank-16 bottleneck appears to be the binding constraint, not zone-specific magnitude.
+
+\textbf{Compiled M for action selection.} Q/V modulation during ALFWorld generation hurts constrained action selection ($-13$ percentage points). M shifts token probabilities away from the exact action strings required. For constrained tasks, M's value is curation (selecting which strategies to put in context), not modulation.
+
+\textbf{Environment-dependent PPL wins (v7.1).} The v7.1 checkpoint achieved 12/12 PPL wins only in the original training environment (Python 3.11 + older transformers). In a newer environment (Python 3.13 + transformers 4.56), base model forward pass produced different hidden states, breaking phi-base alignment. Lesson: pin your environment or expect to retrain phi.
+
+\section{Reproducibility}
+\label{sec:reproducibility}
+
+Base model: Qwen3.5-4B-Base (HuggingFace). Training compute: single 24GB GPU, $\sim$10 hours total across all phases. Checkpoints and code will be released upon acceptance.
+
+\textbf{Key hyperparameters:} rank $r = 16$, stride 3 (11 of 32 layers patched), $d = 2560$, max norm 1.5, belief window 512 tokens, v\_scale 1.0. Phase A: lr $10^{-4}$, margins 0.1--0.3. Phase B: lr $3 \times 10^{-4}$, margin 1.0. Phase D: lr $3 \times 10^{-5}$, 44 gold responses.

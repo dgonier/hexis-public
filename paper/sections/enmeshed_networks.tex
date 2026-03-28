@@ -1,0 +1,76 @@
+\section{Enmeshed Networks}
+\label{sec:enmeshed}
+
+% This section is NEW — no equivalent in sections/ v1.
+% Content drawn from paper-draft-sections.md §2 (conceptual) and M_canonical_recipe.md (technical).
+
+An enmeshed network is a lightweight parametric module that shares the forward pass of a frozen host model, reading intermediate representations at each layer and writing modulations back into the same computation. The enmeshed module maintains its own parameters, receives its own input (the \emph{parallel context}), and can be cleanly removed to recover the unmodified host.
+
+The key distinction from existing adaptation methods is \emph{where} and \emph{how} the module interfaces with the host:
+
+\begin{itemize}
+    \item \textbf{Context-level methods} (RAG, Reflexion, MemGPT) add tokens to the host's input. Memory competes for attention with everything else and dilutes with length.
+    \item \textbf{Parameter-level methods} (LoRA, adapters) modify the host's weights. Each adaptation requires gradient descent. The result is fixed after training.
+    \item \textbf{Activation-level methods} (RepEng, ActAdd) inject fixed directional vectors. The same vector is applied regardless of experience.
+    \item \textbf{Enmeshed networks} process a parallel input through the host's own layers, compile the result into per-layer modulation tensors, and apply these tensors during the primary context's forward pass. Adaptation is at inference cost (one forward pass), experience-specific (different inputs produce different modulations), and dilution-immune (modulations operate outside the context window).
+\end{itemize}
+
+% Fig 1 (arch comparison) is placed in introduction.tex
+% Fig 2 (system overview) moved to appendix to save main-body pages
+
+\subsection{Design Space}
+
+We characterize enmeshed networks along six axes (Table~\ref{tab:design_space}):
+
+\begin{table}[h]
+\centering
+\small
+\caption{Six-axis design space for enmeshed networks. HEXIS instantiates one point (\emph{italic}).}
+\label{tab:design_space}
+\begin{tabular}{lll}
+\toprule
+\textbf{Axis} & \textbf{Options} & \textbf{HEXIS} \\
+\midrule
+Blending function & Additive, gated, cross-attention & \emph{Additive (Level 1)} \\
+Rank & $r \in \{4, 8, 16, 32, 64\}$ & \emph{$r = 16$} \\
+Modulation targets & Q, V, K, Q+V, Q+K+V & \emph{Q + V} \\
+Patching pattern & All layers, stride-$k$, attention-only & \emph{Stride-3 (11/32 layers)} \\
+Compilation & Online, cached, conviction-weighted & \emph{Conviction-weighted} \\
+Temporal profile & Constant, decay, phase-gated & \emph{Constant (with phase-gated mitigation)} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Blending function.} Level 1 (additive): $x' = x + f(x, M)$. Level 2 (gated): $x' = x + g(x) \odot f(x, M)$. Level 3 (cross-attention): $x' = x + \text{Attn}(x, M, M)$. Higher levels provide richer interaction but proportionally higher cost. We validate Level 1 and leave higher levels for future work.
+
+\textbf{Rank.} Controls the capacity of the modulation bottleneck. At rank 16, modulation adds 81,920 FLOPs per layer per token ($2 \times d \times r$)---approximately 200$\times$ cheaper than adding equivalent belief tokens to the context. Rank scales with model size: $r/d \approx 0.006$ (rank 16 for $d = 2560$, rank 32 for $d = 5120$).
+
+\textbf{Patching pattern.} Stride-3 on Qwen3.5-4B-Base (32 layers: 24 DeltaNet + 8 full attention) yields 11 patched layers, covering both linear attention and full self-attention layers. Denser patching yields marginal gains at proportional cost; sparser patching misses critical layers.
+
+\subsection{The Mind Tree}
+\label{sec:mind_tree}
+
+The enmeshed network requires a structured input for its parallel context channel. We introduce the \emph{Mind Tree}: a typed cognitive schema with hierarchical nodes organized into sections:
+
+\begin{table}[h]
+\centering
+\small
+\caption{Mind Tree sections and their roles in compilation and curation.}
+\label{tab:mind_tree}
+\begin{tabular}{llll}
+\toprule
+\textbf{Section} & \textbf{Cognitive Function} & \textbf{M Compiles To} & \textbf{Slot Provides} \\
+\midrule
+identity & self-model & voice, register, framing & rarely needed \\
+beliefs & epistemic & stance direction, emphasis & evidence, citations \\
+strategies & procedural & approach tendency & specific tactics \\
+memories & episodic & experiential tone & specific details, names \\
+models & theory of mind & awareness of opposition & predicted arguments \\
+values & axiological & deep dispositional bias & rarely needed \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Each belief node carries structured metadata: categorical conviction (\texttt{strong}, \texttt{moderate}, \texttt{agnostic}), domain tags, an \texttt{addresses} field listing query types the node answers, and a \texttt{novel} flag marking content unlikely to survive compilation (specific numbers, proper nouns). This metadata enables both \emph{compilation weighting} (high-conviction nodes receive higher weight during $\phi$'s pooling step) and \emph{deterministic curation} (novel content is routed to the explicit slot rather than the compiled channel).
+
+\textbf{Categorical vs.\ numeric conviction.} We use categorical conviction labels rather than numeric credences (e.g., 0.82). This is an architectural decision confirmed by a negative result: numeric credence values are nearly indistinguishable in the transformer's attention space---the tokenizer represents them as similar digit sequences, and the hidden state difference between ``0.82'' and ``0.45'' is far smaller than between ``strong'' and ``agnostic'' (Appendix~\ref{sec:credence_negative}).

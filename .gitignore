@@ -1,0 +1,27 @@
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.eggs/
+
+# Node (figure rendering)
+node_modules/
+*.html
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Checkpoints (large files — released separately)
+checkpoints/*.pt
+*.pt

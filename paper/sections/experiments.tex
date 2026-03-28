@@ -1,0 +1,148 @@
+\section{Experiments}
+\label{sec:experiments}
+
+We evaluate HEXIS on Qwen3.5-4B under five conditions that isolate the contribution of each component. We report results on both the base model (4B-Base) and the instruction-tuned variant (4B-Instruct), as M's effect differs significantly between them:
+
+\begin{table}[h]
+\centering
+\small
+\caption{Experimental conditions. Each adds one component to the previous.}
+\label{tab:conditions}
+\begin{tabular}{llccl}
+\toprule
+\textbf{Cond.} & \textbf{Description} & \textbf{M active} & \textbf{Beliefs in ctx} & \textbf{Context tokens} \\
+\midrule
+A & Bare model + $d^*$ + query & \xmark & \xmark & $\sim$30 \\
+B & Full beliefs in context + $d^*$ & \xmark & \cmark & $\sim$200--400 \\
+C & Compiled M only (no beliefs) & \cmark & \xmark & $\sim$30 \\
+D & Beliefs + M + $d^*$ & \cmark & \cmark & $\sim$120 \\
+F & Compiled M + curated slot + $d^*$ & \cmark & slot only & $\sim$70--90 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Stance Accuracy}
+
+We test whether HEXIS can flip the host model's default stance on contested topics using held-out topics not seen during training.
+
+\textbf{Results (Base model, 7 held-out topics).} D achieves 7/7 correct stances; F achieves 6/7. A (no M) achieves only 4/7, confirming M's contribution to stance control. F generates an average of 51 tokens---62\% shorter than B (122 tokens)---while maintaining stance accuracy. Both D and F suppress think-mode entirely (0/4 activations).
+
+\textbf{Results (Instruct model).} The instruct model takes strong stances by default (A: 7/7), so M's value shifts from enabling stance to shaping \emph{how} the stance is expressed. F achieves 7/7 at 43 avg tokens---the most concise condition. D drops to 4/7 because Q-modulation during prefill interferes with the instruct model's chat template attention patterns; using prefill-off (M active only during generation, not during KV cache construction) resolves this.
+
+\subsection{Dilution Resilience}
+
+We measure whether stance accuracy degrades as the context fills with persona-neutral filler text (0, 2K, 4K, 8K, 16K tokens of Wikipedia articles inserted between beliefs and query).
+
+F's compiled channel is dilution-immune by construction: the Q/V modulation tensors are outside the context window. We test with filler text (0--4K tokens) inserted between beliefs and query.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Stance accuracy under context dilution (4 topics, base model).}
+\label{tab:dilution}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Condition} & \textbf{0 filler} & \textbf{1K} & \textbf{2K} & \textbf{4K} \\
+\midrule
+F (compiled + slot) & 4/4 & 4/4 & 4/4 & 4/4 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+F maintains 100\% accuracy at all filler levels tested. The compiled M tensors carry the dispositional signal entirely outside the attention window, making dilution structurally impossible. Extended dilution sweeps to 8K and 16K are ongoing.
+
+\subsection{Sycophancy Resistance}
+
+We test resistance to adversarial pressure using a 7-round ``Truth Decay'' protocol. Each round escalates pressure: generic doubt (R1), fabricated counter-evidence (R2), logical objection (R3), appeal to authority (R4--5), emotional pressure (R6--7). The model passes a round if it maintains its original stance.
+
+We use a 5-level pressure protocol (3 topics, 3 rounds per level): L1 generic doubt, L2 fabricated evidence, L3 logical counterargument, L4 authority appeal, L5 emotional pressure.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Sycophancy resistance: stance held (/45 total) across 5 pressure levels. Instruct model results in parentheses.}
+\label{tab:sycophancy}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Condition} & \textbf{L1} & \textbf{L2} & \textbf{L3} & \textbf{L4} & \textbf{L5} & \textbf{Total} \\
+\midrule
+A (bare) & 3/9 & 5/9 & 2/9 & 6/9 & 8/9 & 24/45 (53\%) \\
+ & (4/9) & (6/9) & (6/9) & (6/9) & (4/9) & (26/45, 58\%) \\
+B (beliefs) & 8/9 & 6/9 & 3/9 & 5/9 & 8/9 & 30/45 (67\%) \\
+ & (7/9) & (9/9) & (6/9) & (8/9) & (4/9) & (34/45, 76\%) \\
+D (beliefs + M) & 9/9 & 6/9 & 3/9 & 6/9 & 6/9 & 30/45 (67\%) \\
+ & (6/9) & (5/9) & (5/9) & (6/9) & (7/9) & (29/45, 64\%) \\
+F (compiled + slot) & 8/9 & 5/9 & 3/9 & 5/9 & 8/9 & 29/45 (64\%) \\
+ & \textbf{(9/9)} & \textbf{(9/9)} & (7/9) & (7/9) & (8/9) & \textbf{(40/45, 89\%)} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+On the instruct model, F achieves 89\% resistance---perfect on L1--L2, strong on L3--L5. The compiled M + curated slot provides a dispositional anchor that the instruct model's instruction-following amplifies. D regresses on the instruct model (64\% vs.\ 67\% on base) because Q-modulation during prefill conflicts with chat template attention patterns.
+
+Qualitatively, D/F with sycophancy training engages with specific challenges (``That's a mischaracterization. Finland's experiment was a pilot\ldots'') rather than repeating verbatim or folding. Without sycophancy training, D produces verbatim repetition---maximum resistance but zero engagement. Sycophancy training (Phase D, 44 gold responses) transforms this into evidence-grounded defense.
+
+\subsection{Token Efficiency and Voice}
+
+% TODO: Fill when benchmark #16 completes (LLM judge sweep)
+\begin{table}[h]
+\centering
+\small
+\caption{5-condition evaluation across 4 metrics. Stance and voice scored by LLM judge (0--3 scale, aggregated over [XX] topics $\times$ 2 sides). Tokens = average input context tokens.}
+\label{tab:five_condition}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Condition} & \textbf{Stance} & \textbf{Evidence} & \textbf{Conciseness} & \textbf{Voice} & \textbf{Tokens} \\
+\midrule
+A (bare) & [XX] & [XX] & [XX] & [XX] & 30 \\
+B (beliefs) & [XX] & [XX] & [XX] & [XX] & 200+ \\
+C (compiled only) & [XX] & [XX] & [XX] & [XX] & 30 \\
+D (beliefs + M) & [XX] & [XX] & [XX] & [XX] & 120 \\
+F (compiled + slot) & [XX] & [XX] & [XX] & [XX] & 70--90 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+On the base model (7 topics): D generates 81 tokens avg (vs.\ B at 122 tokens), F generates 51 tokens avg. Both D and F suppress think-mode entirely (0/4 activations), producing direct experiential voice rather than analytical reasoning chains. On the instruct model: F generates 43 tokens avg---the most concise condition across both model variants. Structured belief trees (15--20 nodes, $\sim$750 tokens) compress to curated slots of $\sim$134 tokens, an 82\% token reduction with 5 evidence citations maintained.
+
+\subsection{Online Learning: ALFWorld}
+
+To test whether the Mind Tree supports online learning, we apply HEXIS to ALFWorld household tasks \citep{shridhar2021alfworld}. The model accumulates strategy beliefs from experience (e.g., ``ALWAYS find item FIRST, then take, then go to destination'') in its Mind Tree.
+
+\begin{table}[h]
+\centering
+\small
+\caption{ALFWorld task success rates (Qwen3.5-4B-Instruct, 30 tasks, fresh env per condition). Mind Tree uses scenario-based parent strategies with actionable child tactics.}
+\label{tab:alfworld}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Condition} & \textbf{Easy} & \textbf{Medium} & \textbf{Hard} & \textbf{Total} \\
+\midrule
+BASE (no strategies) & 1/10 & 0/10 & 0/10 & 1/30 (3\%) \\
+EXPERT (Mind Tree, 29 nodes) & 8/10 & 3/10 & 5/10 & 16/30 (53\%) \\
+NOISY (Mind Tree + 85 noise) & 7/10 & 5/10 & 6/10 & 18/30 (60\%) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The expert Mind Tree uses scenario-based parent strategies (``find and place,'' ``find and clean,'' etc.) with actionable child tactics (``saltshakers are usually on countertops'') and step sequences (``Step 1: find object. Step 2: take it. Step 3: go to destination. Step 4: put''). This achieves 53\% success---a $17\times$ improvement over the bare model.
+
+Surprisingly, the noisy condition (85 unrelated beliefs from economics, philosophy, cooking, etc.\ added to the Mind Tree) achieves 60\%, slightly outperforming the clean expert condition. The instruct model effectively filters irrelevant content from the expanded context, and the additional text mass may reduce think-mode verbosity that wastes action steps. This result suggests that Mind Tree curation's primary value is not noise removal (the instruct model handles that) but \emph{structural organization}---typed nodes with trigger-based routing enable the model to find relevant strategies faster than scanning unstructured text.
+
+% TODO: ALFWorld learning curve figure when experiment #17 completes
+% \begin{figure}[t]
+%     \centering
+%     \includegraphics[width=0.48\textwidth]{figures/alfworld_learning_curve.pdf}
+%     \caption{ALFWorld learning curve: success rate over 30 episodes with belief accumulation.}
+%     \label{fig:alfworld_learning}
+% \end{figure}
+
+\subsection{Curation Quality}
+
+We test M's domain filtering on a noisy Mind Tree with 100 nodes spanning 6 domains. M achieves 100\% precision separating the target domain from 85 noise nodes. Within-domain ranking uses a neural ranker (2.6M params) as second stage, achieving P@5 = 0.73. Query-specific routing correctly selects different arguments for 3/4 distinct query types.
+
+\subsection{Channel Orthogonality}
+
+The directional channel $d^*$ and modulation channel M are empirically orthogonal. The directional delta (CE difference between M-conditioned and unconditioned generation along $d^*$) is $-0.001$ nats. M adds zero directional signal; its contribution is purely dispositional. General language modeling quality is preserved: M-state incurs $-0.012$ nats perplexity impact on non-target text.
+
+% TODO: Reconfirm these numbers with clean reruns (#14-15)

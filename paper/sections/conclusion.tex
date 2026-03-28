@@ -1,0 +1,10 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+We introduced enmeshed networks---a new architectural primitive in which a lightweight module shares the forward pass of a frozen host, reading and writing intermediate representations at each layer---and instantiated this primitive as HEXIS, implementing compiled dispositional memory for frozen transformers via low-rank Q/V modulation.
+
+HEXIS opens a parallel context channel: a structured cognitive schema (the Mind Tree) is compiled into persistent modulation tensors that shape the host's attention geometry without occupying context positions. The compiled signal is dilution-immune by construction ([XX]\% stance at [XX]K tokens of filler), provides sycophancy resistance ([XX]\% over 7 rounds of adversarial pressure), and carries sufficient content through a rank-16 bottleneck to flip the host model's default stance on contested topics. A three-layer architecture (compiled modulation + curated slot + recursive expansion) matches full in-context beliefs at 82\% token savings.
+
+We characterized the bottleneck boundary precisely: compiled enmeshment steers parametric knowledge but cannot inject novel content. This honest boundary motivates architectural composition rather than a single mechanism. The enmeshed modulation succeeds for open generation and fails for constrained action selection, establishing complementary roles for implicit and explicit memory channels.
+
+We view this work as opening a research program rather than presenting a final architecture. The enmeshed network primitive and the Mind Tree schema are general; the specific instantiation (Level 1, rank 16, Q+V, stride-3, Qwen3.5-4B-Base) is one point in a large design space. We hope the definition, taxonomy, and initial validation encourage exploration of the full space.

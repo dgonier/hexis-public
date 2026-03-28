@@ -1,0 +1,48 @@
+% HEXIS NeurIPS 2026 Submission — Main Document v2
+% TODO: Replace neurips_approx with official neurips_2026.sty before submission
+\documentclass[10pt]{article}
+\usepackage{neurips_approx}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\graphicspath{{/home/dgonier/experiments/figures/}{../../figures/}{../figures/}{../}}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{xcolor}
+\usepackage{subcaption}
+\usepackage{microtype}
+\usepackage{multirow}
+\usepackage{pifont}
+\newcommand{\cmark}{\ding{51}}
+\newcommand{\xmark}{\ding{55}}
+
+\title{HEXIS: Compiled Dispositional Memory Through Enmeshed Networks}
+
+% NeurIPS: double-blind — no author info at submission
+\author{Anonymous}
+\date{}
+
+\begin{document}
+\maketitle
+
+\input{abstract}
+\input{introduction}
+\input{enmeshed_networks}
+\input{hexis_architecture}
+\input{three_layer}
+\input{experiments}
+\input{related_work}
+\input{discussion}
+\input{conclusion}
+
+\bibliographystyle{plainnat}
+\bibliography{../references}
+
+\appendix
+\input{appendix}
+
+\end{document}
