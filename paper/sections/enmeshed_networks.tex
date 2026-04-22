@@ -12,7 +12,7 @@ The key distinction from existing adaptation methods is \emph{where} and \emph{h
     \item \textbf{Context-level methods} (RAG, Reflexion, MemGPT) add tokens to the host's input. Memory competes for attention with everything else and dilutes with length.
     \item \textbf{Parameter-level methods} (LoRA, adapters) modify the host's weights. Each adaptation requires gradient descent. The result is fixed after training.
     \item \textbf{Activation-level methods} (RepEng, ActAdd) inject fixed directional vectors. The same vector is applied regardless of experience.
-    \item \textbf{Enmeshed networks} process a parallel input through the host's own layers, compile the result into per-layer modulation tensors, and apply these tensors during the primary context's forward pass. Adaptation is at inference cost (one forward pass), experience-specific (different inputs produce different modulations), and dilution-immune (modulations operate outside the context window).
+    \item \textbf{Enmeshed networks} process a parallel input through the host's own layers, using the resulting hidden states as a bridge to external knowledge. Two mechanisms emerge from this bridge: \emph{(a)}~compile hidden states into per-layer modulation tensors that shape the primary context's attention (for dispositional tasks); \emph{(b)}~project hidden states into a retrieval space to fetch relevant knowledge nodes from a persistent graph (for agentic tasks). Both mechanisms are experience-specific, inference-cost adaptable, and operate outside the context window.
 \end{itemize}
 
 % Fig 1 (arch comparison) is placed in introduction.tex
@@ -74,3 +74,30 @@ values & axiological & deep dispositional bias & rarely needed \\
 Each belief node carries structured metadata: categorical conviction (\texttt{strong}, \texttt{moderate}, \texttt{agnostic}), domain tags, an \texttt{addresses} field listing query types the node answers, and a \texttt{novel} flag marking content unlikely to survive compilation (specific numbers, proper nouns). This metadata enables both \emph{compilation weighting} (high-conviction nodes receive higher weight during $\phi$'s pooling step) and \emph{deterministic curation} (novel content is routed to the explicit slot rather than the compiled channel).
 
 \textbf{Categorical vs.\ numeric conviction.} We use categorical conviction labels rather than numeric credences (e.g., 0.82). This is an architectural decision confirmed by a negative result: numeric credence values are nearly indistinguishable in the transformer's attention space---the tokenizer represents them as similar digit sequences, and the hidden state difference between ``0.82'' and ``0.45'' is far smaller than between ``strong'' and ``agnostic'' (Appendix~\ref{sec:credence_negative}).
+
+\subsection{Application Domains}
+\label{sec:application_domains}
+
+The distinction between enmeshed modulation and prompt compression is not merely architectural---it determines \emph{which kinds of knowledge benefit from the mechanism}. Table~\ref{tab:application_domains} identifies four domains where compiled dispositional memory provides qualitative advantages over context-level alternatives.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Application domains for enmeshed networks. For each domain, we identify what compiles through the rank-16 bottleneck (zero-token, dilution-immune), what requires the curated slot (novel content), and why prompt compression is insufficient.}
+\label{tab:application_domains}
+\begin{tabular}{p{2.0cm}p{2.5cm}p{2.0cm}p{4.5cm}}
+\toprule
+\textbf{Domain} & \textbf{M Compiles} & \textbf{Slot Provides} & \textbf{Why Not a Prompt?} \\
+\midrule
+User empathy \& preference tracking & Communication style priors, expertise-calibrated attention, emotional register & Specific preference details, names & A prompt says ``user prefers concise answers.'' M \emph{changes what the model attends to} in the user's message---shorter latency to user intent, no token cost per turn. \\
+\addlinespace
+Research conviction \& diversity & Stance strength, resistance to consensus drift, argumentative disposition & Evidence, citations, specific claims & Sycophancy resistance requires dispositional anchoring that survives adversarial pressure (\S\ref{sec:experiments}). Prompt-level beliefs can be argued away. \\
+\addlinespace
+Agentic strategy (ReAct loops) & Approach tendencies, procedural intuition, failure-pattern avoidance & Specific tactics, action sequences, tool signatures & Strategy logs in context dilute as episodes accumulate. Compiled M encodes \emph{when to explore vs.\ exploit} without consuming context budget. Action traces from successful episodes are stored as observation nodes; consolidation promotes recurring patterns to tactics and strategies; M recompiles in seconds. The agent improves hourly without fine-tuning. \\
+\addlinespace
+Codebase \& repository management & Architectural awareness, coding style priors, structural navigation patterns & File paths, API signatures, dependency versions & Repo context in prompt scales linearly with codebase size. M compiles structural intuition---which modules are coupled, where state lives---at fixed cost. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The common thread is that each domain contains knowledge that is \emph{better encoded as a perceptual shift than as text}. A prompt tells the model what to do. Enmeshed modulation changes \emph{how the model processes} its input---what it attends to, what it extracts, how it weights evidence. The distinction is sharpest under adversarial conditions: prompt-level beliefs dilute with context length and fold under argumentative pressure; compiled dispositions are structurally immune to both (\S\ref{sec:experiments}).

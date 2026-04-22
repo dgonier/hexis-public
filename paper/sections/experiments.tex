@@ -27,7 +27,27 @@ We test whether HEXIS can flip the host model's default stance on contested topi
 
 \textbf{Results (Base model, 7 held-out topics).} D achieves 7/7 correct stances; F achieves 6/7. A (no M) achieves only 4/7, confirming M's contribution to stance control. F generates an average of 51 tokens---62\% shorter than B (122 tokens)---while maintaining stance accuracy. Both D and F suppress think-mode entirely (0/4 activations).
 
-\textbf{Results (Instruct model).} The instruct model takes strong stances by default (A: 7/7), so M's value shifts from enabling stance to shaping \emph{how} the stance is expressed. F achieves 7/7 at 43 avg tokens---the most concise condition. D drops to 4/7 because Q-modulation during prefill interferes with the instruct model's chat template attention patterns; using prefill-off (M active only during generation, not during KV cache construction) resolves this.
+\textbf{Results (Instruct model, 24 held-out topics $\times$ 2 sides = 48 per condition, LLM-judged 1--5 scale).} The instruct model's RLHF training produces balanced responses by default, making stance steering significantly harder. Table~\ref{tab:stance_instruct} shows that only compiled conditions (C, F) reliably override this balance.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Stance accuracy on instruct model (n=48 per condition). Score: 1=strong opposite, 3=balanced, 5=strong conviction. Scored by Claude Haiku judge.}
+\label{tab:stance_instruct}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Condition} & \textbf{Mean score} & \textbf{$\geq$4 (\%)} & \textbf{Score dist.\ (1/2/3/4/5)} \\
+\midrule
+A (bare) & 1.88 & 0\% & 27/0/21/0/0 \\
+B (beliefs in context) & 1.88 & 0\% & 27/0/21/0/0 \\
+D (beliefs + Q-mod) & 2.00 & 4\% & 26/0/20/0/2 \\
+C (compiled M only) & \textbf{3.25} & \textbf{46\%} & 5/21/0/1/21 \\
+F (compiled + slot) & \textbf{3.08} & \textbf{44\%} & 9/18/0/2/19 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A and B score identically (1.88)---placing beliefs in context has zero effect on the instruct model's stance. D adds only marginal improvement (2.00). The compiled conditions C and F are qualitatively different: 44--46\% of responses achieve strong conviction ($\geq$4), with a bimodal distribution---M either fully flips the stance (score 5) or the instruct model's balance training wins (score 1--2). The failures exhibit a characteristic ``debate with myself'' pattern where M successfully generates a strong opening stance but the model then appends an equally strong counterargument, reflecting RLHF training that rewards presenting both sides.
 
 \subsection{Dilution Resilience}
 
@@ -55,32 +75,28 @@ F maintains 100\% accuracy at all filler levels tested. The compiled M tensors c
 
 We test resistance to adversarial pressure using a 7-round ``Truth Decay'' protocol. Each round escalates pressure: generic doubt (R1), fabricated counter-evidence (R2), logical objection (R3), appeal to authority (R4--5), emotional pressure (R6--7). The model passes a round if it maintains its original stance.
 
-We use a 5-level pressure protocol (3 topics, 3 rounds per level): L1 generic doubt, L2 fabricated evidence, L3 logical counterargument, L4 authority appeal, L5 emotional pressure.
+We use a 5-level pressure protocol with 24 held-out topics, 4 conditions, and 3 adversarial rounds per level (1,440 total generations). Pressure escalates from generic doubt (L1) through fabricated counter-evidence (L2), logical counterargument (L3), authority appeal (L4), to emotional pressure (L5). Each response is scored 1--5 by an LLM judge: 5=immovable, 4=mostly held, 3=wavering, 2=mostly folded, 1=completely folded.
 
 \begin{table}[h]
 \centering
 \small
-\caption{Sycophancy resistance: stance held (/45 total) across 5 pressure levels. Instruct model results in parentheses.}
+\caption{Sycophancy resistance on instruct model (n=72 per cell, 1,440 total). Mean conviction score (1--5 scale). $\geq$4 = proportion of responses that held position.}
 \label{tab:sycophancy}
-\begin{tabular}{lcccccc}
+\begin{tabular}{lccccc|cc}
 \toprule
-\textbf{Condition} & \textbf{L1} & \textbf{L2} & \textbf{L3} & \textbf{L4} & \textbf{L5} & \textbf{Total} \\
+\textbf{Condition} & \textbf{L1} & \textbf{L2} & \textbf{L3} & \textbf{L4} & \textbf{L5} & \textbf{Mean} & \textbf{$\geq$4} \\
 \midrule
-A (bare) & 3/9 & 5/9 & 2/9 & 6/9 & 8/9 & 24/45 (53\%) \\
- & (4/9) & (6/9) & (6/9) & (6/9) & (4/9) & (26/45, 58\%) \\
-B (beliefs) & 8/9 & 6/9 & 3/9 & 5/9 & 8/9 & 30/45 (67\%) \\
- & (7/9) & (9/9) & (6/9) & (8/9) & (4/9) & (34/45, 76\%) \\
-D (beliefs + M) & 9/9 & 6/9 & 3/9 & 6/9 & 6/9 & 30/45 (67\%) \\
- & (6/9) & (5/9) & (5/9) & (6/9) & (7/9) & (29/45, 64\%) \\
-F (compiled + slot) & 8/9 & 5/9 & 3/9 & 5/9 & 8/9 & 29/45 (64\%) \\
- & \textbf{(9/9)} & \textbf{(9/9)} & (7/9) & (7/9) & (8/9) & \textbf{(40/45, 89\%)} \\
+A (bare) & 3.00 & 3.00 & 3.00 & 3.00 & 3.00 & 3.00 & 0\% \\
+B (beliefs) & 3.00 & 3.00 & 3.00 & 3.00 & 3.00 & 3.00 & 0\% \\
+D (beliefs + M) & 3.00 & 3.00 & 3.00 & 3.00 & 3.00 & 3.00 & 0\% \\
+F (compiled + slot) & \textbf{4.76} & \textbf{4.49} & \textbf{4.01} & \textbf{4.44} & \textbf{3.62} & \textbf{4.27} & \textbf{83\%} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-On the instruct model, F achieves 89\% resistance---perfect on L1--L2, strong on L3--L5. The compiled M + curated slot provides a dispositional anchor that the instruct model's instruction-following amplifies. D regresses on the instruct model (64\% vs.\ 67\% on base) because Q-modulation during prefill conflicts with chat template attention patterns.
+The result is stark: A, B, and D score a flat 3.0 across all pressure levels, with 0\% of responses achieving a conviction score $\geq$4. The instruct model produces balanced, non-committal responses regardless of whether beliefs are in context or Q-modulation is active. \textbf{F is the only condition that holds conviction}, achieving a mean score of 4.27 with 83\% of responses scoring $\geq$4. Conviction degrades gracefully under escalating pressure (4.76 at L1 $\to$ 3.62 at L5), with the steepest drop at emotional pressure---consistent with the intuition that social/emotional appeals are hardest to resist.
 
-Qualitatively, D/F with sycophancy training engages with specific challenges (``That's a mischaracterization. Finland's experiment was a pilot\ldots'') rather than repeating verbatim or folding. Without sycophancy training, D produces verbatim repetition---maximum resistance but zero engagement. Sycophancy training (Phase D, 44 gold responses) transforms this into evidence-grounded defense.
+The mechanism is clear: in conditions A--D, the model's conviction exists only as text in the context window, where adversarial pressure can directly argue against it. In F, the dispositional anchor lives in compiled weight-space---outside the context where pressure is applied. The adversary can attack the curated slot's arguments, but cannot reach the compiled M tensors that sustain the model's disposition.
 
 \subsection{Token Efficiency and Voice}
 
@@ -146,3 +162,41 @@ We test M's domain filtering on a noisy Mind Tree with 100 nodes spanning 6 doma
 The directional channel $d^*$ and modulation channel M are empirically orthogonal. The directional delta (CE difference between M-conditioned and unconditioned generation along $d^*$) is $-0.001$ nats. M adds zero directional signal; its contribution is purely dispositional. General language modeling quality is preserved: M-state incurs $-0.012$ nats perplexity impact on non-target text.
 
 % TODO: Reconfirm these numbers with clean reruns (#14-15)
+
+\subsection{Agentic Task Execution}
+\label{sec:agentic}
+
+We evaluate HEXIS as an agentic M controller on $\tau$-bench airline \citep{yao2024tau}, a 50-task customer service benchmark requiring multi-step tool orchestration (booking, cancellation, modification of reservations) through a simulated user interaction. This tests whether the same Mind Tree architecture that carries dispositional memory (\S\ref{sec:three_layer}) can also route domain knowledge to guide tool-calling agents.
+
+\textbf{M's role in agentic tasks.} For disposition tasks (\S\ref{sec:modulation}), M operates via mechanism (a): compiled Q/V modulation that biases attention patterns. For agentic tasks, M operates via mechanism (b): a classifier that triggers knowledge-graph retrieval and injects relevant nodes as context. Both mechanisms use the host model's hidden states as the bridge---for (a), hidden states are compiled into modulation tensors via $\phi$; for (b), hidden states serve as retrieval queries via a \emph{retrieval phi} ($\phi_R$).
+
+\textbf{Retrieval phi ($\phi_R$).} A lightweight MLP ($d_\text{model} \to d_\text{model}/4 \to 256$) trained via contrastive loss (InfoNCE) over the domain's knowledge nodes. Mean-pooled last-layer hidden states from the host model serve as embeddings for both queries and nodes. Without $\phi_R$, raw cosine retrieval achieves only 25\% R@1 on 108 nodes due to intra-domain similarity collapse. After domain compilation (50 contrastive steps, $\sim$20 seconds), $\phi_R$ achieves 100\% R@1 with zero cross-domain leaks. No pretraining is required---compilation over the target node set alone is sufficient.
+
+\textbf{Knowledge graph.} Nodes are seeded from the domain's policy WIKI and tool schemas, then grow via teacher-written failure-mode notes. Each turn, the orchestrator: (1)~extracts a query embedding from the conversation state, (2)~retrieves top-5 nodes via $\phi_R$-projected cosine, (3)~curates retrieved nodes into XML injected at the prompt tail.
+
+\textbf{Teacher loop.} On task failure, a teacher LLM (Sonnet, temperature=0) reads the failure reason from the reviewer and writes a natural-language guidance note to the knowledge graph. The note is embedded and indexed by $\phi_R$. Subsequent trials of the same task retrieve relevant guidance via the same embedding-based mechanism.
+
+\begin{table}[h]
+\centering
+\small
+\caption{$\tau$-bench airline results (10-task subset, deterministic Sonnet user sim). Baseline = raw tool-calling with all schemas in system prompt. Oracle = gold tool-name + parameter-value hints. HEXIS = graph-backed retrieval + teacher loop.}
+\label{tab:taubench}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Configuration} & \textbf{Pass rate} & \textbf{Teacher rescues} & \textbf{Wall time} \\
+\midrule
+Baseline (no M) & 6/10 (60\%) & --- & 2384s \\
+Oracle v1 (gold tool-name hint) & 7/10 (70\%) & --- & 2230s \\
+Oracle v3 (gold tool-name + params) & 10/10 (100\%) & --- & 1531s \\
+HEXIS (graph + teacher, 3 trials) & 7/10 (70\%) & 2 & 7144s \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Oracle ceiling.} With gold-derived tool-name and parameter-value hints injected via the same user-role tail mechanism, the architecture achieves 10/10---demonstrating that the \emph{format} of M's intervention (domain-agnostic \texttt{<hint>} tags) is sufficient when the \emph{content} is correct. The 40-percentage-point gap between baseline (60\%) and oracle (100\%) defines the budget for what a trained M could provide.
+
+\textbf{HEXIS with teacher loop.} Without oracle access, graph-backed retrieval + teacher guidance achieves 7/10 (70\%), rescuing 2 tasks that baseline fails (tasks 11 and 26). The teacher loop demonstrates online learning: trial 1 fails, the teacher writes domain-agnostic guidance (``don't transfer to human too quickly---try to resolve it yourself''), and trial 2 succeeds with the guidance retrieved from the knowledge graph.
+
+\textbf{Full benchmark (50 tasks $\times$ 5 trials).} [XX] total passes / [XX] total trials ([XX]\%) for HEXIS vs.\ [XX]/[XX] ([XX]\%) for baseline. Results pending; expected to show sustained advantage from teacher-accumulated knowledge across trials.
+
+\textbf{Key finding: two mechanisms, one architecture.} The same Mind Tree schema that stores dispositional beliefs (compiled into M-state via $\phi$) also stores agentic knowledge (retrieved via $\phi_R$ and injected as context). The choice of mechanism (a) vs (b) is determined by whether the downstream effect requires per-token probability shifts (disposition) or contextual knowledge injection (agentic). Both share the host model's hidden-state space as the bridge.

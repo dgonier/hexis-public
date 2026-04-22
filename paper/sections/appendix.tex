@@ -141,6 +141,59 @@ Numeric credences (0.82, 0.45) failed as an M-state feature across 7 training ap
 % Goal: Unexplored possibilities of enmeshed networks
 % ══════════════════════════════════════════════════════════════
 
+\section{Application Domain Analysis}
+\label{sec:application_domain_details}
+
+We expand on the four application domains identified in Table~\ref{tab:application_domains}, detailing the Mind Tree configuration, the compilation/curation split, and the specific failure mode of context-level alternatives that enmeshed modulation addresses.
+
+\subsection{User Empathy and Preference Tracking}
+
+\textbf{Mind Tree configuration.} The \texttt{models} section encodes a theory-of-mind representation of the user: communication style (``prefers direct answers over exploratory discussion''), expertise calibration (``senior engineer, deep Go expertise, new to React''), emotional patterns (``becomes frustrated when asked to repeat context''). The \texttt{memories} section records episodic interactions (``user corrected my testing approach on 2026-02-14'').
+
+\textbf{What compiles.} M encodes the user's \emph{type}---expertise-calibrated attention weighting, register adjustment (formal/casual/technical), empathetic framing priors. The model attends differently to the user's input: shorter latency to user intent, emphasis on aspects the user cares about, suppression of information the user already knows.
+
+\textbf{What needs the slot.} Specific preference details (``prefers pytest over unittest''), names, dates, and particular past interactions.
+
+\textbf{Why not a prompt?} Current approaches (system prompts, RAG-retrieved user profiles) place preferences in context where they (1) dilute over multi-turn conversation as the preference tokens become a shrinking fraction of total context, (2) incur per-turn token cost as the profile is re-injected each turn, and (3) are inspectable---the model can reference ``according to your profile'' rather than naturally adapting its behavior. Compiled M provides preference-shaped attention at zero token cost per turn. The Experiment 0 synthetic task (\S\ref{sec:synthetic_task}) validates this: 100\% Session 2 preference recall through M-state alone.
+
+\textbf{Practical deployment.} An enmeshed assistant compiles the user's Mind Tree once per session (or on significant update). Subsequent turns benefit from preference-shaped attention without re-prompting. The M-state is swappable per user, enabling multi-tenant deployment from a single frozen host.
+
+\subsection{Research Conviction and Intellectual Diversity}
+
+\textbf{Mind Tree configuration.} The \texttt{beliefs} section encodes epistemic positions with categorical conviction labels. The \texttt{values} section encodes axiological commitments (``empirical evidence over theoretical elegance''). The \texttt{models} section encodes awareness of opposing positions (``mainstream consensus holds X; I disagree because Y'').
+
+\textbf{What compiles.} M encodes \emph{dispositional conviction}---the tendency to defend positions under pressure, weight evidence in a particular direction, and resist consensus drift. This is the sycophancy resistance mechanism validated in \S\ref{sec:experiments}: F achieves 89\% resistance across 5 escalating pressure levels on the instruct model.
+
+\textbf{What needs the slot.} Specific evidence, citations, statistical claims, and counter-arguments to predicted objections.
+
+\textbf{Why not a prompt?} Research diversity in multi-agent systems requires agents that maintain genuinely distinct perspectives under debate pressure. Prompt-level beliefs are the easiest target for adversarial argumentation: the opposing agent can read the beliefs (or infer them from outputs) and construct targeted counter-arguments. When the beliefs are inspectable content, the model's chain-of-thought can reason about them and decide to abandon them. Compiled M is non-inspectable: the model cannot reason about its own Q/V modulation, so adversarial pressure targets the model's outputs rather than its dispositional anchoring. This produces agents that \emph{update on evidence} (the curated slot can be revised) while maintaining \emph{stable epistemic character} (the compiled disposition persists).
+
+\textbf{Multi-agent implications.} In a research ensemble, each agent compiles a different Mind Tree encoding a distinct intellectual tradition, methodological commitment, or theoretical framework. The agents share the same frozen host but attend to different features of the evidence, extract different implications from shared data, and resist pressure to converge. Diversity is architectural rather than prompted.
+
+\subsection{Agentic Strategic Thinking (ReAct / ALFWorld)}
+
+\textbf{Mind Tree configuration.} The \texttt{strategies} section encodes procedural knowledge as scenario-based parent nodes with actionable child tactics. The \texttt{memories} section records episodic outcomes (``putting hot object on countertop failed---must cool first''). Strategy nodes carry \texttt{addresses} fields that map to task types (``find-and-heat'', ``examine-in-light'').
+
+\textbf{What compiles.} M encodes \emph{procedural intuition}---approach tendencies (explore-vs-exploit), failure-pattern avoidance, and task-type recognition. The ALFWorld results (\S\ref{sec:experiments}) show the Mind Tree improving success from 3\% to 53\%, though the primary channel is structured context rather than compiled modulation for constrained action selection.
+
+\textbf{What needs the slot.} Specific action sequences (``Step 1: go to fridge. Step 2: open fridge. Step 3: take apple''), tool signatures, and environment-specific details.
+
+\textbf{Why not a prompt?} ReAct-style agents accumulate strategy logs, reflections, and episodic memories as text in context. Over multi-episode learning, this log grows linearly, eventually crowding out task-relevant context. Reflexion \citep{shinn2023reflexion} mitigates this with summarization but the summarized reflections still dilute. Compiled M encodes the \emph{distilled procedural tendency} at fixed cost: the agent's approach bias does not grow with experience. The strategy slot provides episode-specific tactics that may change each round, while M provides the stable procedural character that persists.
+
+\textbf{Online learning loop.} After each episode, new observations are added to the Mind Tree (observation $\to$ tactic $\to$ strategy promotion via graph traversal). Re-compilation through $\phi$ updates M at the cost of one forward pass. The agent's procedural intuition evolves without retraining.
+
+\subsection{Codebase and Repository Management}
+
+\textbf{Mind Tree configuration.} The \texttt{strategies} section encodes architectural patterns (``this repo uses hexagonal architecture with ports-and-adapters''), coupling relationships (``auth middleware and session storage are tightly coupled''), and coding conventions. The \texttt{memories} section records past decisions and their rationale (``chose PostgreSQL over MongoDB for transactional consistency'').
+
+\textbf{What compiles.} M encodes \emph{structural awareness}---which modules are likely coupled, where state lives, which patterns the codebase follows. The model navigates the codebase with shaped attention: when reading a file, M biases attention toward the patterns and structures that matter in this specific repository.
+
+\textbf{What needs the slot.} Specific file paths, API signatures, dependency versions, and recent changes.
+
+\textbf{Why not a prompt?} Repository context in prompt (README, architecture docs, file trees) scales linearly with codebase size. For large repositories, this context dominates the prompt budget and dilutes with conversation length. Compiled M provides structural intuition at $O(L \cdot d \cdot r)$ per token---constant in repository size. The curated slot injects only the file paths and API details relevant to the current query, selected by M's activation scores on strategy nodes. This produces a coding assistant that ``knows'' the repository structure implicitly rather than consulting it explicitly each turn.
+
+\textbf{Multi-repository deployment.} Different codebases compile to different M-states. Switching repositories requires one forward pass through $\phi$, not re-prompting with a new architecture document. M-states can be cached per repository and loaded on demand.
+
 \section{Enmeshed Network Design Space}
 \label{sec:full_design_space}
 

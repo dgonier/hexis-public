@@ -23,9 +23,36 @@ The prefill-off mechanism reveals a general principle for additive modulation: \
 
 Numeric credences failed as an M-state feature. Tokens for ``0.82'' and ``0.45'' are nearly indistinguishable in the transformer's attention space---the hidden state difference between these tokenized numbers is far smaller than between the words ``strong'' and ``agnostic''. Multiple training approaches (NTP with credence perturbation, GRPO, SFT on gold responses) confirmed that this is a representation bottleneck, not a training signal problem. Categorical conviction labels resolve this by using semantically distinct tokens. A future Bayesian treatment could provide formal grounding while maintaining the categorical interface (Appendix~\ref{sec:credence_negative}).
 
+\subsection{Two Mechanisms, One Bridge}
+
+The agentic experiments (\S\ref{sec:agentic}) reveal that HEXIS supports two distinct intervention mechanisms through the same hidden-state bridge:
+
+\textbf{Mechanism (a): Attention modulation.} $\phi$ compiles retrieved Mind Tree nodes into Q/V modulation tensors that bias per-token attention patterns. The hidden states are the \emph{input} to $\phi$; the output is a weight-space perturbation. This mechanism is load-bearing when the downstream effect requires probability-level shifts across all generated tokens---stance direction, experiential voice, sycophancy resistance, user memory integration.
+
+\textbf{Mechanism (b): Knowledge retrieval and context injection.} $\phi_R$ projects hidden states into a retrieval space where cosine similarity identifies relevant knowledge nodes. The output is \emph{context augmentation}---XML injected at the prompt tail. This mechanism is load-bearing when the downstream effect requires specific factual content (tool names, parameter values, policy rules, biographical details) that the model cannot derive from its weights alone.
+
+Crucially, retrieval ($\phi_R$) serves \emph{both} mechanisms. For disposition, retrieval selects which belief nodes, user memories, and biographical details to compile into M-state---this is the curation step of the three-layer architecture (\S\ref{sec:three_layer}). For agentic tasks, retrieval selects which policy rules and tool guidance to inject as context. The shared step is retrieval; the divergence is the downstream path---weight-space compilation (a) or token injection (b).
+
+Both mechanisms share the host model's hidden-state space as the bridge. A production HEXIS agent uses both simultaneously: mechanism (a) maintains consistent interaction style (compiled from user memories, preferences, biographical context), while mechanism (b) surfaces task-relevant knowledge each turn (policy rules, failure modes, tool schemas). The Mind Tree stores all node types; $\phi_R$ retrieves relevant nodes regardless of type; the node's metadata determines whether it flows to compilation (a) or injection (b).
+
+\subsection{Retrieval Phi and Domain Compilation}
+
+The retrieval phi ($\phi_R$) addresses a specific challenge: intra-domain similarity collapse in generative model hidden states. On a 108-node knowledge graph spanning policy rules, tool schemas, and teacher-written failure modes, raw cosine similarity achieves only 25\% R@1---concepts within the same domain (e.g., ``cancellation policy'' vs.\ ``booking policy'') have cosine similarity of 0.858 vs.\ 0.858, making them indistinguishable.
+
+$\phi_R$ resolves this via domain compilation: 50 steps of contrastive training ($\sim$20 seconds) on the node set itself produces a projection that achieves 100\% R@1. This is intentional overfitting---$\phi_R$ memorizes where each node lives in its projected space. When the graph grows (teacher writes a new node), $\phi_R$ recompiles in seconds to incorporate it.
+
+Importantly, no external pretraining data is required. Unlike instruction-tuned embedding models that require millions of diverse training pairs, $\phi_R$ trains entirely from the domain's own node set. The procedure is domain-agnostic: seed nodes from any policy document and tool schema, compile $\phi_R$, deploy. Switching from airline to banking requires only reseeding the graph and recompiling ($\sim$20 seconds).
+
+Standard techniques for improving embedding quality on raw LLM hidden states---whitening, mean centering, principal component removal---were tested and uniformly \emph{degraded} performance (from 75\% to 0--38\% R@1). This is because Qwen3.5-4B's hidden states encode discriminative information in the high-variance directions (opposite to encoder models like BERT). The contrastive $\phi_R$ learns to extract the correct discriminative subspace without blindly removing variance.
+
 \subsection{Unexplored Design Space}
 
 We validate one point in a six-axis design space (Table~\ref{tab:design_space}). The additive blending function (Level 1) is the simplest; gated blending could solve the multi-turn attractor by learning when to suppress M. Cross-attention (Level 3) could transfer richer content. Rank 16 suffices for 4B; larger models may benefit from adaptive rank allocation. The Mind Tree's hierarchical structure maps naturally to a property graph database (e.g., Neo4j), where Cypher queries replace Python filtering for domain/intent matching, and the consolidation cycle (observation$\to$tactic$\to$strategy promotion) maps to graph traversal operations. Activation tracking, biographical commitment, and contradiction detection all benefit from persistent graph storage.
+
+\subsection{Why Not Just Compress a Prompt?}
+\label{sec:why_not_prompt}
+
+The most direct challenge to enmeshed networks is that compiled M is ``just a fancy way of compressing a prompt.'' Three properties distinguish it. First, \emph{structural dilution immunity}: prompt compression reduces tokens but compressed tokens still compete for attention; compiled M operates outside the attention window entirely, making dilution structurally impossible (Table~\ref{tab:dilution}). Second, \emph{non-inspectability}: an adversary can read the prompt and argue against its content; compiled M operates on pre-projection hidden states below the model's chain-of-thought, so any representation the model can attend to is also one it can be argued out of, but M cannot (Appendix~\ref{sec:implicit_validation}). Third, \emph{processing change}: compiled M produces measurable attention divergence (JSD = 0.049 between M-states) and suppresses think-mode activation (0/4 under D/F). The model does not merely produce different words---it processes its input differently. These properties matter most in the application domains identified in Table~\ref{tab:application_domains}: user empathy, research conviction, agentic strategy, and codebase management each require knowledge better encoded as a perceptual shift than as text (full analysis in Appendix~\ref{sec:application_domain_details}).
 
 \subsection{Broader Implications}
 
