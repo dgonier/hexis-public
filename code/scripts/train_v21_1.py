@@ -101,15 +101,23 @@ def train(args):
     d_model = model_config.hidden_size
     n_layers = model_config.num_hidden_layers
     device = next(base_model.parameters()).device
-    stride = 3
-    patched_layers = list(range(0, n_layers, stride))
+
+    preset = getattr(args, "preset_obj", None)
+    if preset is not None:
+        patched_layers = preset.patched_layer_indices(n_layers_override=n_layers)
+        _ckpt_base = preset.checkpoint_base
+    else:
+        stride = args.stride if getattr(args, "stride", None) else 3
+        patched_layers = list(range(0, n_layers, stride))
+        _ckpt_base = "checkpoints"
 
     # === Load d* and zero points ===
-    d_star = torch.load("checkpoints/d_star.pt", map_location="cpu", weights_only=True)
+    d_star = torch.load(f"{_ckpt_base}/d_star.pt",
+                        map_location="cpu", weights_only=True)
     direction_injector = DirectionInjector(d_star, base_scale=args.base_scale).to(device)
     direction_injector.eval()
 
-    topic_zero_points = torch.load("checkpoints/topic_zero_points.pt",
+    topic_zero_points = torch.load(f"{_ckpt_base}/topic_zero_points.pt",
                                     map_location="cpu", weights_only=True)
     print(f"  d* loaded, base_scale={args.base_scale}")
     print(f"  Zero points: {len(topic_zero_points)} topics")
@@ -136,6 +144,32 @@ def train(args):
     }), d_model=d_model, device=device)
     btm_template = btm_template.to(device)
 
+    # === Warm-start from v21 (Phase A Step 2a) ===
+    # Recipe specifies v21_1 warm-starts from v21 (adds L_align+L_content
+    # to the base L_margin curriculum). The original code didn't honor
+    # this — patched 2026-04-23. If --checkpoint is set, load it;
+    # otherwise fall back to <preset.checkpoint_base>/v21/BEST.pt if it
+    # exists (written by the orchestrator's finalize_checkpoint), else
+    # train from scratch with a warning.
+    warm_checkpoint = getattr(args, "checkpoint", None)
+    if warm_checkpoint is None:
+        default_v21 = f"{_ckpt_base}/v21/BEST.pt"
+        if os.path.exists(default_v21):
+            warm_checkpoint = default_v21
+    if warm_checkpoint and os.path.exists(warm_checkpoint):
+        ckpt = torch.load(warm_checkpoint, map_location="cpu", weights_only=False)
+        try:
+            phi_writer.load_state_dict(ckpt["phi_writer"])
+            conviction_reader.load_state_dict(ckpt["conviction_reader"])
+            m_read_head.load_state_dict(ckpt["m_read_head"])
+            btm_template.load_state_dict(ckpt["btm_template"])
+            print(f"  Warm-started from {warm_checkpoint} (epoch {ckpt.get('epoch', '?')})")
+        except Exception as e:
+            print(f"  WARN: warm-start failed ({type(e).__name__}: {e}); "
+                  f"training from scratch")
+    else:
+        print(f"  No warm-start checkpoint found; training from scratch")
+
     trainable_params = (
         sum(p.numel() for p in phi_writer.parameters()) +
         sum(p.numel() for p in conviction_reader.parameters()) +
@@ -151,7 +185,7 @@ def train(args):
         {"params": btm_template.parameters(), "lr": args.lr},
     ], weight_decay=0.01)
 
-    os.makedirs("checkpoints/v21_1", exist_ok=True)
+    os.makedirs(f"{_ckpt_base}/v21_1", exist_ok=True)
 
     # === Helpers ===
     def build_btm(topic):
@@ -364,7 +398,7 @@ def train(args):
 
         # Checkpoint
         if (epoch + 1) % args.checkpoint_every == 0 or epoch == args.epochs - 1:
-            ckpt_path = f"checkpoints/v21_1/v21_1_epoch{epoch}_{args.run_name}.pt"
+            ckpt_path = f"{_ckpt_base}/v21_1/v21_1_epoch{epoch}_{args.run_name}.pt"
             torch.save({
                 "epoch": epoch,
                 "phi_writer": phi_writer.state_dict(),
@@ -449,6 +483,7 @@ def train(args):
     print(f"{'='*60}")
     print(f"  Final: {history[-1]}")
 
+    import os as _os2; _os2.makedirs("logs", exist_ok=True)
     with open(f"logs/v21_1_{args.run_name}_history.json", "w") as f:
         json.dump(history, f, indent=2)
 
@@ -458,6 +493,8 @@ if __name__ == "__main__":
 
     p = argparse.ArgumentParser()
     add_preset_args(p, agentic=False, add_training_args=True, training_phase="a")
+    p.add_argument("--checkpoint", default=None,
+                   help="Warm-start from this path. Default: <preset.checkpoint_base>/v21/BEST.pt")
     p.add_argument("--epochs", type=int, default=200)
     p.add_argument("--d_node", type=int, default=128)
     p.add_argument("--base_scale", type=float, default=0.50)

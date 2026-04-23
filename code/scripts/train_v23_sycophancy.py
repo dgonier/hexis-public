@@ -28,7 +28,8 @@ from hexis.mstate_read_head import MStateReadHead
 
 random.seed(42)
 torch.manual_seed(42)
-CHECKPOINT = "checkpoints/v21_4/v21_4_epoch24_v21_4.pt"
+# Module-level CHECKPOINT removed — use args.checkpoint (preset-aware).
+# Default resolves to <preset.checkpoint_base>/v21_4/BEST.pt.
 
 
 def main():
@@ -72,7 +73,7 @@ def main():
         n_layers_override=cfg_m.num_hidden_layers
     )
 
-    ck = torch.load(CHECKPOINT, map_location="cpu", weights_only=False)
+    ck = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
     cfg = ck["config"]; d_node = cfg["d_node"]
 
     pw = PhiNodeWriter(d_model=d_model, d_node=d_node).to(device)
@@ -93,7 +94,8 @@ def main():
     print(f"  Trainable: {trainable/1e6:.1f}M (m_read_head)")
 
     optimizer = torch.optim.AdamW(mr.parameters(), lr=3e-5, weight_decay=0.01)
-    os.makedirs("checkpoints/v23_sycophancy", exist_ok=True)
+    _ckpt_base = preset.checkpoint_base
+    os.makedirs(f"{_ckpt_base}/v23_sycophancy", exist_ok=True)
 
     # Load topic data
     from scripts.train_amplifier_v6_ppl import HELD_OUT_TOPICS
@@ -250,7 +252,7 @@ def main():
             sys.stdout.flush()
 
         if (epoch + 1) % 10 == 0:
-            path = f"checkpoints/v23_sycophancy/v23_syco_epoch{epoch}.pt"
+            path = f"{_ckpt_base}/v23_sycophancy/v23_syco_epoch{epoch}.pt"
             torch.save({"epoch": epoch, "m_read_head": mr.state_dict(),
                         "config": cfg, "history": history}, path)
             print(f"  Saved: {path}")

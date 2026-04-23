@@ -251,7 +251,9 @@ def train(args):
     train_ids = list(all_topics.keys())
     print(f"  Train: {len(train_ids)}, Held-out: {len(held_out)}")
 
-    os.makedirs(f"checkpoints/{args.run_name}", exist_ok=True)
+    _ckpt_base = (args.preset_obj.checkpoint_base
+                  if getattr(args, "preset_obj", None) else "checkpoints")
+    os.makedirs(f"{_ckpt_base}/{args.run_name}", exist_ok=True)
 
     # === Helpers ===
     def encode_text(text):
@@ -417,7 +419,7 @@ def train(args):
             sys.stdout.flush()
 
         if (epoch + 1) % args.checkpoint_every == 0 or epoch == args.epochs - 1:
-            path = f"checkpoints/{args.run_name}/{args.run_name}_epoch{epoch}.pt"
+            path = f"{_ckpt_base}/{args.run_name}/{args.run_name}_epoch{epoch}.pt"
             torch.save({
                 "epoch": epoch,
                 "v_proj": v_proj.state_dict(),

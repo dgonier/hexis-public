@@ -52,6 +52,12 @@ class PhaseSpec:
     takes_epochs: bool = True
     # Extra CLI fragments to pass (besides --preset). Empty means no extras.
     extra_args: list[str] = None
+    # Subdirectory under preset.checkpoint_base where the script saves its
+    # final-epoch checkpoint. After the phase succeeds, the orchestrator
+    # copies the newest `*.pt` in this dir to `BEST.pt` so downstream
+    # phases can warm-start without knowing the epoch count.
+    # None = skip (extraction phases don't need this).
+    checkpoint_subdir: str | None = None
 
     def __post_init__(self):
         if self.extra_args is None:
@@ -68,6 +74,45 @@ class PhaseSpec:
         cmd.extend(self.extra_args)
         return cmd
 
+    def finalize_checkpoint(self, preset: ModelPreset) -> None:
+        """Copy the newest *.pt in the phase's checkpoint subdir to BEST.pt.
+
+        No-op if checkpoint_subdir is None or the subdir doesn't exist.
+        Called after a successful phase run. Uses copy (not symlink) so
+        the BEST.pt is independently loadable without needing the epoch
+        file to stay in place.
+        """
+        import glob
+        import shutil
+        if not self.checkpoint_subdir:
+            return
+        # REPO_ROOT + preset.checkpoint_base typically resolves to the Modal
+        # volume at /checkpoints/<preset>/<subdir>/*.pt (under the symlink
+        # /root/checkpoints created by _run_train). Fall back to repo-relative.
+        subdir_abs = Path(preset.checkpoint_base) / self.checkpoint_subdir
+        if not subdir_abs.is_absolute():
+            subdir_abs = REPO_ROOT / subdir_abs
+        if not subdir_abs.exists():
+            print(f"[finalize_checkpoint] skip {self.name}: "
+                  f"{subdir_abs} doesn't exist")
+            return
+        pts = sorted(subdir_abs.glob("*.pt"), key=lambda p: p.stat().st_mtime)
+        pts = [p for p in pts if p.name != "BEST.pt"]
+        if not pts:
+            print(f"[finalize_checkpoint] skip {self.name}: "
+                  f"no *.pt in {subdir_abs}")
+            return
+        latest = pts[-1]
+        best = subdir_abs / "BEST.pt"
+        try:
+            if best.exists():
+                best.unlink()
+            shutil.copy(str(latest), str(best))
+            print(f"[finalize_checkpoint] {self.name}: "
+                  f"{latest.name} → {best.name}")
+        except OSError as e:
+            print(f"[finalize_checkpoint] {self.name}: copy failed: {e}")
+
 
 # Phase definitions. Epoch counts per M_canonical_recipe.md.
 DISPOSITIONAL_PHASES: list[PhaseSpec] = [
@@ -80,12 +125,21 @@ DISPOSITIONAL_PHASES: list[PhaseSpec] = [
         takes_epochs=False,
     ),
     PhaseSpec(
+        name="zero_points",
+        script="scripts/find_zero_points.py",
+        description="Stage 2 — Per-topic ambivalence zero-point sweep",
+        default_epochs=0,
+        smoke_epochs=0,
+        takes_epochs=False,
+    ),
+    PhaseSpec(
         name="a.v21",
         script="scripts/train_v21.py",
         description="Phase A Step 2a — Base content (v21)",
         default_epochs=100,
         smoke_epochs=5,
         extra_args=[],
+        checkpoint_subdir="v21",
     ),
     PhaseSpec(
         name="a.v21_1",
@@ -94,6 +148,7 @@ DISPOSITIONAL_PHASES: list[PhaseSpec] = [
         default_epochs=125,
         smoke_epochs=5,
         extra_args=[],
+        checkpoint_subdir="v21_1",
     ),
     PhaseSpec(
         name="a.v21_2",
@@ -102,6 +157,7 @@ DISPOSITIONAL_PHASES: list[PhaseSpec] = [
         default_epochs=100,
         smoke_epochs=5,
         extra_args=[],
+        checkpoint_subdir="v21_2",
     ),
     PhaseSpec(
         name="a.v21_4",
@@ -110,6 +166,7 @@ DISPOSITIONAL_PHASES: list[PhaseSpec] = [
         default_epochs=25,
         smoke_epochs=5,
         extra_args=[],
+        checkpoint_subdir="v21_4",
     ),
     PhaseSpec(
         name="b",
@@ -118,6 +175,7 @@ DISPOSITIONAL_PHASES: list[PhaseSpec] = [
         default_epochs=100,
         smoke_epochs=5,
         extra_args=[],
+        checkpoint_subdir="v23_compiled",  # matches default --run_name
     ),
     PhaseSpec(
         name="d",
@@ -126,6 +184,7 @@ DISPOSITIONAL_PHASES: list[PhaseSpec] = [
         default_epochs=50,
         smoke_epochs=5,
         extra_args=[],
+        checkpoint_subdir="v23_sycophancy",
     ),
 ]
 
@@ -165,7 +224,8 @@ ALIAS_MAP = {
     "dispositional": [p.name for p in DISPOSITIONAL_PHASES],
     "agentic": [p.name for p in AGENTIC_PHASES],
     "d_star": ["d_star"],
-    "a": ["a.v21", "a.v21_1", "a.v21_2", "a.v21_4"],
+    "zero_points": ["zero_points"],
+    "a": ["zero_points", "a.v21", "a.v21_1", "a.v21_2", "a.v21_4"],
     "b": ["b"],
     "d": ["d"],
 }
@@ -225,6 +285,8 @@ def run_phase(phase: PhaseSpec, preset: ModelPreset, *, smoke: bool,
     wall = time.time() - t0
     print(f"\n[hexis.train] {phase.name} exited rc={result.returncode} "
           f"in {wall/60:.1f}min")
+    if result.returncode == 0:
+        phase.finalize_checkpoint(preset)
     return result.returncode
 
 
