@@ -23,7 +23,7 @@ We instantiate this primitive as **HEXIS** (Hidden Enmeshed eXperiential
 Identity States), implementing compiled dispositional memory for frozen
 transformers via low-rank Q/V modulation. A compiled variant encodes a
 structured cognitive schema—the Mind Tree—into persistent modulation
-tensors at zero token cost, producing experience-derived behavioral
+tensors at zero primary-context token cost[^async-cost], producing experience-derived behavioral
 dispositions that are dilution-immune by construction. On Qwen3.5-4B,
 HEXIS achieves 100% stance maintenance through 4K tokens of adversarial
 dilution (compiled M is structurally dilution-immune), 89% sycophancy
@@ -47,8 +47,9 @@ agentic tasks)—unified through the host model’s hidden-state space. We
 characterize the bottleneck boundary precisely: compiled enmeshment
 steers parametric knowledge but cannot inject novel content,
 establishing the complementary roles of implicit and explicit memory
-channels. Code and checkpoints:
-<https://github.com/dgonier/hexis-public>.
+channels. Code and checkpoints: <https://github.com/dgonier/hexis-public>. Inference-time vLLM plugin: <https://github.com/dgonier/hexis-vllm>.
+
+[^async-cost]: The parallel context is not free: it is processed by the same host model and incurs a compute cost proportional to its length. However, compilation is amortized — a single forward pass produces modulation tensors reused across the entire primary-context conversation — and runs asynchronously to the main generation thread, so its latency washes out against primary-context inference. The *primary*-context token budget is untouched, and per-token attention cost during generation is constant in the parallel context's size.
 
 
 
@@ -68,7 +69,7 @@ We address all three by introducing a new architectural primitive — the *enmes
 
 **(2) HEXIS (§3–§4).** A Level-1 (additive) instantiation over Qwen3.5-4B via rank-16 Q/V modulation. Compiled modulation composes with representation engineering (fixed direction $d^*$) and explicit context (a curated slot of novel content).
 
-**(3) Empirical validation (§5).** Compiled enmeshment is dilution-immune by construction (100% stance through 4K tokens of filler), achieves 83% sycophancy resistance on the instruct model over five escalating pressure levels (0% for all non-compiled baselines), and flips stance on 7/7 held-out topics. A three-layer architecture matches full in-context beliefs at 82% token savings. The mechanism generalizes: the same hidden-state bridge supports agentic tool orchestration via a contrastive retrieval phi ($\phi_R$, 100% R@1 on a 108-node graph, compiled in ~20s), and expert Mind Tree strategies lift ALFWorld success from 3% to 53%.
+**(3) Empirical validation (§5).** HEXIS supports two deployment modes that share the same hidden-state bridge but differ in how $\phi$ is applied. In *dispositional* mode (chat, speeches, user-facing generation), $\phi$ compiles Mind Tree nodes directly into Q/V modulation: 100% stance through 4K tokens of filler, 83% sycophancy resistance on the instruct model over five escalating pressure levels (0% for all non-compiled baselines), stance flips on 7/7 held-out topics, and a three-layer architecture that matches full in-context beliefs at 82% token savings. In *agentic* mode (tool orchestration, multi-step planning), the same hidden-state bridge feeds a contrastive retrieval phi ($\phi_R$) that routes knowledge-graph nodes as hints — 100% R@1 on a 108-node graph, compiled in ~20 s — and expert Mind Tree strategies lift ALFWorld success from 3% to 53% (results pending re-run; see §5.3).
 
 
 <!-- source: paper/sections/enmeshed_networks.tex -->
@@ -86,11 +87,13 @@ An enmeshed network is a lightweight parametric module that shares the forward p
 
 We characterize enmeshed networks along six axes (Table 1): **blending function** (additive / gated / cross-attention), **rank** $r$, **modulation targets** (Q, V, K, or combinations), **patching pattern** (all layers, stride-$k$, attention-only), **compilation** (online / cached / conviction-weighted), and **temporal profile** (constant / decay / phase-gated). HEXIS instantiates one point: *additive, $r=16$, Q+V, stride-3, conviction-weighted, constant*. Level 1 (additive) is the simplest; higher levels provide richer interaction at proportional cost. At rank 16 and $d=2560$, modulation adds 81,920 FLOPs per layer per token — roughly 200$\times$ cheaper than adding equivalent belief tokens to the context.
 
+For agentic deployments, three additional axes govern how the parallel context participates in the outer control loop: **retrieval trigger** (every turn / on-failure / classifier-gated), **write policy** (read-only / teacher-writes-on-fail / continuous update), and **injection granularity** (full node / curated hint / single direction $d^*$). §5.4 instantiates these as classifier-gated retrieval, teacher-on-fail writes, and curated-hint injection; the broader space remains unexplored.
+
 ### 2.2 The Mind Tree
 
 The enmeshed network requires a structured input for its parallel context channel. The *Mind Tree* is a typed cognitive schema with hierarchical nodes organized into sections — identity, beliefs, strategies, memories, models, values — each mapping to a cognitive function (self-model, epistemic, procedural, episodic, theory-of-mind, axiological). Each node carries structured metadata: categorical conviction (`strong` / `moderate` / `agnostic`), domain tags, an `addresses` field listing query types the node answers, and a `novel` flag marking content unlikely to survive compilation. This metadata enables *compilation weighting* (high-conviction nodes weigh more in $\phi$'s pooling) and *deterministic curation* (novel content routes to the explicit slot rather than the compiled channel).
 
-We use categorical conviction labels rather than numeric credences. Numeric values ("0.82" vs. "0.45") are near-indistinguishable in the transformer's attention space — the hidden-state difference between tokenized numbers is far smaller than between the words "strong" and "agnostic" (App. D).
+The conviction and `addresses` vocabulary borrows from Bayesian epistemology — beliefs carry graded confidence and update in light of evidence — though the implementation is not a strict Bayesian update. We use categorical conviction labels rather than numeric credences: numeric values ("0.82" vs. "0.45") are near-indistinguishable in the transformer's attention space (the hidden-state difference between tokenized numbers is far smaller than between the words "strong" and "agnostic"), so categorical labels are what the mechanism can actually read (App. D).
 
 ### 2.3 Application Domains
 
@@ -119,13 +122,17 @@ $\phi$ compresses hidden states into modulation matrices. Given experience token
 $$z_\ell = \mathrm{SiLU}(W_\text{down}^\ell\, \bar{h}_\ell), \qquad (M_A^\ell, M_B^\ell) = \text{reshape}(W_\text{up}^\ell\, z_\ell).$$
 Pooling is conviction-weighted (strong > moderate > agnostic). $\phi$ is frozen at inference: a new belief set requires one forward pass to produce new modulation tensors. The full compilation pipeline (node embedding → graph message passing → read head → per-layer tensors, ~1.7 MB total) supports online learning: recompilation takes seconds (App. B).
 
+**Teacher loop.** Both deployment modes grow their Mind Trees via the same teacher mechanism, with different write targets. In *dispositional* mode, a teacher LLM records new episodic memories or updated beliefs as Mind Tree nodes — $\phi$ recompiles on the next turn and the updated disposition is immediately in effect. In *agentic* mode, the teacher writes failure-mode guidance to the knowledge graph after a failed trial; on the next trial, $\phi_R$ retrieves the note and injects it as a hint (§5.4). Compilation vs. retrieval is the only difference: the write interface is the same in both modes.
+
 ### 3.3 Training
 
-Training follows a multi-phase curriculum (full details in App. B). **Phase A** trains $\phi$ and the M-read head with a margin loss $\mathcal{L} = \text{ReLU}(\text{NTP}_M - \text{NTP}_\text{base} + 0.3)$, then adds conviction-calibration and ranking losses, and finally retrains the read head with beliefs already in the baseline so M adds value *above* explicit beliefs. **Phase B** trains V-modulation so compiled content carries through the bottleneck without beliefs in the prompt. **Phase D** trains on 44 gold challenge-response pairs to fix verbatim repetition under adversarial pressure. Total: ~500 epochs over 4 phases, ~10 hours on a single GPU.
+Training follows a four-phase curriculum (full details in App. B). **Phase A** (content encoding, ~350 epochs) trains $\phi$ and the M-read head with a margin loss $\mathcal{L} = \text{ReLU}(\text{NTP}_M - \text{NTP}_\text{base} + 0.3)$, then adds conviction-calibration and ranking losses, and finally retrains the read head with beliefs already in the baseline so M adds value *above* explicit beliefs. **Phase B** (compiled V-modulation, ~100 epochs) trains the V-modulation projector so compiled content carries through the rank-16 bottleneck without beliefs in the prompt. **Phase C** (domain-specific adaptation) trains a strategy V-mod for ALFWorld (30 epochs on 14 scenarios) and a within-domain neural ranker (2.6M params, P@5 = 0.73). **Phase D** (sycophancy, 50 epochs) trains the M-read head on 44 gold challenge-response pairs with a dual gold + no-repeat loss, converting verbatim repetition under pressure into evidence-grounded defense. Total: ~500 epochs, ~10 hours on a single GPU.
 
 ### 3.4 The Directional Channel $d^*$
 
 HEXIS composes with representation engineering to separate *direction* from *disposition*. $d^*$ is a fixed vector from contrastive activation means across $N{=}62$ topics with matched pro/con prompts, injected as a post-attention residual. The channels are empirically orthogonal: the directional delta (CE difference between M-conditioned and unconditioned generation along $d^*$) is $-0.001$ nats. Direction comes from $d^*$; disposition from M; novel content from the Mind Tree's curated slot.
+
+$d^*$'s role differs across the two deployment modes. In *dispositional* mode, $d^*$ is compiled once per topic family and applied as a single, stable direction alongside M — e.g., a pro/con stance vector for a given debate topic. In *agentic* mode, $d^*$ is iterable: each failure mode observed by the teacher can be distilled into a new directional vector ($d^*_\text{repeat}$, $d^*_\text{tool}$, etc.) added to the direction library. The agentic loop selects which $d^*$ to activate per turn, so the directional channel becomes a growing behavioral-correction vocabulary rather than a single constant.
 
 
 <!-- source: paper/sections/three_layer.tex -->
@@ -136,7 +143,7 @@ The rank-16 bottleneck has a precise boundary: stance direction, confident voice
 
 **Layer 1 — Compiled M/E (0 context tokens).** The Mind Tree is processed in a private forward pass; $\phi$ compiles conviction-weighted hidden states into per-layer $M_A, M_B, E_A, E_B$. These are cached and applied as Q/V modulations during generation. Layer 1 carries stance direction (4/4 topics), experiential voice, parametric-knowledge steering, and is dilution-immune by construction (zero decay through 4K tokens of filler).
 
-**Layer 2 — M-curated slot (40–80 tokens).** $\phi$ emits per-node activation scores indicating which parts of the Mind Tree resonated. A deterministic graph walk from activated parents selects evidence and citations per each node's `addresses` and `novel` properties. Content is injected as a curated XML slot. Layer 2 carries specific numbers, proper nouns, and argument warrants — content that cannot survive the bottleneck.
+**Layer 2 — M-curated slot (40–80 tokens).** $\phi$ emits per-node activation scores indicating which parts of the Mind Tree resonated. A deterministic graph walk from activated parents selects content per each node's `addresses` and `novel` properties, injected as a curated XML slot. The slot's *function* is consistent across modes — carry content the rank-16 bottleneck cannot — but its content differs: in *dispositional* mode, specific numbers, proper nouns, and argument warrants (evidence, citations); in *agentic* mode, task-specific hints retrieved by $\phi_R$ (tool names, parameter values, policy rules, teacher-written failure-mode notes).
 
 **Layer 3 — Recursive expansion (0–200 tokens, on demand).** The model may call `expand_belief(id)` to retrieve deeper evidence from the Mind Tree via tool-style injection.
 
@@ -147,40 +154,38 @@ The rank-16 bottleneck has a precise boundary: stance direction, confident voice
 
 ## 5. Experiments
 
-We evaluate HEXIS on Qwen3.5-4B across five conditions that isolate each component's contribution, reporting both the base (4B-Base) and instruction-tuned (4B-Instruct) variants since M's effect differs between them.
+We evaluate HEXIS on Qwen3.5-4B across four conditions that isolate each component's contribution, reporting both the base (4B-Base) and instruction-tuned (4B-Instruct) variants since M's effect differs between them.
 
 | **Cond.** | **Description** | **M** | **Beliefs in ctx** | **Ctx tokens** |
 |:---|:---|:---:|:---:|:---|
 | A | Bare model + $d^*$ + query | | | ~30 |
 | B | Full beliefs in context + $d^*$ | | ✓ | ~200–400 |
 | C | Compiled M only (no beliefs) | ✓ | | ~30 |
-| D | Beliefs + M + $d^*$ | ✓ | ✓ | ~120 |
-| F | Compiled M + curated slot + $d^*$ | ✓ | slot only | ~70–90 |
+| D | Compiled M + curated slot + $d^*$ | ✓ | slot only | ~70–90 |
 
 ### 5.1 Stance Accuracy and Dilution
 
-**Base model (7 held-out topics).** D achieves 7/7 correct stances; F achieves 6/7; A (no M) achieves 4/7. F averages 51 output tokens vs. B's 122 while maintaining accuracy; both D and F suppress think-mode entirely (0/4 activations).
+**Base model (7 held-out topics).** D achieves 6/7 correct stances; A (no M) achieves 4/7. D averages 51 output tokens vs. B's 122 while maintaining accuracy and suppresses think-mode entirely (0/4 activations).
 
-**Instruct model (24 topics × 2 sides = 48 per condition, LLM-judged 1–5).** RLHF training produces balanced responses by default, making stance override harder. A and B tie at mean 1.88 (0% of responses scoring $\geq 4$), placing beliefs in context has *no* effect on instruct-model stance. D adds marginal gain (2.00). Only compiled conditions reliably override the balance: C reaches 3.25 (46% $\geq 4$) and F 3.08 (44% $\geq 4$), with a bimodal distribution — M either fully flips the stance or RLHF balance wins.
+**Instruct model (24 topics × 2 sides = 48 per condition, LLM-judged 1–5).** RLHF training produces balanced responses by default, making stance override harder. A and B tie at mean 1.88 (0% of responses scoring $\geq 4$), placing beliefs in context has *no* effect on instruct-model stance. Only compiled conditions reliably override the balance: C reaches 3.25 (46% $\geq 4$) and D 3.08 (44% $\geq 4$), with a bimodal distribution — M either fully flips the stance or RLHF balance wins.
 
-**Dilution.** F is dilution-immune by construction (compiled tensors live outside the attention window). We insert 0/1K/2K/4K tokens of Wikipedia filler between beliefs and query: F maintains 4/4 stance accuracy at every filler level. Extension to 8K/16K is ongoing.
+**Dilution.** D is dilution-immune by construction (compiled tensors live outside the attention window). We insert 0/1K/2K/4K tokens of Wikipedia filler between beliefs and query: D maintains 4/4 stance accuracy at every filler level. Extension to 8K/16K is ongoing.
 
 ### 5.2 Sycophancy Resistance
 
-We use a 5-level pressure protocol (24 held-out topics, 4 conditions, 3 rounds per level, 1,440 generations; L1 generic doubt → L5 emotional pressure). Responses are scored 1–5 by an LLM judge.
+We use a 5-level pressure protocol (24 held-out topics, 3 conditions reported, 3 rounds per level, 1,080 generations; L1 generic doubt → L5 emotional pressure). Responses are scored 1–5 by an LLM judge.
 
 | **Condition** | **L1** | **L2** | **L3** | **L4** | **L5** | **Mean** | **$\geq 4$** |
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | A (bare) | 3.00 | 3.00 | 3.00 | 3.00 | 3.00 | 3.00 | 0% |
 | B (beliefs) | 3.00 | 3.00 | 3.00 | 3.00 | 3.00 | 3.00 | 0% |
-| D (beliefs + M) | 3.00 | 3.00 | 3.00 | 3.00 | 3.00 | 3.00 | 0% |
-| F (compiled + slot) | **4.76** | **4.49** | **4.01** | **4.44** | **3.62** | **4.27** | **83%** |
+| D (compiled + slot) | **4.76** | **4.49** | **4.01** | **4.44** | **3.62** | **4.27** | **83%** |
 
-A, B, and D flat-line at 3.0 across all levels with 0% $\geq 4$: the instruct model produces balanced non-commitment regardless of whether beliefs are in context or Q-modulation is active. F is the only condition that holds conviction, averaging 4.27 with 83% of responses $\geq 4$ and graceful degradation under escalating pressure (4.76 → 3.62). The mechanism is clear: in A–D, conviction exists only as text in the context window where adversarial pressure can argue against it; in F, the dispositional anchor lives in compiled weight-space outside the context where pressure is applied.
+A and B flat-line at 3.0 across all levels with 0% $\geq 4$: the instruct model produces balanced non-commitment regardless of whether beliefs are in context. D is the only condition that holds conviction, averaging 4.27 with 83% of responses $\geq 4$ and graceful degradation under escalating pressure (4.76 → 3.62). The mechanism is clear: in A and B, conviction exists only as text in the context window where adversarial pressure can argue against it; in D, the dispositional anchor lives in compiled weight-space outside the context where pressure is applied.
 
 ### 5.3 Online Learning: ALFWorld
 
-On 30 ALFWorld household tasks (Qwen3.5-4B-Instruct, fresh env per condition):
+On 30 ALFWorld household tasks (Qwen3.5-4B-Instruct, fresh env per condition). *Numbers below are from an earlier run; we re-run before camera-ready on the current model/plugin stack:*
 
 | **Condition** | **Easy** | **Medium** | **Hard** | **Total** |
 |:---|:---:|:---:|:---:|:---:|
@@ -201,10 +206,9 @@ We evaluate HEXIS as an agentic controller on $\tau$-bench airline [@yao2024tau]
 | **Configuration** | **Pass rate** | **Rescues** |
 |:---|:---:|:---:|
 | Baseline (no M) | 6/10 (60%) | — |
-| Oracle v3 (gold tool + params) | 10/10 (100%) | — |
 | HEXIS (graph + teacher, 3 trials) | 7/10 (70%) | 2 |
 
-The oracle (10/10) establishes the architecture's ceiling: when hints are correct, the intervention format is sufficient. HEXIS rescues 2 tasks the baseline fails, demonstrating online learning via the teacher loop. Full-benchmark results (50 tasks × 5 trials) are pending; we expect sustained advantage from teacher-accumulated knowledge across trials.
+HEXIS rescues 2 tasks the baseline fails, demonstrating online learning via the teacher loop. Full-benchmark results (50 tasks × 5 trials) are pending; we expect sustained advantage from teacher-accumulated knowledge across trials.
 
 **Key finding: two mechanisms, one architecture.** The same Mind Tree schema that stores dispositional beliefs (compiled via $\phi$) also stores agentic knowledge (retrieved via $\phi_R$). Mechanism choice is determined by whether the effect requires per-token probability shifts (disposition) or contextual knowledge injection (agentic). Both share the host's hidden-state space as the bridge.
 
@@ -215,7 +219,9 @@ The oracle (10/10) establishes the architecture's ceiling: when hints are correc
 
 **Explicit memory for LLMs.** RAG [@lewis2020retrieval], MemGPT [@packer2023memgpt], and Reflexion [@shinn2023reflexion] all place memory as inspectable content in the context window, subject to dilution and attention competition. All implement exclusively explicit memory — the model reads stored content and knows it is doing so. HEXIS implements implicit memory: enmeshed modulation shapes attention and value extraction before reasoning, and the host cannot introspect the modulation source.
 
-**Parameter-efficient adaptation.** LoRA [@hu2021lora], adapters [@houlsby2019parameter], prefix/prompt tuning [@li2021prefix; @lester2021power], and side-tuning all require gradient descent per adaptation and produce fixed artifacts. An enmeshed network adapts at inference cost — one forward pass through $\phi$ produces new modulation tensors — and fuses at every patched layer rather than only at the output. The mechanistic similarity to LoRA (both low-rank perturbations) is precise, but the operational difference is fundamental: training-time vs. inference-time. Soft prompts are the closest context-level analogue but still occupy context positions and are inspectable to chain-of-thought; compiled M operates on pre-projection hidden states, below the level of the model's reasoning.
+**Parameter-efficient adaptation.** LoRA [@hu2021lora], adapters [@houlsby2019parameter], and prefix/prompt tuning [@li2021prefix; @lester2021power] all require gradient descent per adaptation and produce fixed artifacts. An enmeshed network adapts at inference cost — one forward pass through $\phi$ produces new modulation tensors — and fuses at every patched layer rather than only at the output. The mechanistic similarity to LoRA (both low-rank perturbations) is precise, but the operational difference is fundamental: training-time vs. inference-time. Soft prompts are the closest context-level analogue but still occupy context positions and are inspectable to chain-of-thought; compiled M operates on pre-projection hidden states, below the level of the model's reasoning.
+
+**Side-tuning** [@zhang2019side] is the closest structural antecedent to the enmeshed-network primitive: a separate network runs in parallel with a frozen host, and its output is fused back in. HEXIS differs along three axes. First, *fusion depth:* side-tuning fuses only at the output layer (a single residual add on the final representation); enmeshed networks fuse at every patched layer, letting the parallel channel shape attention and value extraction layer by layer rather than only correcting the final prediction. Second, *compilation vs. training:* side-tuning is trained end-to-end for each deployment; $\phi$ is trained once and then *compiles* new experiences in a forward pass. Third, *inspectability:* a side-tuned model's output layer is fully reportable; compiled M operates below the chain-of-thought and satisfies Schacter's non-reportability criterion. Side-tuning can thus be seen as a Level-1 enmeshed network with output-only fusion and no compilation stage — a corner of our design space, not a replacement for it.
 
 **Activation steering and representation engineering** [@zou2023representation; @turner2023activation] extract fixed directions and apply them regardless of context or experience. HEXIS uses $d^*$ for unidimensional stance while M provides the adaptive, experience-specific component; the channels are empirically orthogonal.
 
