@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from qkvm.jeffrey_update import credence_to_conviction
+from hexis.jeffrey_update import credence_to_conviction
 
 
 class ConvictionReader(nn.Module):

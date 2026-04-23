@@ -172,12 +172,12 @@ def build_conviction_xml(topic, side, max_tokens=None, tokenizer=None):
 
 def train(args):
     from transformers import AutoModelForCausalLM, AutoTokenizer
-    from qkvm.model_hybrid import get_text_config
-    from qkvm.belief_tree_memory import BeliefTreeMemory, build_topic_tree, get_pro_con_node_ids
-    from qkvm.phi_node_writer import PhiNodeWriter
-    from qkvm.mstate_read_head import MStateReadHead
-    from qkvm.jeffrey_update import initialize_credences_from_zero_points
-    from qkvm.data_200_topics import TRAIN_200, HELD_OUT_200
+    from hexis.model_hybrid import get_text_config
+    from hexis.belief_tree_memory import BeliefTreeMemory, build_topic_tree, get_pro_con_node_ids
+    from hexis.phi_node_writer import PhiNodeWriter
+    from hexis.mstate_read_head import MStateReadHead
+    from hexis.jeffrey_update import initialize_credences_from_zero_points
+    from hexis.data_200_topics import TRAIN_200, HELD_OUT_200
     from scripts.train_amplifier_v6_ppl import TRAIN_TOPICS, HELD_OUT_TOPICS
 
     print("=" * 60)
@@ -441,16 +441,27 @@ def train(args):
 
 
 if __name__ == "__main__":
+    from hexis.adapters.cli import add_preset_args, resolve_preset_args
+
     p = argparse.ArgumentParser()
-    p.add_argument("--model", default="Qwen/Qwen3.5-4B-Base")
-    p.add_argument("--checkpoint", default="checkpoints/v21_4/v21_4_epoch24_v21_4.pt")
+    # Phase B = V-mod compiled training. Recipe lr=3e-4 is preset.lr_phase_b.
+    add_preset_args(p, agentic=False, add_training_args=True, training_phase="b")
+    p.add_argument("--checkpoint", default=None,
+                   help="Default: <preset.checkpoint_base>/v21_4/BEST.pt")
     p.add_argument("--epochs", type=int, default=100)
     p.add_argument("--topics_per_epoch", type=int, default=12)
-    p.add_argument("--lr", type=float, default=3e-4)
-    p.add_argument("--margin", type=float, default=0.5)
     p.add_argument("--print_every", type=int, default=1)
     p.add_argument("--checkpoint_every", type=int, default=25)
-    p.add_argument("--v_checkpoint", default=None, help="Warm-start V-mod from previous checkpoint")
+    p.add_argument("--v_checkpoint", default=None,
+                   help="Warm-start V-mod from previous checkpoint")
     p.add_argument("--run_name", default="v23_compiled")
     args = p.parse_args()
+    preset = resolve_preset_args(args)
+    if args.checkpoint is None:
+        args.checkpoint = f"{preset.checkpoint_base}/v21_4/BEST.pt"
+    # Phase B recipe: margin=1.0 (was hardcoded 0.5 in this script; recipe
+    # says 1.0 for v_scale=1.0 default). Preset.margin_base may differ —
+    # leave Phase B at its recipe value unless user overrides.
+    if args.margin == preset.margin_base:
+        args.margin = 1.0
     train(args)

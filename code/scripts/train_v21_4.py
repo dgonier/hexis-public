@@ -41,7 +41,7 @@ DSTAR_GEN_SCALE = 0.10
 
 def build_belief_prompt_for_topic(topic, side, credences=None):
     """Build hierarchical belief prompt for a topic."""
-    from qkvm.belief_prompt import (
+    from hexis.belief_prompt import (
         build_hierarchical_belief_xml, build_full_prompt, load_classifications,
     )
     classifications = load_classifications()
@@ -68,21 +68,21 @@ def statement_ntp(model, tokenizer, prompt, statement, device):
 
 def train(args):
     from transformers import AutoModelForCausalLM, AutoTokenizer
-    from qkvm.model_hybrid import get_text_config
-    from qkvm.direction_injector import (
+    from hexis.model_hybrid import get_text_config
+    from hexis.direction_injector import (
         DirectionInjector, install_direction_hooks, remove_direction_hooks,
     )
-    from qkvm.belief_tree_memory import BeliefTreeMemory, build_topic_tree, get_pro_con_node_ids
-    from qkvm.phi_node_writer import PhiNodeWriter
-    from qkvm.conviction_reader import ConvictionReader
-    from qkvm.mstate_read_head import MStateReadHead
-    from qkvm.jeffrey_update import (
+    from hexis.belief_tree_memory import BeliefTreeMemory, build_topic_tree, get_pro_con_node_ids
+    from hexis.phi_node_writer import PhiNodeWriter
+    from hexis.conviction_reader import ConvictionReader
+    from hexis.mstate_read_head import MStateReadHead
+    from hexis.jeffrey_update import (
         jeffrey_update_node, propagate_credences,
         initialize_credences_from_zero_points,
         credence_to_conviction,
     )
 
-    from qkvm.data_200_topics import TRAIN_200, HELD_OUT_200
+    from hexis.data_200_topics import TRAIN_200, HELD_OUT_200
     from scripts.train_amplifier_v6_ppl import (
         TRAIN_TOPICS as TRAIN_ORIGINAL,
         HELD_OUT_TOPICS as HELD_OUT_ORIGINAL,
@@ -422,19 +422,27 @@ def train(args):
 
 
 if __name__ == "__main__":
+    from hexis.adapters.cli import add_preset_args, resolve_preset_args
+
     p = argparse.ArgumentParser()
-    p.add_argument("--model", default="Qwen/Qwen3.5-4B-Base")
-    p.add_argument("--checkpoint", default="checkpoints/v21_2/v21_2_epoch99_v21_2.pt")
+    add_preset_args(p, agentic=False, add_training_args=True, training_phase="a")
+    p.add_argument("--checkpoint", default=None,
+                   help="Default: <preset.checkpoint_base>/v21_2/BEST.pt")
     p.add_argument("--epochs", type=int, default=100)
     p.add_argument("--d_node", type=int, default=128)
-    p.add_argument("--rank", type=int, default=16)
     p.add_argument("--topics_per_epoch", type=int, default=16)
-    p.add_argument("--lr", type=float, default=1e-4)
     p.add_argument("--grad_clip", type=float, default=1.0)
-    p.add_argument("--margin", type=float, default=0.1)
     p.add_argument("--print_every", type=int, default=1)
     p.add_argument("--checkpoint_every", type=int, default=25)
     p.add_argument("--eval_every", type=int, default=10)
     p.add_argument("--run_name", default="v21_4")
+    args = p.parse_args()
+    preset = resolve_preset_args(args)
+    if args.checkpoint is None:
+        args.checkpoint = f"{preset.checkpoint_base}/v21_2/BEST.pt"
+    # Phase A step 2d recipe: margin=0.1 (smaller than earlier phases).
+    # Preset's margin_base is the Phase A.1 default; override for 2d.
+    if args.margin == preset.margin_base:  # user didn't override
+        args.margin = 0.1
 
-    train(p.parse_args())
+    train(args)

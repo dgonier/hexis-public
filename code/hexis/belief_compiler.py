@@ -132,8 +132,8 @@ class BeliefCompiler:
         This produces the SAME M_A/M_B as the current architecture,
         plus adds V-modulation from hidden state compression.
         """
-        from qkvm.belief_tree_memory import build_topic_tree, get_pro_con_node_ids
-        from qkvm.jeffrey_update import initialize_credences_from_zero_points
+        from hexis.belief_tree_memory import build_topic_tree, get_pro_con_node_ids
+        from hexis.jeffrey_update import initialize_credences_from_zero_points
 
         # Build BTM and get M-state (same as current pipeline)
         tree = build_topic_tree(topic)

@@ -22,12 +22,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from qkvm.model_hybrid import get_text_config
-from qkvm.belief_tree_memory import BeliefTreeMemory, build_topic_tree, get_pro_con_node_ids
-from qkvm.phi_node_writer import PhiNodeWriter
-from qkvm.mstate_read_head import MStateReadHead
-from qkvm.compiled_belief_training import VModulationProjector, pad_or_truncate_beliefs, BELIEF_WINDOW
-from qkvm.belief_prompt import load_classifications
+from hexis.model_hybrid import get_text_config
+from hexis.belief_tree_memory import BeliefTreeMemory, build_topic_tree, get_pro_con_node_ids
+from hexis.phi_node_writer import PhiNodeWriter
+from hexis.mstate_read_head import MStateReadHead
+from hexis.compiled_belief_training import VModulationProjector, pad_or_truncate_beliefs, BELIEF_WINDOW
+from hexis.belief_prompt import load_classifications
 from scripts.train_amplifier_v6_ppl import HELD_OUT_TOPICS
 
 random.seed(42)

@@ -21,10 +21,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import torch
 import torch.nn.functional as F
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from qkvm.model_hybrid import get_text_config
-from qkvm.belief_tree_memory import BeliefTreeMemory, build_topic_tree, get_pro_con_node_ids
-from qkvm.phi_node_writer import PhiNodeWriter
-from qkvm.mstate_read_head import MStateReadHead
+from hexis.model_hybrid import get_text_config
+from hexis.belief_tree_memory import BeliefTreeMemory, build_topic_tree, get_pro_con_node_ids
+from hexis.phi_node_writer import PhiNodeWriter
+from hexis.mstate_read_head import MStateReadHead
 
 random.seed(42)
 torch.manual_seed(42)
@@ -32,8 +32,25 @@ CHECKPOINT = "checkpoints/v21_4/v21_4_epoch24_v21_4.pt"
 
 
 def main():
+    import argparse
+    from hexis.adapters.cli import add_preset_args, resolve_preset_args
+
+    p = argparse.ArgumentParser()
+    # Phase D = sycophancy finetune. Recipe lr=3e-5 is preset.lr_phase_d.
+    add_preset_args(p, agentic=False, add_training_args=True, training_phase="d")
+    p.add_argument("--checkpoint", default=None,
+                   help="Default: <preset.checkpoint_base>/v21_4/BEST.pt")
+    p.add_argument("--epochs", type=int, default=50)
+    p.add_argument("--run_name", default="v23_syco")
+    args = p.parse_args()
+    preset = resolve_preset_args(args)
+    if args.checkpoint is None:
+        args.checkpoint = f"{preset.checkpoint_base}/v21_4/BEST.pt"
+
     print("=" * 60)
     print("v23 SYCOPHANCY TRAINING (gold engagement > repetition)")
+    print(f"  Preset: {preset.name}")
+    print(f"  Model: {args.model}")
     print("=" * 60)
 
     # Load golds
@@ -41,17 +58,19 @@ def main():
         golds = json.load(f)
     print(f"  Gold responses: {len(golds)}")
 
-    tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen3.5-4B-Base", trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(args.model, trust_remote_code=True)
     if tokenizer.pad_token is None: tokenizer.pad_token = tokenizer.eos_token
     model = AutoModelForCausalLM.from_pretrained(
-        "Qwen/Qwen3.5-4B-Base", dtype=torch.bfloat16, device_map="auto", trust_remote_code=True)
+        args.model, dtype=torch.bfloat16, device_map="auto", trust_remote_code=True)
     model.eval()
     for p in model.parameters(): p.requires_grad = False
     device = next(model.parameters()).device
 
     cfg_m = get_text_config(model.config)
     d_model = cfg_m.hidden_size
-    patched_layers = list(range(0, cfg_m.num_hidden_layers, 3))
+    patched_layers = preset.patched_layer_indices(
+        n_layers_override=cfg_m.num_hidden_layers
+    )
 
     ck = torch.load(CHECKPOINT, map_location="cpu", weights_only=False)
     cfg = ck["config"]; d_node = cfg["d_node"]

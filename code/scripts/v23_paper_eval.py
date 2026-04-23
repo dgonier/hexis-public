@@ -17,14 +17,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import torch
 import torch.nn.functional as F_nn
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from qkvm.model_hybrid import get_text_config
-from qkvm.belief_tree_memory import BeliefTreeMemory, build_topic_tree, get_pro_con_node_ids
-from qkvm.phi_node_writer import PhiNodeWriter
-from qkvm.mstate_read_head import MStateReadHead
-from qkvm.compiled_belief_training import VModulationProjector, pad_or_truncate_beliefs, BELIEF_WINDOW, build_conviction_xml
-from qkvm.argument_curator import ArgumentCurator
+from hexis.model_hybrid import get_text_config
+from hexis.belief_tree_memory import BeliefTreeMemory, build_topic_tree, get_pro_con_node_ids
+from hexis.phi_node_writer import PhiNodeWriter
+from hexis.mstate_read_head import MStateReadHead
+from hexis.compiled_belief_training import VModulationProjector, pad_or_truncate_beliefs, BELIEF_WINDOW, build_conviction_xml
+from hexis.argument_curator import ArgumentCurator
 from scripts.train_amplifier_v6_ppl import HELD_OUT_TOPICS
-from qkvm.data_200_topics import HELD_OUT_200
+from hexis.data_200_topics import HELD_OUT_200
 
 random.seed(42)
 CHECKPOINT = "checkpoints/v21_4/v21_4_epoch24_v21_4.pt"

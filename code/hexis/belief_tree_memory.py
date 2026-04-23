@@ -15,7 +15,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import List, Dict, Optional, Tuple
 
-from qkvm.belief_tree import BeliefTree, BeliefNode, NodeType
+from hexis.belief_tree import BeliefTree, BeliefNode, NodeType
 
 
 # Edge type mapping

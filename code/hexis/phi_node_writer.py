@@ -11,8 +11,8 @@ import torch
 import torch.nn as nn
 from typing import Dict, List
 
-from qkvm.belief_tree_memory import BeliefTreeMemory
-from qkvm.belief_tree import BeliefTree
+from hexis.belief_tree_memory import BeliefTreeMemory
+from hexis.belief_tree import BeliefTree
 
 
 class PhiNodeWriter(nn.Module):

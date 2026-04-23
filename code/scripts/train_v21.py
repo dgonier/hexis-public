@@ -56,16 +56,16 @@ def statement_ntp(model, tokenizer, prompt, statement, device):
 
 def train(args):
     from transformers import AutoModelForCausalLM, AutoTokenizer
-    from qkvm.model_hybrid import get_text_config
-    from qkvm.direction_injector import (
+    from hexis.model_hybrid import get_text_config
+    from hexis.direction_injector import (
         DirectionInjector, install_direction_hooks, remove_direction_hooks,
     )
-    from qkvm.belief_tree_memory import BeliefTreeMemory, build_topic_tree, get_pro_con_node_ids
-    from qkvm.phi_node_writer import PhiNodeWriter
-    from qkvm.conviction_reader import ConvictionReader
-    from qkvm.mstate_read_head import MStateReadHead
+    from hexis.belief_tree_memory import BeliefTreeMemory, build_topic_tree, get_pro_con_node_ids
+    from hexis.phi_node_writer import PhiNodeWriter
+    from hexis.conviction_reader import ConvictionReader
+    from hexis.mstate_read_head import MStateReadHead
 
-    from qkvm.data_200_topics import TRAIN_200, HELD_OUT_200
+    from hexis.data_200_topics import TRAIN_200, HELD_OUT_200
     from scripts.train_amplifier_v6_ppl import (
         TRAIN_TOPICS as TRAIN_ORIGINAL,
         HELD_OUT_TOPICS as HELD_OUT_ORIGINAL,
@@ -389,20 +389,23 @@ def train(args):
 
 
 if __name__ == "__main__":
+    from hexis.adapters.cli import add_preset_args, resolve_preset_args
+
     p = argparse.ArgumentParser()
-    p.add_argument("--model", default="Qwen/Qwen3.5-4B-Base")
+    add_preset_args(p, agentic=False, add_training_args=True, training_phase="a")
     p.add_argument("--epochs", type=int, default=200)
     p.add_argument("--d_node", type=int, default=128)
-    p.add_argument("--rank", type=int, default=16)
     p.add_argument("--base_scale", type=float, default=10.0)
     p.add_argument("--topics_per_epoch", type=int, default=16)
     p.add_argument("--eval_topics", type=int, default=20)
-    p.add_argument("--lr", type=float, default=1e-4)
     p.add_argument("--grad_clip", type=float, default=1.0)
-    p.add_argument("--margin", type=float, default=0.3)
     p.add_argument("--print_every", type=int, default=1)
     p.add_argument("--checkpoint_every", type=int, default=25)
     p.add_argument("--eval_every", type=int, default=10)
     p.add_argument("--run_name", default="v21")
+    args = p.parse_args()
+    resolve_preset_args(args)
+    print(f"  Preset: {args.preset} (model={args.model}, rank={args.rank}, "
+          f"margin={args.margin}, lr={args.lr})")
 
-    train(p.parse_args())
+    train(args)

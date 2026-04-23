@@ -65,7 +65,7 @@ def extract_d_star(base_model, tokenizer, topics, patched_layers, device):
 def verify_d_star(base_model, tokenizer, d_star, held_out_topics,
                    patched_layers, device, scale=10.0):
     """Verify d* reproduces ~81% held-out accuracy."""
-    from qkvm.model_hybrid import get_text_config
+    from hexis.model_hybrid import get_text_config
 
     layers = base_model.model.layers
 
@@ -134,8 +134,8 @@ def verify_d_star(base_model, tokenizer, d_star, held_out_topics,
 
 def main():
     from transformers import AutoModelForCausalLM, AutoTokenizer
-    from qkvm.model_hybrid import get_text_config
-    from qkvm.data_200_topics import TRAIN_200, HELD_OUT_200
+    from hexis.model_hybrid import get_text_config
+    from hexis.data_200_topics import TRAIN_200, HELD_OUT_200
     from scripts.train_amplifier_v6_ppl import (
         TRAIN_TOPICS as TRAIN_ORIGINAL,
         HELD_OUT_TOPICS as HELD_OUT_ORIGINAL,
@@ -146,22 +146,34 @@ def main():
     print("Stage 1: Extract d* direction vector")
     print("=" * 60)
 
-    model_name = "Qwen/Qwen3.5-4B-Base"
+    import argparse
+    from hexis.adapters.cli import add_preset_args, resolve_preset_args
+
+    ap = argparse.ArgumentParser()
+    add_preset_args(ap, agentic=False, output_subpath="d_star.pt")
+    args = ap.parse_args()
+    preset = resolve_preset_args(args)
+    model_name = args.model
+    stride = args.stride
+    output_path = args.output
+    print(f"  Preset: {preset.name} (hf_id={model_name}, stride={stride})")
+
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     base_model = AutoModelForCausalLM.from_pretrained(
         model_name, dtype=torch.bfloat16, device_map="auto", trust_remote_code=True)
     base_model.eval()
-    for p in base_model.parameters():
-        p.requires_grad = False
+    for param in base_model.parameters():
+        param.requires_grad = False
 
     model_config = get_text_config(base_model.config)
     d_model = model_config.hidden_size
     n_layers = model_config.num_hidden_layers
     device = next(base_model.parameters()).device
-    stride = 3
-    patched_layers = list(range(0, n_layers, stride))
+    patched_layers = preset.patched_layer_indices(n_layers_override=n_layers) \
+        if args.stride is None \
+        else list(range(0, n_layers, stride))
 
     # Training topics for extraction (NOT held-out)
     train_topics = list(TRAIN_ORIGINAL) + list(TRAIN_200)
@@ -180,9 +192,9 @@ def main():
         print(f"  Layer {l:2d}: norm={d_star[l].norm():.4f}, shape={d_star[l].shape}")
 
     # Save
-    os.makedirs("checkpoints", exist_ok=True)
-    torch.save(d_star, "checkpoints/d_star.pt")
-    print(f"\nSaved d* to checkpoints/d_star.pt")
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+    torch.save(d_star, output_path)
+    print(f"\nSaved d* to {output_path}")
 
     # Verify: reproduce ~81% held-out
     print(f"\nVerifying on held-out...")

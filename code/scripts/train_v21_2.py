@@ -57,21 +57,21 @@ def statement_ntp(model, tokenizer, prompt, statement, device):
 
 def train(args):
     from transformers import AutoModelForCausalLM, AutoTokenizer
-    from qkvm.model_hybrid import get_text_config
-    from qkvm.direction_injector import (
+    from hexis.model_hybrid import get_text_config
+    from hexis.direction_injector import (
         DirectionInjector, install_direction_hooks, remove_direction_hooks,
     )
-    from qkvm.belief_tree_memory import BeliefTreeMemory, build_topic_tree, get_pro_con_node_ids
-    from qkvm.phi_node_writer import PhiNodeWriter
-    from qkvm.conviction_reader import ConvictionReader
-    from qkvm.mstate_read_head import MStateReadHead
-    from qkvm.jeffrey_update import (
+    from hexis.belief_tree_memory import BeliefTreeMemory, build_topic_tree, get_pro_con_node_ids
+    from hexis.phi_node_writer import PhiNodeWriter
+    from hexis.conviction_reader import ConvictionReader
+    from hexis.mstate_read_head import MStateReadHead
+    from hexis.jeffrey_update import (
         jeffrey_update_node, propagate_credences,
         initialize_credences_from_zero_points,
         credence_to_conviction,
     )
 
-    from qkvm.data_200_topics import TRAIN_200, HELD_OUT_200
+    from hexis.data_200_topics import TRAIN_200, HELD_OUT_200
     from scripts.train_amplifier_v6_ppl import (
         TRAIN_TOPICS as TRAIN_ORIGINAL,
         HELD_OUT_TOPICS as HELD_OUT_ORIGINAL,
@@ -466,16 +466,23 @@ def train(args):
 
 
 if __name__ == "__main__":
+    from hexis.adapters.cli import add_preset_args, resolve_preset_args
+
     p = argparse.ArgumentParser()
-    p.add_argument("--model", default="Qwen/Qwen3.5-4B-Base")
-    p.add_argument("--checkpoint", default="checkpoints/v21_1/v21_1_epoch124_v21_1.pt")
+    # v21_2 uses --rank_margin (not --margin), so add_training_args=False
+    # here and we manage rank/lr manually via preset fall-through.
+    add_preset_args(p, agentic=False, add_training_args=False)
+    p.add_argument("--rank", type=int, default=None,
+                   help="Override preset.rank")
+    p.add_argument("--lr", type=float, default=None,
+                   help="Override preset.lr_phase_a")
+    p.add_argument("--checkpoint", default=None,
+                   help="Default: <preset.checkpoint_base>/v21_1/BEST.pt")
     p.add_argument("--epochs", type=int, default=100)
     p.add_argument("--d_node", type=int, default=128)
-    p.add_argument("--rank", type=int, default=16)
     p.add_argument("--base_scale", type=float, default=0.50)
     p.add_argument("--topics_per_epoch", type=int, default=16)
     p.add_argument("--eval_topics", type=int, default=20)
-    p.add_argument("--lr", type=float, default=1e-4)
     p.add_argument("--grad_clip", type=float, default=1.0)
     p.add_argument("--rank_margin", type=float, default=0.05)
     p.add_argument("--content_margin", type=float, default=0.1)
@@ -485,5 +492,13 @@ if __name__ == "__main__":
     p.add_argument("--checkpoint_every", type=int, default=25)
     p.add_argument("--eval_every", type=int, default=10)
     p.add_argument("--run_name", default="v21_2")
+    args = p.parse_args()
+    preset = resolve_preset_args(args)
+    if args.rank is None:
+        args.rank = preset.rank
+    if args.lr is None:
+        args.lr = preset.lr_phase_a
+    if args.checkpoint is None:
+        args.checkpoint = f"{preset.checkpoint_base}/v21_1/BEST.pt"
 
-    train(p.parse_args())
+    train(args)

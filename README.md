@@ -33,26 +33,65 @@ checkpoints/        # Released after acceptance
 
 ## Quick Start
 
+### One-command training (new — recommended)
+
 ```bash
-# 1. Extract d* direction vectors (~5 min)
-python code/scripts/extract_d_star.py --model Qwen/Qwen3.5-4B-Base
+# Install
+cd code && pip install -e .
 
-# 2. Train base M (~2 hours)
-python code/scripts/train_v21.py --model Qwen/Qwen3.5-4B-Base --epochs 50
+# Train the full dispositional pipeline on any supported model
+python -m hexis.train --preset qwen3.5-4b
+python -m hexis.train --preset ministral-8b
+python -m hexis.train --preset qwen3.6-35b-a3b
 
-# 3. Train M with beliefs (~30 min)
-python code/scripts/train_v21_4.py --checkpoint checkpoints/v21/BEST.pt --epochs 25
+# Or just a subset
+python -m hexis.train --preset ministral-8b --phases a,b,d
+python -m hexis.train --preset ministral-8b --phases agentic
+python -m hexis.train --preset ministral-8b --smoke    # 5-epoch smoke run
 
-# 4. Evaluate
-python code/scripts/v23_paper_eval.py
+# Dry-run to preview without executing
+python -m hexis.train --preset ministral-8b --dry-run
 ```
+
+### Running individual scripts
+
+```bash
+# Dispositional d* extraction (~5 min)
+python code/scripts/extract_d_star.py --preset qwen3.5-4b
+
+# Phase A training (~6 hours on 4B, longer for bigger models)
+python code/scripts/train_v21.py --preset qwen3.5-4b
+
+# Phase B compiled V-mod (~3 hours)
+python code/hexis/compiled_belief_training.py --preset qwen3.5-4b
+
+# Phase D sycophancy (~1 hour)
+python code/scripts/train_v23_sycophancy.py --preset qwen3.5-4b
+```
+
+### Supported models (via adapter preset)
+
+Each preset encodes the architecture, recipe hyperparameters (rank, stride,
+margin, lr), chat/tool format, and vLLM deploy config for one model:
+
+- `qwen3.5-4b` — the paper's base model (dense, 4B, non-thinking)
+- `ministral-8b` — Mistral 8B medium-scale portability
+- `qwen3-30b-a3b-thinking` — Qwen3 MoE 30B thinking-mode
+- `qwen3.6-35b-a3b` — Qwen3.6 MoE 35B hybrid-attention, thinking-mode default
+
+Add a new model by registering a `ModelPreset` in `code/hexis/adapters/presets.py` — see
+`code/M_canonical_recipe.md` for the hyperparameter scaling rules.
 
 See `code/M_canonical_recipe.md` for the full reproducibility guide.
 
-## Base Model
+## Base Models
 
-All experiments use **Qwen3.5-4B-Base** (hybrid DeltaNet + full attention, 32 layers, d=2560).
-The host model is completely frozen — only the enmeshed modules (~367M params) are trained.
+The paper's main results are on **Qwen3.5-4B-Base** (hybrid DeltaNet + full
+attention, 32 layers, d=2560). The host model is always frozen — only the
+enmeshed modules (~367M params on 4B; scales with model size) are trained.
+
+Portability results on Ministral-8B and Qwen3.6-35B-A3B validate that HEXIS
+transfers across model families and scales.
 
 ## Citation
 
