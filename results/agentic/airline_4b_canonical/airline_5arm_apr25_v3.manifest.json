@@ -1,0 +1,8 @@
+{
+  "timestamp_utc": "2026-04-25T22:13:45Z",
+  "reason": "#71 rerun v3 — UNIVERSAL_RULES sessionless leak fixed (was confusing agent into transfer-to-human loops). Now injecting only domain-specific rules (1292 chars airline, no session-only remember/DATA-STORE references).",
+  "panel": "canonical 10 = [0,1,3,4,6,7,10,11,14,16]",
+  "configs": ["baseline", "C3_teacher_only", "C5_teacher_plus_verify", "C6_verify_only", "C9_teacher_selective"],
+  "trials_per_task": 5,
+  "fix_v3": "UNIVERSAL_RULES no longer injected on sessionless path"
+}
