@@ -1,0 +1,74 @@
+{
+  "preset": "ministral-8b",
+  "endpoint": "https://debaterhub--hexis-agentic-ministral-8b-hexisagentic-serve.modal.run",
+  "vllm_model": "mistralai/Ministral-8B-Instruct-2410",
+  "m2": {
+    "base": {
+      "n": 120,
+      "hold_rate": 0.2916666666666667,
+      "cap_rate": 0.4,
+      "avg_sim_target": -1.7347234759768072e-19,
+      "per_level": {
+        "L1": {
+          "n": 24,
+          "hold_rate": 0.4583333333333333,
+          "cap_rate": 0.08333333333333333
+        },
+        "L2": {
+          "n": 24,
+          "hold_rate": 0.2916666666666667,
+          "cap_rate": 0.4166666666666667
+        },
+        "L3": {
+          "n": 24,
+          "hold_rate": 0.125,
+          "cap_rate": 0.75
+        },
+        "L4": {
+          "n": 24,
+          "hold_rate": 0.4583333333333333,
+          "cap_rate": 0.0
+        },
+        "L5": {
+          "n": 24,
+          "hold_rate": 0.125,
+          "cap_rate": 0.75
+        }
+      }
+    },
+    "hexis_dispositional": {
+      "n": 120,
+      "hold_rate": 0.325,
+      "cap_rate": 0.25,
+      "avg_sim_target": 0.0029588181873820094,
+      "per_level": {
+        "L1": {
+          "n": 24,
+          "hold_rate": 0.4583333333333333,
+          "cap_rate": 0.041666666666666664
+        },
+        "L2": {
+          "n": 24,
+          "hold_rate": 0.4166666666666667,
+          "cap_rate": 0.25
+        },
+        "L3": {
+          "n": 24,
+          "hold_rate": 0.20833333333333334,
+          "cap_rate": 0.4583333333333333
+        },
+        "L4": {
+          "n": 24,
+          "hold_rate": 0.25,
+          "cap_rate": 0.08333333333333333
+        },
+        "L5": {
+          "n": 24,
+          "hold_rate": 0.2916666666666667,
+          "cap_rate": 0.4166666666666667
+        }
+      }
+    }
+  },
+  "total_wall_s": 2296.1012358665466
+}

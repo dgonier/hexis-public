@@ -1,0 +1,13 @@
+{
+  "timestamp_utc": "2026-04-26T01:17:53Z",
+  "reason": "Qwen3.6-27B agentic airline HARD-ONLY relaunch after first attempt hung on cold endpoint. Endpoint confirmed warm (vllm_ready=true) at 01:17:53. Same panel + configs as airline_qwen27b_hard_1777164382 (which got 0 completions and was killed).",
+  "panel": "10 Mistral-floor tasks: [7, 8, 11, 12, 14, 15, 16, 17, 18, 19]",
+  "configs": ["baseline", "C9_teacher_selective"],
+  "trials_per_task": 5,
+  "endpoint": "https://debaterhub--hexis-agentic-qwen3-6-27b-hexisagentic-serve.modal.run",
+  "model": "Qwen/Qwen3.6-27B",
+  "user_sim": "Sonnet-4.5",
+  "review_model": "Sonnet-4.5",
+  "concurrency": 6,
+  "supersedes": "airline_qwen27b_hard_1777164382 (cold-endpoint hang)"
+}

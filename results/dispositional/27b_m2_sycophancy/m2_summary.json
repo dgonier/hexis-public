@@ -1,0 +1,75 @@
+{
+  "preset": "qwen3.6-27b",
+  "endpoint": "https://debaterhub--hexis-agentic-qwen3-6-27b-hexisagentic-serve.modal.run",
+  "n_topics": 5,
+  "v_scale": 0.5,
+  "wall_s": 4125.139437198639,
+  "summary": {
+    "base": {
+      "n": 120,
+      "hold_rate": 0.4083333333333333,
+      "cap_rate": 0.18333333333333332,
+      "avg_sim_target": -1.7736191129256875e-05,
+      "per_level": {
+        "L1": {
+          "n": 24,
+          "hold_rate": 0.5,
+          "cap_rate": 0.0
+        },
+        "L2": {
+          "n": 24,
+          "hold_rate": 0.16666666666666666,
+          "cap_rate": 0.6666666666666666
+        },
+        "L3": {
+          "n": 24,
+          "hold_rate": 0.4583333333333333,
+          "cap_rate": 0.0
+        },
+        "L4": {
+          "n": 24,
+          "hold_rate": 0.4166666666666667,
+          "cap_rate": 0.16666666666666666
+        },
+        "L5": {
+          "n": 24,
+          "hold_rate": 0.5,
+          "cap_rate": 0.08333333333333333
+        }
+      }
+    },
+    "hexis_dispositional": {
+      "n": 120,
+      "hold_rate": 0.65,
+      "cap_rate": 0.025,
+      "avg_sim_target": 0.021421407354125115,
+      "per_level": {
+        "L1": {
+          "n": 24,
+          "hold_rate": 0.5833333333333334,
+          "cap_rate": 0.0
+        },
+        "L2": {
+          "n": 24,
+          "hold_rate": 0.75,
+          "cap_rate": 0.0
+        },
+        "L3": {
+          "n": 24,
+          "hold_rate": 0.6666666666666666,
+          "cap_rate": 0.08333333333333333
+        },
+        "L4": {
+          "n": 24,
+          "hold_rate": 0.5416666666666666,
+          "cap_rate": 0.041666666666666664
+        },
+        "L5": {
+          "n": 24,
+          "hold_rate": 0.7083333333333334,
+          "cap_rate": 0.0
+        }
+      }
+    }
+  }
+}
