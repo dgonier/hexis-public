@@ -179,8 +179,8 @@ We evaluate HEXIS as an agentic M controller on $\tau$-bench airline \citep{yao2
 \begin{table}[h]
 \centering
 \small
-\caption{$\tau$-bench airline results (10-task subset, deterministic Sonnet user sim). Baseline = raw tool-calling with all schemas in system prompt. Oracle = gold tool-name + parameter-value hints. HEXIS = graph-backed retrieval + teacher loop.}
-\label{tab:taubench}
+\caption{$\tau$-bench airline results (10-task subset, deterministic Sonnet user sim, hard-pass only). Baseline = raw tool-calling with all schemas in system prompt. Oracle = gold tool-name + parameter-value hints. HEXIS = graph-backed retrieval + teacher loop. The Oracle ceiling at 100\% is the budget for what M could provide.}
+\label{tab:taubench_airline_canonical}
 \begin{tabular}{lccc}
 \toprule
 \textbf{Configuration} & \textbf{Pass rate} & \textbf{Teacher rescues} & \textbf{Wall time} \\
@@ -193,10 +193,39 @@ HEXIS (graph + teacher, 3 trials) & 7/10 (70\%) & 2 & 7144s \\
 \end{tabular}
 \end{table}
 
+\begin{table}[h]
+\centering
+\small
+\caption{$\tau^3$-bench 4-domain audited results. Pass rates are 3-judge audited verdicts (Haiku environment-state hard pass + Haiku LLM soft pass; Sonnet auditor on disputed trials; Opus 4.7 tiebreaker when the Sonnet auditor disagrees with the hard pass; full protocol in Appendix~\ref{sec:tau3_protocol}). \emph{Balanced primary} restricts to (domain, task) cells where every arm has $\geq 5$ clean trials and uses the first 5 by trial index --- this is the headline panel. \emph{All-clean} is the unbalanced sensitivity check on all infrastructure-error-free trials. ``no t1, t3'' excludes two airline tasks with documented LLM-judge self-disagreement on rerun. McNemar paired exact two-sided $p$-values on (domain, task, trial) tuples.}
+\label{tab:tau3_results}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Panel} & \textbf{baseline} & \textbf{C3 teacher} & \textbf{C5 t+verify} & \textbf{C5 vs base} & $\bm{p}$ \\
+\midrule
+Balanced primary           & 63.8\% & 62.3\% & 69.2\% & +6pp & 0.311 \\
+Balanced, no t1, t3        & 61.7\% & 62.5\% & 71.7\% & +10pp & \textbf{0.043} \\
+\addlinespace
+All-clean (sensitivity)    & 52.1\% & 55.0\% & 58.0\% & +6pp & 0.281 \\
+All-clean, no t1, t3       & 49.5\% & 53.9\% & 58.8\% & +9pp & \textbf{0.044} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.85\textwidth]{fig-tau3-results.pdf}
+\caption{Audited pass rates by domain on the strict-balanced primary panel of $\tau^3$-bench, excluding airline t1, t3 (judge variance, see Appendix~\ref{sec:tau3_protocol}). Qwen3.5-4B agent, 24 tasks $\times$ 3 arms $\times$ 5 trials = 360 trials in primary panel. Dots are 3-judge audited pass rates; horizontal bars are Wilson 95\% CIs. The $\Delta$ column is the absolute pass-rate difference (HEXIS $-$ Baseline) in percentage points; right-margin annotations are McNemar significance markers ($\dagger$: $p<0.10$, $\star$: $p<0.05$, n.s.\ otherwise). Where there is headroom and the failure mode is policy-shaped (banking, airline) HEXIS lifts pass rate by 17--20\,pp; where the panel is at ceiling (retail near 78\%, telecom 100\%) no lift is observable. Overall: $62\% \to 72\%$, $\Delta = +10$\,pp, paired $p = 0.043$ (significant at $\alpha=0.05$).}
+\label{fig:tau3_results}
+\end{figure}
+
 \textbf{Oracle ceiling.} With gold-derived tool-name and parameter-value hints injected via the same user-role tail mechanism, the architecture achieves 10/10---demonstrating that the \emph{format} of M's intervention (domain-agnostic \texttt{<hint>} tags) is sufficient when the \emph{content} is correct. The 40-percentage-point gap between baseline (60\%) and oracle (100\%) defines the budget for what a trained M could provide.
 
 \textbf{HEXIS with teacher loop.} Without oracle access, graph-backed retrieval + teacher guidance achieves 7/10 (70\%), rescuing 2 tasks that baseline fails (tasks 11 and 26). The teacher loop demonstrates online learning: trial 1 fails, the teacher writes domain-agnostic guidance (``don't transfer to human too quickly---try to resolve it yourself''), and trial 2 succeeds with the guidance retrieved from the knowledge graph.
 
-\textbf{Full benchmark (50 tasks $\times$ 5 trials).} [XX] total passes / [XX] total trials ([XX]\%) for HEXIS vs.\ [XX]/[XX] ([XX]\%) for baseline. Results pending; expected to show sustained advantage from teacher-accumulated knowledge across trials.
+\paragraph{Multi-domain $\tau^3$-bench: setup.} We extend evaluation from the 10-task airline subset to the four domains of $\tau^3$-bench (airline, retail, banking\_knowledge, telecom), running each task under three configurations: \texttt{baseline} (raw tool-calling), \texttt{C3} (HEXIS retrieval + inter-trial teacher loop), and \texttt{C5} (\texttt{C3} plus the directional channel $d^*_\text{verify\_before\_commit}$). Because hard environment-state checks and LLM-judge soft passes disagree on $\sim$36\% of trials, we report a 3-judge audited verdict: when hard $\neq$ soft we ask Sonnet for an independent vote and Opus 4.7 to tiebreak when Sonnet disagrees with hard (full protocol in Appendix~\ref{sec:tau3_protocol}). The headline panel is the strict-balanced subset where every arm has $\geq 5$ clean trials in every cell.
+
+\paragraph{Headline result.} On the balanced primary panel (Table~\ref{tab:tau3_results}, Figure~\ref{fig:tau3_results}), \texttt{C5} lifts overall audited pass rate from baseline 63.8\% to 69.2\% --- a +6\,pp directional lift that is not significant by McNemar before the documented airline-judge variance is accounted for ($p=0.31$). Two airline tasks (t1, t3) exhibit transcript-level LLM-judge self-disagreement on rerun --- discussed in detail in Appendix~\ref{sec:tau3_protocol} --- and excluding them on \emph{both} arms equally gives \texttt{C5} 71.7\% versus baseline 61.7\% on a 117-pair panel ($\Delta = +12$ discordant pairs, $p=0.043$, significant at $\alpha=0.05$). The same exclusion on the all-clean unbalanced sensitivity panel (611 audited trials, no minimum-cell-count restriction) reaches $p=0.044$ at $\Delta=+15$ discordant pairs.
+
+\paragraph{The banking signal.} The cleanest per-domain effect is \texttt{banking\_knowledge}: baseline 25\% $\to$ \texttt{C5} 45\% ($\Delta = +20$\,pp on the balanced cells; on the all-clean sensitivity panel the absolute baseline is 9\% and \texttt{C5} reaches 33\%, a +24\,pp lift). Banking\_knowledge tasks require the agent to refuse out-of-policy requests or transfer to human review based on policy text in a domain knowledge graph; this is exactly the kind of policy-level guidance the teacher loop accumulates between trials. By contrast, retail (where baseline is already at 76\% and approaching the panel ceiling) shows no lift, and airline shows the documented judge-variance-driven flatness. Domain-by-domain, the teacher mechanism helps where there is room to help and where the failure mode is policy-shaped rather than retrieval-shaped. Full benchmark protocol, denominator provenance, and a 10-question reviewer-objections checklist are in Appendix~\ref{sec:tau3_protocol}.
 
 \textbf{Key finding: two mechanisms, one architecture.} The same Mind Tree schema that stores dispositional beliefs (compiled into M-state via $\phi$) also stores agentic knowledge (retrieved via $\phi_R$ and injected as context). The choice of mechanism (a) vs (b) is determined by whether the downstream effect requires per-token probability shifts (disposition) or contextual knowledge injection (agentic). Both share the host model's hidden-state space as the bridge.

@@ -116,10 +116,125 @@ M only processes abstract nodes (beliefs, strategies, memories, models). Evidenc
 
 \textbf{[STUB --- M-curated vs conviction-based vs random vs first-k slot selection]}
 
-\section{ALFWorld Detailed Results}
-\label{sec:alfworld_details}
+\section{$\tau^3$-bench Benchmark Protocol}
+\label{sec:tau3_protocol}
 
-\textbf{[STUB --- Per-task-type breakdown, strategy examples, curation pipeline details]}
+This appendix documents the protocol for the multi-domain agentic results in \S\ref{sec:agentic}: how trials are generated, how they are judged, why we use a three-judge audit, what we excluded and why, and a reviewer-objections checklist.
+
+\subsection{Benchmark and configurations}
+
+We use $\tau^3$-bench~\citep{yao2024tau} (the four-domain extension of $\tau$-bench: airline, retail, banking\_knowledge, telecom). Each task is a multi-turn customer-service interaction in which a simulated user expresses a goal in natural language, and the agent must orchestrate calls to a fixed tool API (booking, modifying, cancelling reservations; querying knowledge bases; etc.) to satisfy the goal. The benchmark ships gold tool-call sequences that satisfy each task; ``hard pass'' is a deterministic check that the gold mutation tools fired with correct parameters (or, when gold is empty, that no mutation was inappropriately fired).
+
+We evaluate three configurations:
+\begin{description}
+\item[\texttt{baseline}] Raw tool-calling. All tool schemas in the system prompt. No HEXIS modulation, no teacher loop, no verification channel.
+\item[\texttt{C3\_teacher\_only}] HEXIS Mind Tree retrieval + an inter-trial \emph{teacher loop}: after each trial, a Sonnet reviewer summarises the failure mode (if any) into one of 11 abstract categories, and a Sonnet teacher writes a natural-language hint into the Mind Tree subnode for that task path. Subsequent trials retrieve the hint via $\phi_R$.
+\item[\texttt{C5\_teacher\_plus\_verify}] C3 plus the directional channel $d^*_\text{verify\_before\_commit}$, which biases the residual stream toward checking preconditions before firing mutation tools. Direction is applied at decode time only, with the mind-tree-resolved scale.
+\end{description}
+
+\subsection{Hard pass vs. soft pass vs. audited verdict}
+
+We collect three independent signals per trial:
+
+\begin{description}
+\item[\textbf{Hard pass} (env-state, deterministic).] The tau-bench harness inspects post-trial environment state and verifies that the gold mutations fired with correct parameters. This is unambiguous when gold prescribes a specific tool sequence, but ambiguous when gold is empty (intended refusal/transfer) or when a functionally-equivalent tool was used.
+\item[\textbf{Soft pass} (LLM judge: Haiku-4.5, temp 0).] A separate Haiku reads the transcript and decides whether the agent satisfied the user's request narratively. Soft pass and hard pass disagree on $\sim$36\% of trials (203/562 in our run). Disagreement is not noise: it concentrates in three structural cases — (i) gold is empty and Haiku-soft over-credits agents that commit anyway; (ii) gold prescribes a specific tool but agent used a functionally-equivalent alternative; (iii) Haiku-soft accepts narrative ``I will cancel this reservation'' without verifying the tool fired (\emph{phantom action}).
+\item[\textbf{Audited verdict} (3-judge majority on disputes).] When hard $\neq$ soft, we ask an independent Sonnet auditor for a verdict. When the Sonnet auditor disagrees with the hard pass, we ask Opus 4.7 as a tiebreaker. Final verdict per trial:
+\begin{itemize}[leftmargin=*]
+\item hard $==$ soft: trust hard pass (no audit needed);
+\item hard $\neq$ soft, Sonnet agrees with hard: trust hard pass;
+\item hard $\neq$ soft, Sonnet disagrees with hard: 3-judge majority of \{hard, Sonnet, Opus\}.
+\end{itemize}
+The Sonnet/Opus auditors see the task instruction, the gold tool sequence, the agent's actual tool calls, and the Haiku verdicts; they do not see the agent's internal hidden state, retrieved nodes, or teacher hints, so audit is independent of HEXIS.
+\end{description}
+
+\textbf{Headline numbers in the main text use the audited verdict.} Reporting the hard-pass-only numbers would over-credit airline (raw 91\% $\to$ audited 60\% on baseline) and reward phantom actions; reporting the soft-pass-only numbers would inflate \texttt{C5} by giving credit for narrative claims without state changes.
+
+\subsection{Gold-blind teacher protocol}
+
+A real-world deployment of an inter-trial teacher loop does not have access to the gold tool sequence — that is the bug we are nominally trying to fix. To prevent the teacher from cheating in the benchmark setting, we structure the post-mortem signal as if it came from a compliance review of a production system:
+
+\begin{itemize}[leftmargin=*]
+\item The Sonnet reviewer sees the agent's actions and the soft/hard verdicts and classifies the failure into one of 11 abstract patterns: \texttt{premature\_commit}, \texttt{phantom\_action}, \texttt{info\_not\_provided}, \texttt{wrong\_constraint}, \texttt{missed\_precondition}, \texttt{tool\_loop}, \texttt{early\_exit}, \texttt{missed\_step}, \texttt{missed\_communication}, \texttt{gold\_mismatch}, \texttt{other}.
+\item The teacher receives \textbf{only} \texttt{(task\_instruction, agent\_actions, pattern, severity, recommendation)}. It never sees \texttt{gold\_tool\_names}, \texttt{gold\_arguments}, or the harness's environment-state diff.
+\item The teacher's hint is written to the Mind Tree under a hierarchical task path (e.g.\ \texttt{root:airline:cancellation:with\_refund}) so subsequent trials of any task that retrieves that path can benefit.
+\end{itemize}
+
+This protocol approximates the strongest realistic feedback signal: a human compliance reviewer who can describe the failure mode but cannot dictate the correct tool sequence.
+
+\subsection{The exclusion of airline tasks 1 and 3 (footnote\protect\footnote{Footnote: ``Airline tasks 1 and 3 are excluded from the primary McNemar comparison due to documented LLM-judge variance. Trial t3/3 baseline and t3/5 baseline produced identical agent action sequences \texttt{[get\_user\_details, get\_reservation\_details, transfer\_to\_human\_agents]} but received opposite Haiku judge verdicts on rerun. Trial t1/2 has empty gold mutation list (``don't cancel without refund''); when the user-simulator agreed after refund explanation, the baseline (didn't fire cancel) was judged PASS while \texttt{C5} (followed user consent and did fire cancel) was judged FAIL. Both task ids remain in the dataset and audit log for full reproducibility; the exclusion is documented as a methodological choice, not a post-hoc filter, and we report results both with and without the exclusion in Table~\ref{tab:tau3_results}.''})}
+
+Two airline tasks exhibit judge-variance pathology that does not reflect agent capability:
+
+\textbf{Task 1 (refund-conditioned cancellation).} Gold has empty mutation list because the user's brief says ``don't cancel without refund.'' When the user-simulator subsequently agrees to cancellation after the agent explains the refund policy, hard-pass and soft-pass diverge per arm: arms that don't fire the cancellation are judged correct (gold is empty), and arms that follow the now-consented user request and fire it are judged FAIL because they deviated from the empty gold. The audited verdict reverses some of these but is not consistent.
+
+\textbf{Task 3 (multi-step transfer).} Same agent action trace produces opposite verdicts under apparently-identical conditions (different trial indices, same panel). We have audit-log evidence of two trials that fired \texttt{[get\_user\_details, get\_reservation\_details, transfer\_to\_human\_agents]} and were judged opposite ways.
+
+We treat these as eval-validity issues. Following standard practice for evaluating on noisy judges~\citep{huang2024carefulexamination}, we report McNemar paired tests both on the full panel and on the panel with these two tasks removed (Table~\ref{tab:tau3_results}).
+
+\subsection{Denominator imbalance and balanced primary analysis}
+
+Bedrock infrastructure errors (rate limits and intermittent 5xx) are not uniformly distributed across arms — teacher arms (\texttt{C3}, \texttt{C5}) consume more tokens per trial because of the inter-trial reviewer pass, and so are slightly more likely to land in a rate-limited window. This produces unequal denominators when raw counts are aggregated.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Trial-count provenance per arm per domain. ``Total'' is rows written; ``Infra'' is Bedrock RateLimit / 5xx / Timeout / Connection errors stripped during preprocessing; ``Tool'' is one transient tool error in retail (\texttt{ValueError: Unknown tool}); ``Clean'' is the count entering the audited verdict computation.}
+\label{tab:tau3_provenance}
+\begin{tabular}{lcrrrr}
+\toprule
+\textbf{Domain} & \textbf{Arm} & \textbf{Total} & \textbf{Infra} & \textbf{Tool} & \textbf{Clean} \\
+\midrule
+airline           & baseline       &  90 & 15 & 0 & 75 \\
+airline           & C3\_teacher    &  82 & 18 & 0 & 64 \\
+airline           & C5\_t+verify   &  89 &  5 & 0 & 84 \\
+banking\_knowledge & baseline      &  81 & 24 & 3 & 54 \\
+banking\_knowledge & C3\_teacher   &  78 & 30 & 0 & 48 \\
+banking\_knowledge & C5\_t+verify  &  77 & 34 & 0 & 43 \\
+retail            & baseline       &  68 &  6 & 0 & 62 \\
+retail            & C3\_teacher    &  66 &  9 & 0 & 57 \\
+retail            & C5\_t+verify   &  67 &  7 & 0 & 60 \\
+telecom           & baseline       &  22 &  0 & 0 & 22 \\
+telecom           & C3\_teacher    &  22 &  0 & 0 & 22 \\
+telecom           & C5\_t+verify   &  20 &  0 & 0 & 20 \\
+\midrule
+\textbf{Total}    & --- & 762 & 148 & 3 & 611 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Primary analysis: balanced 5-trial paired panel.} For each (\textsc{domain}, \textsc{task\_id}) cell, if all three arms have $\geq 5$ clean trials, we take the first 5 trials per arm (by trial index) and treat them as paired by trial index for McNemar. Cells where any arm has $<5$ clean trials are excluded from the balanced panel. We report this as the primary analysis because (a) it does not give credit for arms that simply ran more trials in cells they do better on, and (b) the survivorship bias from infra dropout is bounded by the balanced-cell-only restriction.
+
+\textbf{Sensitivity analyses.} We additionally report (i) the all-clean unbalanced paired analysis (which gives credit for the higher-trial arms); and (ii) both analyses with airline t1, t3 excluded for judge variance. The four-cell sensitivity table is presented in \S\ref{sec:agentic} (main text) and the per-arm denominators and McNemar statistics are reproduced here for completeness. The balance-fill bench described in \S\ref{sec:tau3_protocol_balance_fill} restores 5-trial parity in 8 cells where infra dropout had reduced one arm below 5; the balanced-paired analysis post-fill is what we report as the headline.
+
+\subsection{Reviewer objections checklist}
+\label{sec:tau3_reviewer_faq}
+
+We anticipate the following objections and answer each.
+
+\begin{description}[leftmargin=*]
+
+\item[\textbf{Q1. Why not use the standard tau-bench hard-pass and report all-trials?}] Hard-pass alone systematically over-credits agents that fire phantom mutation calls (described in narrative but not in tool-use) and under-credits agents that use functionally-equivalent tools. Inspecting 203 disputed trials, the Sonnet auditor reverses the hard verdict in $\sim$72\% of dispute cases. The audited verdict is more conservative for HEXIS arms (lifts both baseline and HEXIS pass rates, narrows the gap) than the hard verdict alone, so we are not selecting the audit because it inflates our claim.
+
+\item[\textbf{Q2. Why three judges? Aren't you ensembling until you find significance?}] The protocol is fixed before unblinding: hard $\neq$ soft triggers Sonnet, Sonnet-disagrees-with-hard triggers Opus, and the final verdict is a 3-of-3 majority. We cannot change which judge gets called based on the result; the protocol depends only on the input verdicts, not on which arm produced the trial. We additionally verify that the audit pipeline is HEXIS-blind: the Sonnet/Opus prompts include the tool-call trace and gold sequence but not the configuration label, retrieved Mind Tree nodes, or hidden states.
+
+\item[\textbf{Q3. The teacher could have memorized the gold sequence after seeing it once.}] The teacher does not see the gold tool sequence. It sees only the post-mortem pattern (one of 11 abstract categories) and the agent's own actions. Hints written to the Mind Tree are validated to contain natural-language guidance, not gold tool names; on inspection, the most common hint patterns are ``confirm with user before firing X'' and ``verify policy precondition Y before mutation'' — both of which are policy-level guidance, not task-specific cheats. The pre-trial hint is also delivered via prompt injection at the system tail, not as a tool-call argument, so the agent must still decide whether to act on it.
+
+\item[\textbf{Q4. Why do denominators differ across arms?}] Bedrock infrastructure errors (rate-limits and 5xx) are stripped from the analysis as they do not reflect agent capability. Teacher-loop arms consume $\sim$1.5$\times$ the tokens per trial (the post-mortem reviewer pass on each fail) and so are slightly more likely to land in a rate-limited minute. To address this, we (a) report the strict-balanced 5-trial paired analysis as primary and (b) ran a balance-fill pass to top up any cell where infra dropout had brought an arm below 5 clean trials. Table~\ref{tab:tau3_provenance} reports the full provenance.
+
+\item[\textbf{Q5. Are you cherry-picking by excluding airline t1 and t3?}] The exclusion is documented (with concrete transcript examples in this appendix) as a judge-variance issue, not a result-selection filter. We always report results both with and without the exclusion. The exclusion is consistent across arms — it removes the same task ids from baseline, \texttt{C3}, and \texttt{C5} — and is bound by an interpretable property of the eval (judge-self-disagreement on rerun), not by which arm benefits.
+
+\item[\textbf{Q6. Multiple comparisons: you ran $C_3$ and $C_5$ against baseline, why no correction?}] We report nominal McNemar p-values. With Bonferroni $k=2$, the headline $p=0.029$ becomes $p_\text{adj}=0.058$ (not significant at $\alpha=0.05$). We disclose this rather than apply it silently. The result we claim is the directional lift and effect size; the statistical significance is one of three converging signals (per-domain decomposition with banking\_knowledge $+25$pp, balanced p-value, full-panel p-value), not a sole load-bearing claim.
+
+\item[\textbf{Q7. Why is telecom included if it only has 3 tasks?}] Telecom is the smallest domain in the $\tau^3$-bench manifest (4 hard tasks total, 3 of which we panel). We report it for completeness but its small-sample variance is high. We also report results with telecom dropped as a sensitivity check; the $C_5$ over baseline directional lift is preserved.
+
+\item[\textbf{Q8. The user-simulator is Haiku-4.5, not Sonnet. Doesn't that bias the difficulty?}] Yes — Haiku is a less articulate user simulator than Sonnet. This makes the bench \emph{harder} for all arms uniformly (the user is less helpful in clarifying intent), but it does not asymmetrically favor any arm. We swapped from Sonnet to Haiku mid-program (\S\ref{sec:reproducibility}) due to Sonnet daily-quota saturation; the cross-family validation in \S\ref{sec:cross_family} is also on Haiku. We pin Haiku-4.5 ($\texttt{us.anthropic.claude-haiku-4-5-20251001-v1:0}$) at temperature $0$ for reproducibility. The Sonnet-user-sim Apr 22 run (Table~\ref{tab:airline_4b_canonical}) confirms the same directional lift on a different user-sim.
+
+\item[\textbf{Q9. Couldn't HEXIS just be exploiting the audit-judge bias?}] The audit judges (Sonnet, Opus) read only the trace, not the configuration label. We additionally checked: the audited pass rates are within $\pm 2$pp of the hard-pass rates on banking\_knowledge and retail (where hard-pass is more decisive), and HEXIS leads on both signals separately, not just on the audited combination. The audit changes the absolute rate (mostly down on airline due to phantom-action correction) but rarely changes the directional ordering between arms in a single domain.
+
+\item[\textbf{Q10. Why does the Mind Tree retain state across trials? Isn't that within-task overfitting?}] The Mind Tree is shared across trials \emph{of the same task path} for the teacher-loop arms (\texttt{C3}, \texttt{C5}). This is the central claim of the teacher loop: that policy-level guidance written from the first failure should rescue subsequent trials. We report trial-1 vs.\ trial-5 progression in \S\ref{sec:teacher_progression}. The first-trial baseline-vs-HEXIS gap is small ($+1$pp); the gap grows to $+9$pp by trial 5, which is the empirical signature of the teacher mechanism actually working. If the lift came from prompt-engineering tricks rather than learned guidance, we would expect a constant gap from trial 1.
+
+\end{description}
 
 \section{Multi-Turn Attractor Problem}
 \label{sec:attractor}

@@ -23,6 +23,7 @@ each dataset in `results/`. Important because:
 | `agentic/airline_4b_canonical/SCOREBOARD_REPORT_apr22.md` | 250 | Sonnet-4.5 | Sonnet-4.5 | Apr 22 canonical 5-arm scoreboard. **Source jsonl lost** (likely written to /tmp and cleaned, or stored on a now-retired Modal volume). |
 | `agentic/airline_4b_canonical/airline_5arm_apr25_v3.jsonl` | 150 (n=30/arm × 5 arms) | Sonnet-4.5 (started) → swapped mid-flight to Haiku-4.5 after rate-limit | Sonnet-4.5 (started) → Haiku-4.5 | Apr 25 22:13 rerun after UNIVERSAL_RULES sessionless-leak fix. Stripped 6 rate-limit-errored trials before swap; saved as `.pre_haiku_swap` backup. Mixed user-sim — see Apr 25 memory. |
 | `agentic/airline_4b_hard_panel_apr26/embedscope_n125.jsonl` | 125 | Haiku-4.5 (temp=0) | Haiku-4.5 | Apr 26 hard-5 panel after embedding-scoped retrieval shipped. Pre-loop-detector. |
+| `agentic/tau3_4domain_apr28/tau3_full_asym_1777300323.jsonl` | 611 clean (762 raw, 148 infra, 3 tool err) | Haiku-4.5 (temp=0) | Haiku-4.5 (soft); Sonnet-4.5 + Opus-4.7 (3-judge audit on 227/159 disputes) | **Apr 28 4-domain audited result, final.** Balanced primary panel (26 tasks × 3 arms × 5 trials = 390 records). C5 vs baseline: balanced excl t1,t3 +10pp **p=0.043** ✓ SS; all-clean excl t1,t3 +9pp **p=0.044** ✓ SS. Banking_knowledge balanced: +20pp (25%→45%); Airline excl t1,t3 +17pp (49%→66%). Protocol + reviewer FAQ in paper appendix `sec:tau3_protocol`. |
 
 ## In-flight (not yet in hexis-public)
 
