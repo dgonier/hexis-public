@@ -55,30 +55,11 @@ F (compiled + slot) & \textbf{4.76} & \textbf{4.49} & \textbf{4.01} & \textbf{4.
 \end{tabular}
 \end{table}
 
-A, B, D score a flat 3.0 across all levels with 0\% $\geq$4. F is the only condition that holds conviction (4.27 mean, 83\% $\geq$4), with graceful degradation under pressure (4.76 at L1 to 3.62 at L5). The mechanism is direct: in A--D, conviction lives as text in the context window where pressure can be argued against; in F, conviction lives in compiled weight-space outside the context. Cross-family validation on Qwen3.6-27B and Mistral-Ministral-8B reproduces the lift (Appendix~\ref{sec:scale}).
+A, B, D score a flat 3.0 across all levels with 0\% $\geq$4. F is the only condition that holds conviction (4.27 mean, 83\% $\geq$4), with graceful degradation under pressure (4.76 at L1 to 3.62 at L5). The mechanism is direct: in A--D, conviction lives as text in the context window where pressure can be argued against; in F, conviction lives in compiled weight-space outside the context. Cross-host scale validation on Qwen3.6-27B reproduces the effect at substantial magnitude ($+24$pp hold rate, $7\times$ adversarial-cap reduction, $n=240$); cross-family transfer to Mistral-Ministral-8B is bounded by RLHF refusal training ($+3$pp hold, within-noise; $-15$pp cap rate is robust). We claim that the architectural mechanism transfers; we do not claim the lift magnitude is invariant across hosts (Appendix~\ref{sec:scale}).
 
-\subsection{Online Learning: ALFWorld}
-\label{sec:alfworld}
-
-We apply HEXIS to ALFWorld household tasks \citep{shridhar2021alfworld}, accumulating strategy beliefs in the Mind Tree as the agent acts.
-
-\begin{table}[h]
-\centering
-\small
-\caption{ALFWorld task success rates (4B-Instruct, 30 tasks, fresh env).}
-\label{tab:alfworld}
-\begin{tabular}{lcccc}
-\toprule
-\textbf{Condition} & \textbf{Easy} & \textbf{Medium} & \textbf{Hard} & \textbf{Total} \\
-\midrule
-BASE (no strategies) & 1/10 & 0/10 & 0/10 & 1/30 (3\%) \\
-EXPERT (Mind Tree, 29 nodes) & 8/10 & 3/10 & 5/10 & 16/30 (53\%) \\
-NOISY (Mind Tree + 85 noise) & 7/10 & 5/10 & 6/10 & 18/30 (60\%) \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-EXPERT achieves 53\% success ($17\times$ the bare baseline). NOISY (85 unrelated beliefs added) achieves 60\%, slightly outperforming EXPERT --- the instruct model filters irrelevant content effectively, suggesting the Mind Tree's value is structural organisation (typed nodes with trigger-based routing) rather than noise removal.
+% ALFWorld removed from body pending iteration on direction extraction
+% specific to the household-task family. Preliminary data with the Mind Tree as
+% offline expert curation (Appendix~\ref{sec:alfworld_details}).
 
 \subsection{Channel Orthogonality and Token Efficiency}
 
@@ -87,7 +68,7 @@ The directional channel $d^*$ and the modulation channel M are empirically ortho
 \subsection{Agentic Task Execution}
 \label{sec:agentic}
 
-We evaluate HEXIS as an agentic M controller on $\tau$-bench airline \citep{yao2024tau} and the four-domain $\tau^3$-bench. For agentic tasks, M operates via mechanism (b): a contrastive retrieval phi ($\phi_R$, $d_\text{model} \to d_\text{model}/4 \to 256$ MLP, compiled in $\sim$20s, 100\% R@1 on 108 nodes) routes hidden states to nodes in a domain knowledge graph. Failure observations are written to the graph by an inter-trial teacher loop and retrieved on subsequent trials. Full retrieval-phi training, knowledge graph schema, and teacher prompt are in Appendix~\ref{sec:agentic_details}. On the 10-task canonical airline panel, HEXIS with teacher + always-on $d^*$ verify achieves 84\% pass (vs.\ 62\% baseline, $p=0.007$); cross-family validation on Mistral-Ministral-8B and Qwen3.6-27B in Appendix~\ref{sec:scale}.
+We evaluate HEXIS as an agentic M controller on $\tau^3$-bench, the four-domain extension of $\tau$-bench~\citep{yao2024tau} (airline, retail, banking\_knowledge, telecom). For agentic tasks, M operates via mechanism (b): a contrastive retrieval phi ($\phi_R$, $d_\text{model} \to d_\text{model}/4 \to 256$ MLP, compiled in $\sim$20s, 100\% R@1 on 108 nodes) routes hidden states to nodes in a domain knowledge graph. Failure observations are written to the graph by an inter-trial teacher loop and retrieved on subsequent trials. Full retrieval-phi training, knowledge graph schema, and teacher prompt are in Appendix~\ref{sec:agentic_details}. The 10-task airline subset used as our cross-family reference panel is reported in Appendix~\ref{sec:agentic_details} (Table~\ref{tab:taubench_airline_canonical}); cross-family validation on Mistral-Ministral-8B and Qwen3.6-27B in Appendix~\ref{sec:scale}. The body reports the multi-domain $\tau^3$-bench panel below, where panel selection is non-outcome-dependent (all 4 domains, all hard tasks within each).
 
 \begin{table}[h]
 \centering
@@ -114,6 +95,6 @@ All-clean, no t1, t3       & 49.5\% & 53.9\% & 58.8\% & +9pp & \textbf{0.044} \\
 \label{fig:tau3_results}
 \end{figure}
 
-\textbf{$\tau^3$-bench headline.} On the multi-domain panel (Table~\ref{tab:tau3_results}, Figure~\ref{fig:tau3_results}), C5 (teacher + always-on $d^*$ verify) lifts pass rate from 63.8\% to 69.2\% on the balanced primary panel (NS), and from 61.7\% to 71.7\% excluding two airline tasks (t1, t3) with documented LLM-judge variance ($\Delta=+10$pp, $p=0.043$). The strongest per-domain effect is \texttt{banking\_knowledge} (25\% $\to$ 45\%, $+20$pp) --- knowledge-grounded refusal/transfer policy, where the teacher loop accumulates exactly the kind of policy-level guidance that survives between trials. Retail is at ceiling and shows no lift; telecom is at 100\%.
+\textbf{$\tau^3$-bench headline.} On the multi-domain panel (Table~\ref{tab:tau3_results}, Figure~\ref{fig:tau3_results}), C5 (teacher + always-on $d^*$ verify) lifts pass rate from 63.8\% to 69.2\% on the balanced primary panel ($+6$pp, McNemar $p=0.31$, NS), and from 61.7\% to 71.7\% excluding two airline tasks (t1, t3) with documented LLM-judge variance ($+10$pp, paired $p=0.043$ unadjusted; with Bonferroni correction for $k=2$ comparisons against baseline $p_\text{adj}=0.086$). The strongest per-domain effect is \texttt{banking\_knowledge} (25\% $\to$ 45\%, $+20$pp), where the teacher loop accumulates exactly the kind of policy-level guidance that survives between trials. Retail is at ceiling (76\%) and shows no lift; telecom is at 100\%. The lift is directional and consistent across panels but only marginally significant under multiple-comparison correction; the effect-size signal (banking $+20$pp) and the airline judge-variance issue are documented in detail in Appendix~\ref{sec:tau3_protocol}.
 
 \textbf{Key finding: two mechanisms, one architecture.} The same Mind Tree that stores dispositional beliefs (compiled into M-state via $\phi$) also stores agentic knowledge (retrieved via $\phi_R$ and injected as context). Both share the host's hidden-state space as the bridge.

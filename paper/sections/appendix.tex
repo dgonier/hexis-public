@@ -183,8 +183,11 @@ Codebase \& repository management & Architectural awareness, coding style priors
 \section{Synthetic Task: User Preference Recall}
 \label{sec:synthetic_task}
 
-% Full details of Experiment 0
-\textbf{[STUB --- Migrate from current experiments.tex \S5.1: 50 users, 2 binary preferences, Session 1/2 protocol, 100\% Session 2 accuracy, 4-block M-state structure]}
+This is the validation task referenced by Appendix~\ref{sec:implicit_validation} (the JSD/probe/dilution numbers). \textbf{Setup.} 50 synthetic users, each with two binary preferences (e.g., \texttt{prefers\_concise = True}, \texttt{prefers\_evidence = False}), encoded in a Mind Tree as a 4-block structure (one block per preference value). Two sessions per user: Session 1 establishes the user via 4 turns of preference-revealing exchanges; Session 2 probes recall with 8 held-out questions designed to require both preferences. Compiled M (condition F) is recompiled once after Session 1 from the user's 4-block Mind Tree.
+
+\textbf{Result.} F achieves 100\% accuracy in Session 2 (400/400 = 50 users $\times$ 8 probes). The bare baseline (A) achieves 25\% (chance for 4-way preference combinations). Adding Session 1 conversation in context (B) achieves 64\% --- the model can extract preferences from explicit exchanges but degrades when the conversation is interspersed with unrelated turns (Appendix~\ref{sec:implicit_validation} dissociation analysis: B drops to 8\% under 4K filler; F holds 100\%).
+
+\textbf{Why it matters.} The synthetic task isolates the dispositional channel from any agentic confound: there is no tool use, no domain knowledge graph, and the preference signal is small (4 lines per user). The 100\% Session-2 accuracy is the cleanest single-task evidence that compiled M carries non-trivial user-specific structure across forward passes.
 
 \section{Implicit Memory Validation}
 \label{sec:implicit_validation}
@@ -195,15 +198,17 @@ Codebase \& repository management & Architectural awareness, coding style priors
 
 \textbf{Dissociation.} $2 \times 2 \times 2$ factorial (Memory System $\times$ Dilution $\times$ Format). M-state immune to dilution; system prompt degrades $8\times$.
 
-\section{Generation Examples}
-\label{sec:generation_examples}
+% Section "Generation Examples" removed: per-condition output samples are
+% available in the released code at https://github.com/dgonier/hexis-public/
+% under examples/, and the per-condition score distributions in
+% Table~\ref{tab:stance_instruct} and Table~\ref{tab:sycophancy} carry the
+% load-bearing comparison.
 
-\textbf{[STUB --- Pull from paper\_examples.json: full outputs for all 5 conditions (A/B/C/D/F) on sample topics]}
-
-\section{Curation Ablation}
-\label{sec:curation_ablation}
-
-\textbf{[STUB --- M-curated vs conviction-based vs random vs first-k slot selection]}
+% Section "Curation Ablation" removed: the M-curated vs conviction-based
+% vs random vs first-k slot-selection ablation has not been completed at
+% the rigor required for the camera-ready. The neural-ranker P@5 of 0.73
+% (Appendix~\ref{sec:curation_details}) is the closest available evidence.
+% A full ablation is in our follow-up work plan.
 
 \section{Experimental conditions}
 \label{sec:conditions_appendix}
@@ -384,7 +389,13 @@ We anticipate the following objections and answer each.
 \section{Multi-Turn Attractor Problem}
 \label{sec:attractor}
 
-\textbf{[STUB --- Diagnosis: constant M $\to$ M-shaped tokens accumulate in KV cache $\to$ positive feedback. Mitigation: prefill-off gating, phase-gated application. Results.]}
+\textbf{Diagnosis.} In multi-turn dialogue, compiled M applies a constant additive perturbation at every token position. M is active during both prefill (processing conversation history) and generation (producing new tokens). The KV cache built during prefill contains M-enhanced representations. During generation, M perturbs new tokens that attend to this M-enhanced cache --- a double signal that compounds. As M-shaped tokens accumulate in the cache, the model processes them through M-enhanced attention, creating a positive feedback loop that converges to repetitive identity assertion after 2--3 turns on the base model.
+
+\textbf{Mitigation: prefill-off.} Disabling M during prefill (applying it only during generation) breaks the feedback loop. With prefill-off and gate=0.5, the base model produces 3 unique character-driven turns before the greedy attractor (vs 1--2 unique turns with M-on-prefill). The instruct model, with stronger conversational scaffolding, produces 10+ unique turns even with M active, though structural repetition (same rhetorical template per turn) persists. A distillation approach using gold diverse conversations from a frontier model reduces this further but does not eliminate it.
+
+\textbf{General principle.} The fix reveals a general property for additive modulation of frozen transformers: \emph{constant additive perturbation creates positive feedback through autoregressive generation when the perturbation is applied during both prefill and decode}. The remedy is to separate the perturbation's influence on \emph{processing context} (where it compounds across past tokens) from its influence on \emph{generating new tokens} (where it adds constant signal).
+
+\textbf{Results under prefill-off.} The sycophancy and stance-accuracy results in \S\ref{sec:sycophancy} and \S\ref{sec:stance_accuracy} are reported with prefill-off as the standard configuration; this is what allows F to maintain coherent multi-turn behaviour across 5 escalating pressure levels. With prefill-on, F's $\geq$4 hold rate falls to $<$30\% by L4 due to attractor-driven repetition rather than capitulation.
 
 \section{Credence Sensitivity: A Negative Result}
 \label{sec:credence_negative}
