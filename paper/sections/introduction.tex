@@ -18,7 +18,7 @@ We address all three failure modes by introducing a new architectural primitive-
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=\textwidth]{fig-arch-comparison.png}
+    \includegraphics[width=0.78\textwidth]{fig-arch-comparison.png}
     \caption{Four approaches to equipping LLMs with memory. (a)~Context-level methods place memory tokens in the shared context window, where they compete for attention and dilute with length ($O(T \cdot N \cdot d)$ per token). (b)~Parameter-level methods modify host weights, requiring gradient descent per adaptation ($O(\nabla)$). (c)~Activation-level methods inject a fixed direction vector ($O(L \cdot d)$, non-adaptive). (d)~Enmeshed networks (this work) compile a secondary knowledge graph into per-layer modulation tensors $M_\ell$ that blend with the frozen host via a blending function $B$ ($O(L \cdot d \cdot r)$ per token, constant in memory size $N$).}
     \label{fig:arch_comparison}
 \end{figure}

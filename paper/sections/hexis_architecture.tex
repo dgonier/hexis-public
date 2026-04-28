@@ -27,7 +27,7 @@ where $E_A^\ell, E_B^\ell$ are the V-modulation matrices. Q-modulation controls 
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=\textwidth]{fig-layer-modulation.png}
+    \includegraphics[width=0.78\textwidth]{fig-layer-modulation.png}
     \caption{Q-modulation (top) steers attention by perturbing the pre-query hidden state $x_\ell$ through a rank-16 bottleneck: $x' = x + s_M \cdot (x \, M_A) M_B^\top$, then $Q' = W_Q \, x'$. V-modulation (bottom) shapes value extraction: $V' = V + s_E \cdot (x \, E_A) E_B^\top$. The host's frozen $W_Q$ and $W_V$ are untouched.}
     \label{fig:modulation}
 \end{figure}
