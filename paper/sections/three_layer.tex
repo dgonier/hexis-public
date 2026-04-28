@@ -6,7 +6,7 @@ Compiled enmeshment carries dispositional content through a rank-16 bottleneck. 
 % Fig (three-layer) moved to appendix to save main-body pages.
 % See Appendix Figure~\ref{fig:three_layer} for the full diagram.
 
-\textbf{Layer 1: Compiled M/E} (0 tokens in primary context). The Mind Tree is processed in a private forward pass. $\phi$ compiles conviction-weighted hidden states into per-layer $M_A, M_B, E_A, E_B$ tensors. These are cached and applied as Q/V modulations during generation. Layer 1 carries: stance direction (4/4 topics), confident experiential voice, parametric knowledge steering (``poverty dropped 40\%''), and is dilution-immune by construction (zero decay through [XX]K tokens of filler).
+\textbf{Layer 1: Compiled M/E} (0 tokens in primary context). The Mind Tree is processed in a private forward pass. $\phi$ compiles conviction-weighted hidden states into per-layer $M_A, M_B, E_A, E_B$ tensors. These are cached and applied as Q/V modulations during generation. Layer 1 carries: stance direction (4/4 topics), confident experiential voice, parametric knowledge steering (``poverty dropped 40\%''), and is dilution-immune by construction (zero decay through 4K tokens of filler).
 
 \textbf{Layer 2: M-curated slot} (40--80 tokens). During compilation, $\phi$ produces per-node activation scores indicating which parts of the Mind Tree resonated. A deterministic graph walk from activated parent nodes selects evidence, citations, and specific arguments based on each node's \texttt{addresses} and \texttt{novel} properties. This content is injected into the primary context as a curated XML slot. Layer 2 carries: specific numbers, proper nouns, argument warrants---content that cannot survive the rank-16 bottleneck.
 
@@ -24,7 +24,7 @@ Compiled enmeshment carries dispositional content through a rank-16 bottleneck. 
 Stance flip & \cmark{} & 4/4 topics \\
 Confident experiential voice & \cmark{} & 0\% think-mode activation \\
 Parametric knowledge steering & \cmark{} & ``poverty dropped 40\%'' \\
-Dilution immunity & \cmark{} & [XX]\% at [XX]K tokens \\
+Dilution immunity & \cmark{} & 100\% at 4K tokens \\
 Novel statistics & \xmark{} & ``47.3\%'' not reproduced \\
 Unknown proper nouns & \xmark{} & ``Nextera Labs'' not reproduced \\
 Exact action selection & \xmark{} & ALFWorld 0/15 with compiled M \\

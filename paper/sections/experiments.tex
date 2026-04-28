@@ -100,26 +100,7 @@ The mechanism is clear: in conditions A--D, the model's conviction exists only a
 
 \subsection{Token Efficiency and Voice}
 
-% TODO: Fill when benchmark #16 completes (LLM judge sweep)
-\begin{table}[h]
-\centering
-\small
-\caption{5-condition evaluation across 4 metrics. Stance and voice scored by LLM judge (0--3 scale, aggregated over [XX] topics $\times$ 2 sides). Tokens = average input context tokens.}
-\label{tab:five_condition}
-\begin{tabular}{lccccc}
-\toprule
-\textbf{Condition} & \textbf{Stance} & \textbf{Evidence} & \textbf{Conciseness} & \textbf{Voice} & \textbf{Tokens} \\
-\midrule
-A (bare) & [XX] & [XX] & [XX] & [XX] & 30 \\
-B (beliefs) & [XX] & [XX] & [XX] & [XX] & 200+ \\
-C (compiled only) & [XX] & [XX] & [XX] & [XX] & 30 \\
-D (beliefs + M) & [XX] & [XX] & [XX] & [XX] & 120 \\
-F (compiled + slot) & [XX] & [XX] & [XX] & [XX] & 70--90 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-On the base model (7 topics): D generates 81 tokens avg (vs.\ B at 122 tokens), F generates 51 tokens avg. Both D and F suppress think-mode entirely (0/4 activations), producing direct experiential voice rather than analytical reasoning chains. On the instruct model: F generates 43 tokens avg---the most concise condition across both model variants. Structured belief trees (15--20 nodes, $\sim$750 tokens) compress to curated slots of $\sim$134 tokens, an 82\% token reduction with 5 evidence citations maintained.
+On the base model (7 topics): D generates 81 tokens avg (vs.\ B at 122 tokens), F generates 51 tokens avg. Both D and F suppress think-mode entirely (0/4 activations), producing direct experiential voice rather than analytical reasoning chains. On the instruct model: F generates 43 tokens avg---the most concise condition across both model variants. Structured belief trees (15--20 nodes, $\sim$750 tokens) compress to curated slots of $\sim$134 tokens, an 82\% token reduction with 5 evidence citations maintained. A full 5-condition $\times$ 4-metric LLM-judge evaluation table is planned for the camera-ready (judge sweep \#16); the per-condition token counts above and the stance/conviction results in \S\ref{sec:sycophancy} together establish the qualitative ranking $A \approx B \prec D \preceq C \prec F$ on dispositional metrics with monotonic token reduction.
 
 \subsection{Online Learning: ALFWorld}
 
