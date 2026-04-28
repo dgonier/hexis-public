@@ -1,103 +1,36 @@
 \section{Enmeshed Networks}
 \label{sec:enmeshed}
 
-% This section is NEW — no equivalent in sections/ v1.
-% Content drawn from paper-draft-sections.md §2 (conceptual) and M_canonical_recipe.md (technical).
+An enmeshed network is a lightweight parametric module that shares the forward pass of a frozen host model, reading intermediate representations at each layer and writing modulations back into the same computation. The enmeshed module maintains its own parameters, receives its own input (the \emph{parallel context}), and can be cleanly removed to recover the unmodified host. The key distinction from existing adaptation methods is \emph{where} and \emph{how} the module interfaces with the host:
 
-An enmeshed network is a lightweight parametric module that shares the forward pass of a frozen host model, reading intermediate representations at each layer and writing modulations back into the same computation. The enmeshed module maintains its own parameters, receives its own input (the \emph{parallel context}), and can be cleanly removed to recover the unmodified host.
-
-The key distinction from existing adaptation methods is \emph{where} and \emph{how} the module interfaces with the host:
-
-\begin{itemize}
+\begin{itemize}[leftmargin=*]
     \item \textbf{Context-level methods} (RAG, Reflexion, MemGPT) add tokens to the host's input. Memory competes for attention with everything else and dilutes with length.
     \item \textbf{Parameter-level methods} (LoRA, adapters) modify the host's weights. Each adaptation requires gradient descent. The result is fixed after training.
     \item \textbf{Activation-level methods} (RepEng, ActAdd) inject fixed directional vectors. The same vector is applied regardless of experience.
-    \item \textbf{Enmeshed networks} process a parallel input through the host's own layers, using the resulting hidden states as a bridge to external knowledge. Two mechanisms emerge from this bridge: \emph{(a)}~compile hidden states into per-layer modulation tensors that shape the primary context's attention (for dispositional tasks); \emph{(b)}~project hidden states into a retrieval space to fetch relevant knowledge nodes from a persistent graph (for agentic tasks). Both mechanisms are experience-specific, inference-cost adaptable, and operate outside the context window.
+    \item \textbf{Enmeshed networks} process a parallel input through the host's own layers, using the resulting hidden states as a bridge to external knowledge. Two mechanisms emerge: \emph{(a)}~compile hidden states into per-layer modulation tensors that shape the primary context's attention (dispositional tasks); \emph{(b)}~project hidden states into a retrieval space to fetch relevant knowledge nodes from a persistent graph (agentic tasks). Both are experience-specific, inference-cost adaptable, and operate outside the context window.
 \end{itemize}
 
-% Fig 1 (arch comparison) is placed in introduction.tex
-% Fig 2 (system overview) moved to appendix to save main-body pages
+% Visualisation in Appendix~\ref{sec:system_figures} (Figure~\ref{fig:arch_comparison}).
 
 \subsection{Design Space}
 
-We characterize enmeshed networks along six axes (Table~\ref{tab:design_space}):
-
-\begin{table}[h]
-\centering
-\small
-\caption{Six-axis design space for enmeshed networks. HEXIS instantiates one point (\emph{italic}).}
-\label{tab:design_space}
-\begin{tabular}{lll}
-\toprule
-\textbf{Axis} & \textbf{Options} & \textbf{HEXIS} \\
-\midrule
-Blending function & Additive, gated, cross-attention & \emph{Additive (Level 1)} \\
-Rank & $r \in \{4, 8, 16, 32, 64\}$ & \emph{$r = 16$} \\
-Modulation targets & Q, V, K, Q+V, Q+K+V & \emph{Q + V} \\
-Patching pattern & All layers, stride-$k$, attention-only & \emph{Stride-3 (11/32 layers)} \\
-Compilation & Online, cached, conviction-weighted & \emph{Conviction-weighted} \\
-Temporal profile & Constant, decay, phase-gated & \emph{Constant (with phase-gated mitigation)} \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textbf{Blending function.} Level 1 (additive): $x' = x + f(x, M)$. Level 2 (gated): $x' = x + g(x) \odot f(x, M)$. Level 3 (cross-attention): $x' = x + \text{Attn}(x, M, M)$. Higher levels provide richer interaction but proportionally higher cost. We validate Level 1 and leave higher levels for future work.
-
-\textbf{Rank.} Controls the capacity of the modulation bottleneck. At rank 16, modulation adds 81,920 FLOPs per layer per token ($2 \times d \times r$)---approximately 200$\times$ cheaper than adding equivalent belief tokens to the context. Rank scales with model size: $r/d \approx 0.006$ (rank 16 for $d = 2560$, rank 32 for $d = 5120$).
-
-\textbf{Patching pattern.} Stride-3 on Qwen3.5-4B-Base (32 layers: 24 DeltaNet + 8 full attention) yields 11 patched layers, covering both linear attention and full self-attention layers. Denser patching yields marginal gains at proportional cost; sparser patching misses critical layers.
+We characterise enmeshed networks along six axes (Appendix Table~\ref{tab:design_space}): \textbf{blending function} (Level 1 additive in HEXIS, Levels 2-3 are gated/cross-attention), \textbf{rank} ($r=16$; rank scales as $r/d \approx 0.006$), \textbf{modulation targets} (Q+V), \textbf{patching pattern} (stride-3, 11 of 32 Qwen3.5-4B-Base layers), \textbf{compilation} (conviction-weighted), and \textbf{temporal profile} (constant with phase-gated mitigation). At rank 16, modulation adds 81{,}920 FLOPs per layer per token --- approximately 200$\times$ cheaper than adding equivalent belief tokens to context.
 
 \subsection{The Mind Tree}
 \label{sec:mind_tree}
 
-The enmeshed network requires a structured input for its parallel context channel. We introduce the \emph{Mind Tree}: a typed cognitive schema with hierarchical nodes organized into sections:
+The enmeshed network requires a structured input for its parallel context channel. The \emph{Mind Tree} is a typed cognitive schema with hierarchical nodes organised into six sections (\texttt{identity}, \texttt{beliefs}, \texttt{strategies}, \texttt{memories}, \texttt{models}, \texttt{values}; full role table in Appendix~\ref{sec:mind_tree_spec}). Each belief node carries structured metadata: categorical conviction (\texttt{strong}, \texttt{moderate}, \texttt{agnostic}), domain tags, an \texttt{addresses} field listing query types the node answers, and a \texttt{novel} flag marking content unlikely to survive compilation. This metadata enables both \emph{compilation weighting} (high-conviction nodes receive higher weight during $\phi$'s pooling step) and \emph{deterministic curation} (novel content is routed to the explicit slot rather than the compiled channel).
 
-\begin{table}[h]
-\centering
-\small
-\caption{Mind Tree sections and their roles in compilation and curation.}
-\label{tab:mind_tree}
-\begin{tabular}{llll}
-\toprule
-\textbf{Section} & \textbf{Cognitive Function} & \textbf{M Compiles To} & \textbf{Slot Provides} \\
-\midrule
-identity & self-model & voice, register, framing & rarely needed \\
-beliefs & epistemic & stance direction, emphasis & evidence, citations \\
-strategies & procedural & approach tendency & specific tactics \\
-memories & episodic & experiential tone & specific details, names \\
-models & theory of mind & awareness of opposition & predicted arguments \\
-values & axiological & deep dispositional bias & rarely needed \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Each belief node carries structured metadata: categorical conviction (\texttt{strong}, \texttt{moderate}, \texttt{agnostic}), domain tags, an \texttt{addresses} field listing query types the node answers, and a \texttt{novel} flag marking content unlikely to survive compilation (specific numbers, proper nouns). This metadata enables both \emph{compilation weighting} (high-conviction nodes receive higher weight during $\phi$'s pooling step) and \emph{deterministic curation} (novel content is routed to the explicit slot rather than the compiled channel).
-
-\textbf{Categorical vs.\ numeric conviction.} We use categorical conviction labels rather than numeric credences (e.g., 0.82). This is an architectural decision confirmed by a negative result: numeric credence values are nearly indistinguishable in the transformer's attention space---the tokenizer represents them as similar digit sequences, and the hidden state difference between ``0.82'' and ``0.45'' is far smaller than between ``strong'' and ``agnostic'' (Appendix~\ref{sec:credence_negative}).
+\textbf{Categorical vs.\ numeric conviction.} We use categorical conviction labels rather than numeric credences. This is an architectural decision confirmed by a negative result: numeric credence values are nearly indistinguishable in the transformer's attention space (Appendix~\ref{sec:credence_negative}).
 
 \subsection{Application Domains}
 \label{sec:application_domains}
 
-The distinction between enmeshed modulation and prompt compression is not merely architectural---it determines \emph{which kinds of knowledge benefit from the mechanism}. Table~\ref{tab:application_domains} identifies four domains where compiled dispositional memory provides qualitative advantages over context-level alternatives.
-
-\begin{table}[h]
-\centering
-\small
-\caption{Application domains for enmeshed networks. For each domain, we identify what compiles through the rank-16 bottleneck (zero-token, dilution-immune), what requires the curated slot (novel content), and why prompt compression is insufficient.}
-\label{tab:application_domains}
-\begin{tabular}{p{2.0cm}p{2.5cm}p{2.0cm}p{4.5cm}}
-\toprule
-\textbf{Domain} & \textbf{M Compiles} & \textbf{Slot Provides} & \textbf{Why Not a Prompt?} \\
-\midrule
-User empathy \& preference tracking & Communication style priors, expertise-calibrated attention, emotional register & Specific preference details, names & A prompt says ``user prefers concise answers.'' M \emph{changes what the model attends to} in the user's message---shorter latency to user intent, no token cost per turn. \\
-\addlinespace
-Research conviction \& diversity & Stance strength, resistance to consensus drift, argumentative disposition & Evidence, citations, specific claims & Sycophancy resistance requires dispositional anchoring that survives adversarial pressure (\S\ref{sec:experiments}). Prompt-level beliefs can be argued away. \\
-\addlinespace
-Agentic strategy (ReAct loops) & Approach tendencies, procedural intuition, failure-pattern avoidance & Specific tactics, action sequences, tool signatures & Strategy logs in context dilute as episodes accumulate. Compiled M encodes \emph{when to explore vs.\ exploit} without consuming context budget. Action traces from successful episodes are stored as observation nodes; consolidation promotes recurring patterns to tactics and strategies; M recompiles in seconds. The agent improves hourly without fine-tuning. \\
-\addlinespace
-Codebase \& repository management & Architectural awareness, coding style priors, structural navigation patterns & File paths, API signatures, dependency versions & Repo context in prompt scales linearly with codebase size. M compiles structural intuition---which modules are coupled, where state lives---at fixed cost. \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The common thread is that each domain contains knowledge that is \emph{better encoded as a perceptual shift than as text}. A prompt tells the model what to do. Enmeshed modulation changes \emph{how the model processes} its input---what it attends to, what it extracts, how it weights evidence. The distinction is sharpest under adversarial conditions: prompt-level beliefs dilute with context length and fold under argumentative pressure; compiled dispositions are structurally immune to both (\S\ref{sec:experiments}).
+Compiled dispositional memory provides qualitative advantages over context-level alternatives in four domains where knowledge is \emph{better encoded as a perceptual shift than as text} (full per-domain analysis in Appendix~\ref{sec:application_domain_details}):
+\begin{itemize}[leftmargin=*]
+\item \textbf{User empathy / preference tracking.} M changes \emph{what the model attends to} in the user's message; a prompt only says ``user prefers concise.''
+\item \textbf{Research conviction.} Sycophancy resistance requires dispositional anchoring that survives adversarial pressure (\S\ref{sec:sycophancy}); prompt-level beliefs can be argued away.
+\item \textbf{Agentic strategy.} Strategy logs in context dilute as episodes accumulate; compiled M encodes when to explore vs.\ exploit at fixed cost (\S\ref{sec:agentic}).
+\item \textbf{Codebase \& repository management.} Repo context in prompt scales linearly with codebase size; M compiles structural intuition at fixed cost.
+\end{itemize}
+The common thread: a prompt tells the model what to do; enmeshed modulation changes \emph{how} the model processes its input. The distinction is sharpest under adversarial conditions: prompt-level beliefs dilute with context length and fold under argumentative pressure; compiled dispositions are structurally immune to both.

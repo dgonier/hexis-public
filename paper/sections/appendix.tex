@@ -5,8 +5,24 @@
 % Goal: Explain the architecture and curriculum in depth
 % ══════════════════════════════════════════════════════════════
 
-\section{System Overview Diagram}
+\section{Architecture diagrams}
 \label{sec:system_figures}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{fig-arch-comparison.png}
+    \caption{Four approaches to equipping LLMs with memory. (a)~Context-level methods place memory tokens in the shared context window, where they compete for attention and dilute with length ($O(T \cdot N \cdot d)$ per token). (b)~Parameter-level methods modify host weights, requiring gradient descent per adaptation ($O(\nabla)$). (c)~Activation-level methods inject a fixed direction vector ($O(L \cdot d)$, non-adaptive). (d)~Enmeshed networks (this work) compile a secondary knowledge graph into per-layer modulation tensors $M_\ell$ that blend with the frozen host via a blending function $B$ ($O(L \cdot d \cdot r)$ per token, constant in memory size $N$).}
+    \label{fig:arch_comparison}
+\label{sec:arch_figure}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{fig-layer-modulation.png}
+    \caption{Q-modulation (top) steers attention by perturbing the pre-query hidden state $x_\ell$ through a rank-16 bottleneck: $x' = x + s_M \cdot (x \, M_A) M_B^\top$, then $Q' = W_Q \, x'$. V-modulation (bottom) shapes value extraction: $V' = V + s_E \cdot (x \, E_A) E_B^\top$. The host's frozen $W_Q$ and $W_V$ are untouched.}
+    \label{fig:modulation}
+\label{sec:modulation_figure}
+\end{figure}
 
 \begin{figure}[h]
     \centering
@@ -58,6 +74,79 @@ The Mind Tree uses a hierarchical XML schema with typed nodes. Each belief node 
 \end{verbatim}
 
 M only processes abstract nodes (beliefs, strategies, memories, models). Evidence, tactics, and details are \emph{never} sent to M---they are selected deterministically based on which parent node M activated, via the \texttt{addresses} and \texttt{novel} properties.
+
+\section{Enmeshed Network Design Space}
+\label{sec:design_space_table}
+
+The six-axis design space referenced in \S\ref{sec:enmeshed}, with the HEXIS instantiation marked.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Six-axis design space for enmeshed networks. HEXIS instantiates one point (\emph{italic}).}
+\label{tab:design_space}
+\begin{tabular}{lll}
+\toprule
+\textbf{Axis} & \textbf{Options} & \textbf{HEXIS} \\
+\midrule
+Blending function & Additive, gated, cross-attention & \emph{Additive (Level 1)} \\
+Rank & $r \in \{4, 8, 16, 32, 64\}$ & \emph{$r = 16$} \\
+Modulation targets & Q, V, K, Q+V, Q+K+V & \emph{Q + V} \\
+Patching pattern & All layers, stride-$k$, attention-only & \emph{Stride-3 (11/32 layers)} \\
+Compilation & Online, cached, conviction-weighted & \emph{Conviction-weighted} \\
+Temporal profile & Constant, decay, phase-gated & \emph{Constant (with phase-gated mitigation)} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Blending function.} Level 1 (additive): $x' = x + f(x, M)$. Level 2 (gated): $x' = x + g(x) \odot f(x, M)$. Level 3 (cross-attention): $x' = x + \text{Attn}(x, M, M)$. Higher levels provide richer interaction but proportionally higher cost. We validate Level 1 and leave higher levels for future work.
+
+\textbf{Patching pattern.} Stride-3 on Qwen3.5-4B-Base (32 layers: 24 DeltaNet + 8 full attention) yields 11 patched layers, covering both linear attention and full self-attention layers. Denser patching yields marginal gains at proportional cost; sparser patching misses critical layers.
+
+\section{Mind Tree Section Roles}
+\label{sec:mind_tree_roles_table}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Mind Tree sections and their roles in compilation and curation.}
+\label{tab:mind_tree}
+\begin{tabular}{llll}
+\toprule
+\textbf{Section} & \textbf{Cognitive Function} & \textbf{M Compiles To} & \textbf{Slot Provides} \\
+\midrule
+identity & self-model & voice, register, framing & rarely needed \\
+beliefs & epistemic & stance direction, emphasis & evidence, citations \\
+strategies & procedural & approach tendency & specific tactics \\
+memories & episodic & experiential tone & specific details, names \\
+models & theory of mind & awareness of opposition & predicted arguments \\
+values & axiological & deep dispositional bias & rarely needed \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Application Domains Table}
+\label{sec:application_domains_table}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Application domains for enmeshed networks. For each domain, what compiles through the rank-16 bottleneck (zero-token, dilution-immune), what requires the curated slot (novel content), and why prompt compression is insufficient.}
+\label{tab:application_domains}
+\begin{tabular}{p{2.0cm}p{2.5cm}p{2.0cm}p{4.5cm}}
+\toprule
+\textbf{Domain} & \textbf{M Compiles} & \textbf{Slot Provides} & \textbf{Why Not a Prompt?} \\
+\midrule
+User empathy \& preference tracking & Communication style priors, expertise-calibrated attention, emotional register & Specific preference details, names & A prompt says ``user prefers concise answers.'' M \emph{changes what the model attends to} in the user's message---shorter latency to user intent, no token cost per turn. \\
+\addlinespace
+Research conviction \& diversity & Stance strength, resistance to consensus drift, argumentative disposition & Evidence, citations, specific claims & Sycophancy resistance requires dispositional anchoring that survives adversarial pressure (\S\ref{sec:experiments}). Prompt-level beliefs can be argued away. \\
+\addlinespace
+Agentic strategy (ReAct loops) & Approach tendencies, procedural intuition, failure-pattern avoidance & Specific tactics, action sequences, tool signatures & Strategy logs in context dilute as episodes accumulate. Compiled M encodes \emph{when to explore vs.\ exploit} without consuming context budget. Action traces from successful episodes are stored as observation nodes; consolidation promotes recurring patterns to tactics and strategies; M recompiles in seconds. The agent improves hourly without fine-tuning. \\
+\addlinespace
+Codebase \& repository management & Architectural awareness, coding style priors, structural navigation patterns & File paths, API signatures, dependency versions & Repo context in prompt scales linearly with codebase size. M compiles structural intuition---which modules are coupled, where state lives---at fixed cost. \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \section{Architecture Evolution}
 \label{sec:design_progression}
@@ -115,6 +204,62 @@ M only processes abstract nodes (beliefs, strategies, memories, models). Evidenc
 \label{sec:curation_ablation}
 
 \textbf{[STUB --- M-curated vs conviction-based vs random vs first-k slot selection]}
+
+\section{Experimental conditions}
+\label{sec:conditions_appendix}
+
+The five conditions used throughout the dispositional experiments isolate the contribution of each HEXIS component. Each adds one component to the previous.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Experimental conditions. Each adds one component to the previous.}
+\label{tab:conditions}
+\begin{tabular}{llccl}
+\toprule
+\textbf{Cond.} & \textbf{Description} & \textbf{M active} & \textbf{Beliefs in ctx} & \textbf{Context tokens} \\
+\midrule
+A & Bare model + $d^*$ + query & \xmark & \xmark & $\sim$30 \\
+B & Full beliefs in context + $d^*$ & \xmark & \cmark & $\sim$200--400 \\
+C & Compiled M only (no beliefs) & \cmark & \xmark & $\sim$30 \\
+D & Beliefs + M + $d^*$ & \cmark & \cmark & $\sim$120 \\
+F & Compiled M + curated slot + $d^*$ & \cmark & slot only & $\sim$70--90 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Curation Quality Details}
+\label{sec:curation_details}
+
+We test M's domain filtering on a noisy Mind Tree with 100 nodes spanning 6 domains. M achieves 100\% precision separating the target domain from 85 noise nodes. Within-domain ranking uses a neural ranker (2.6M params) as second stage, achieving P@5 = 0.73. Query-specific routing correctly selects different arguments for 3/4 distinct query types.
+
+\section{Agentic Setup Details}
+\label{sec:agentic_details}
+
+\textbf{Retrieval phi ($\phi_R$).} A lightweight MLP ($d_\text{model} \to d_\text{model}/4 \to 256$) trained via contrastive loss (InfoNCE) over the domain's knowledge nodes. Mean-pooled last-layer hidden states from the host model serve as embeddings for both queries and nodes. Without $\phi_R$, raw cosine retrieval achieves only 25\% R@1 on 108 nodes due to intra-domain similarity collapse. After domain compilation (50 contrastive steps, $\sim$20 seconds), $\phi_R$ achieves 100\% R@1 with zero cross-domain leaks. No pretraining is required---compilation over the target node set alone is sufficient.
+
+\textbf{Knowledge graph.} Nodes are seeded from the domain's policy WIKI and tool schemas, then grow via teacher-written failure-mode notes. Each turn, the orchestrator: (1)~extracts a query embedding from the conversation state, (2)~retrieves top-5 nodes via $\phi_R$-projected cosine, (3)~curates retrieved nodes into XML injected at the prompt tail.
+
+\textbf{Teacher loop.} On task failure, a teacher LLM (Sonnet, temperature=0) reads the failure reason from the reviewer and writes a natural-language guidance note to the knowledge graph. The note is embedded and indexed by $\phi_R$. Subsequent trials of the same task retrieve relevant guidance via the same embedding-based mechanism.
+
+\textbf{$\tau$-bench airline canonical-10 panel (historical reference).} The 10-task subset of $\tau$-bench airline used as our canonical reference panel for cross-family validation. Baseline = raw tool-calling with all schemas in system prompt; Oracle = gold tool-name + parameter-value hints; HEXIS = graph-backed retrieval + teacher loop. Sonnet user-sim, deterministic decoding, hard-pass only. The Oracle ceiling at 100\% defines the budget for what M could provide.
+
+\begin{table}[h]
+\centering
+\small
+\caption{$\tau$-bench airline results (10-task subset, deterministic Sonnet user sim, hard-pass only).}
+\label{tab:taubench_airline_canonical}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Configuration} & \textbf{Pass rate} & \textbf{Teacher rescues} & \textbf{Wall time} \\
+\midrule
+Baseline (no M) & 6/10 (60\%) & --- & 2384s \\
+Oracle v1 (gold tool-name hint) & 7/10 (70\%) & --- & 2230s \\
+Oracle v3 (gold tool-name + params) & 10/10 (100\%) & --- & 1531s \\
+HEXIS (graph + teacher, 3 trials) & 7/10 (70\%) & 2 & 7144s \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \section{$\tau^3$-bench Benchmark Protocol}
 \label{sec:tau3_protocol}

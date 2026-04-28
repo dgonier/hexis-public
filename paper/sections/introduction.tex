@@ -16,9 +16,6 @@ We address all three failure modes by introducing a new architectural primitive-
 
 \textbf{(3) Empirical validation (\S\ref{sec:experiments}).} We demonstrate that compiled enmeshment is dilution-immune by construction (100\% stance at 4K tokens of filler), provides sycophancy resistance (83\% $\geq$4-conviction hold rate across 5 escalating pressure levels on the 4B instruct model vs.\ 0\% for non-compiled conditions), and carries sufficient content through a rank-16 bottleneck to flip the host model's default stance on contested topics. A three-layer architecture (compiled modulation + curated slot + recursive expansion) matches full in-context beliefs at 82\% token savings. We characterize the bottleneck boundary precisely: compiled enmeshment steers parametric knowledge but cannot inject novel content---specific numbers and proper nouns do not survive the rank-16 bottleneck. The mechanism generalizes to online learning: an agent that accumulates action traces as Mind Tree observations and recompiles M after each batch of episodes shows continuous improvement on ALFWorld household tasks, with no fine-tuning and no growing context window.
 
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=0.78\textwidth]{fig-arch-comparison.png}
-    \caption{Four approaches to equipping LLMs with memory. (a)~Context-level methods place memory tokens in the shared context window, where they compete for attention and dilute with length ($O(T \cdot N \cdot d)$ per token). (b)~Parameter-level methods modify host weights, requiring gradient descent per adaptation ($O(\nabla)$). (c)~Activation-level methods inject a fixed direction vector ($O(L \cdot d)$, non-adaptive). (d)~Enmeshed networks (this work) compile a secondary knowledge graph into per-layer modulation tensors $M_\ell$ that blend with the frozen host via a blending function $B$ ($O(L \cdot d \cdot r)$ per token, constant in memory size $N$).}
-    \label{fig:arch_comparison}
-\end{figure}
+% Figure ``Four approaches to equipping LLMs with memory'' moved to Appendix~\ref{sec:arch_figure}
+% to free body-page budget; the four categories (context/parameter/activation/enmeshed) are described in
+% the surrounding paragraph and revisited formally in \S\ref{sec:enmeshed}.

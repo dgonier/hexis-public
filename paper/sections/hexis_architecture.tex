@@ -1,69 +1,29 @@
 \section{HEXIS: Architecture and Training}
 \label{sec:hexis}
 
-We instantiate a Level 1 enmeshed network (\S\ref{sec:enmeshed}) over Qwen3.5-4B-Base, a hybrid-attention model with 32 layers (24 DeltaNet linear attention, 8 full self-attention at layers $\{3, 7, 11, 15, 19, 23, 27, 31\}$), $d = 2560$, grouped-query attention with 16 query heads and 4 key-value heads, and head dimension 256. We term this instantiation HEXIS: the compiled modulation tensors are the \emph{states}---Hidden from the host's introspection, Enmeshed in its forward pass, derived from eXperience, and shaping its Identity.
+We instantiate a Level 1 enmeshed network (\S\ref{sec:enmeshed}) over Qwen3.5-4B-Base, a hybrid-attention model with 32 layers (24 DeltaNet linear attention, 8 full self-attention; $d=2560$, GQA with 16 query and 4 key-value heads). We term this instantiation HEXIS: the compiled modulation tensors are the \emph{states}---Hidden from the host's introspection, Enmeshed in its forward pass, derived from eXperience, and shaping its Identity.
 
 \subsection{Modulation Mechanism}
 \label{sec:modulation}
 
 At each patched layer $\ell \in \mathcal{L}$, HEXIS applies two low-rank perturbations to the host's projections. For Q-modulation, the pre-projection hidden state $x_\ell$ is perturbed before the query projection:
 \begin{equation}
-x'_\ell = x_\ell + s_M \cdot (x_\ell \, M_A^\ell) (M_B^\ell)^\top
-\label{eq:q_mod}
-\end{equation}
-where $M_A^\ell \in \mathbb{R}^{d \times r}$ and $M_B^\ell \in \mathbb{R}^{r \times d}$ are the Q-modulation matrices at rank $r = 16$ and $s_M$ is a learned scale. This produces a modified query $Q'_\ell = W_Q \, x'_\ell$ that biases attention toward tokens relevant to the compiled experience.
-
-For V-modulation, a parallel perturbation shapes the value extraction:
-\begin{equation}
+x'_\ell = x_\ell + s_M \cdot (x_\ell \, M_A^\ell) (M_B^\ell)^\top, \qquad
 V'_\ell = V_\ell + s_E \cdot (x_\ell \, E_A^\ell) (E_B^\ell)^\top
+\label{eq:qv_mod}
 \end{equation}
-where $E_A^\ell, E_B^\ell$ are the V-modulation matrices. Q-modulation controls \emph{what the host attends to}; V-modulation controls \emph{what information is extracted} from attended positions. Together they implement a compiled attentional policy.
+where $M_A^\ell, M_B^\ell, E_A^\ell, E_B^\ell$ are the rank-$r$ ($r=16$) modulation matrices and $s_M, s_E$ are learned scales. Q-modulation controls \emph{what the host attends to}; V-modulation controls \emph{what information is extracted} from attended positions. Together they implement a compiled attentional policy. We patch stride-3 across the network (11 of 32 layers, including 4 of 8 full-attention layers). Each modulated layer adds $\sim$82K FLOPs/token, $\sim$200$\times$ cheaper than adding equivalent belief tokens to context. A diagram of the two perturbations is in Appendix Figure~\ref{fig:modulation}.
 
-\textbf{Query-agnostic compilation, content-specific effect.} The modulation tensors $M_A, M_B$ are compiled once from the Mind Tree and then fixed. They encode the agent's disposition---not a response to any particular query. Yet the \emph{effect} of M is query-specific, because the perturbation $x M_A M_B^\top$ depends on the current hidden state $x$. When the user asks about a topic that the Mind Tree covers, $x$ will have large projection onto the directions that $M_A$ spans, producing a strong perturbation. When the user asks about an unrelated topic, $x$ projects weakly onto those directions and M has minimal effect. In this sense, M acts as a \emph{content-addressable filter}: the compiled disposition selectively activates in proportion to the semantic relevance of each input token to the encoded experience. This is why M can encode beliefs about many topics simultaneously---each belief occupies different directions in the rank-$r$ subspace, and the input determines which directions are expressed. The mechanism is analogous to how a prism separates white light: all colors are present simultaneously, but only the wavelengths matching the input angle emerge.
-
-\textbf{Patching.} We apply modulation at stride-3 across the network, patching 11 of 32 layers (indices $\{0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30\}$), which includes 4 of 8 full self-attention layers ($\{3, 9, 15, 27\}$) and 7 DeltaNet layers. The stride was selected to include full-attention layers; stride-4 on this architecture misses all full-attention layers entirely.
-
-\textbf{Computational cost.} Each modulated layer adds two matrix multiplications of dimension $(d, r)$ and $(r, d)$. At $r = 16$ and $d = 2560$, this is 81,920 FLOPs per layer per token---approximately 200$\times$ cheaper than adding equivalent belief tokens to the context.
-
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=0.78\textwidth]{fig-layer-modulation.png}
-    \caption{Q-modulation (top) steers attention by perturbing the pre-query hidden state $x_\ell$ through a rank-16 bottleneck: $x' = x + s_M \cdot (x \, M_A) M_B^\top$, then $Q' = W_Q \, x'$. V-modulation (bottom) shapes value extraction: $V' = V + s_E \cdot (x \, E_A) E_B^\top$. The host's frozen $W_Q$ and $W_V$ are untouched.}
-    \label{fig:modulation}
-\end{figure}
+\textbf{Query-agnostic compilation, content-specific effect.} The modulation tensors are compiled once from the Mind Tree and fixed; they encode the agent's disposition rather than a response to any query. Yet the \emph{effect} is query-specific because $x M_A M_B^\top$ depends on the current hidden state. M acts as a \emph{content-addressable filter}: each belief occupies different directions in the rank-$r$ subspace, and the input determines which directions are expressed.
 
 \subsection{The Write Function $\phi$}
 \label{sec:write_function}
 
-The write function $\phi$ compresses hidden states into modulation matrices. Given a set of experience tokens processed through the host's frozen layers, $\phi$ reads the hidden states at each patched layer, pools them, and projects through a bottleneck:
-\begin{align}
-z_\ell &= \text{SiLU}(W_\text{down}^\ell \cdot \bar{h}_\ell) \\
-M_A^\ell, M_B^\ell &= \text{reshape}(W_\text{up}^\ell \cdot z_\ell)
-\end{align}
-where $\bar{h}_\ell$ is the pooled hidden state at layer $\ell$ and $z_\ell$ is the bottleneck representation. In compiled mode, pooling is weighted by conviction level---belief nodes marked \texttt{strong} receive higher weight than \texttt{moderate} or \texttt{agnostic}.
+$\phi$ compresses hidden states into modulation matrices. Given experience tokens processed through the host's frozen layers, $\phi$ reads the hidden states at each patched layer, pools them, and projects through a bottleneck: $z_\ell = \text{SiLU}(W_\text{down}^\ell \bar{h}_\ell)$, $(M_A^\ell, M_B^\ell) = \text{reshape}(W_\text{up}^\ell z_\ell)$, where $\bar h_\ell$ is the pooled hidden state at layer $\ell$. In compiled mode, pooling is weighted by conviction level. $\phi$ is trained jointly with the modulation objective and frozen at inference. Different inputs to $\phi$ produce different modulation tensors --- this is what makes enmeshed modulation experience-adaptive. A new belief set requires only one forward pass through $\phi$ ($\sim$20 seconds), so the agent can recompile M in seconds and immediately benefit from updated disposition. Full compilation pipeline (PhiNodeWriter, BeliefTreeMemory, MStateReadHead) in Appendix~\ref{sec:system_figures} (Figure~\ref{fig:system_overview}).
 
-$\phi$ is trained jointly with the modulation objective (\S\ref{sec:training}) but frozen at inference time. Different inputs to $\phi$ produce different modulation tensors---this is what makes enmeshed modulation experience-adaptive rather than fixed. A new belief set requires only one forward pass through $\phi$ to produce new modulation tensors, making adaptation cost equivalent to inference.
-
-\textbf{End-to-end compilation pipeline.} Figure~\ref{fig:compilation} traces the full path from cognitive schema to inference-time modulation: (1)~Each Mind Tree node's text is encoded through the frozen host's layers, producing a $d$-dimensional embedding. (2)~PhiNodeWriter refines each embedding conditioned on its parent's embedding, writing experience into the belief tree's graph structure. (3)~BeliefTreeMemory runs message passing over the graph, propagating conviction and context between nodes. (4)~MStateReadHead gathers conviction-weighted perspective embeddings and projects them through a rank-$r$ bottleneck to produce per-layer $(M_A^\ell, M_B^\ell, s^\ell)$ tuples. The resulting tensors are $\sim$1.7\,MB for 11 layers at rank 16---they are cached and applied as constant perturbations during all subsequent inference. Updating the agent's disposition requires only repeating steps 1--4 with the modified Mind Tree, not retraining any parameters. This is why the mechanism supports online learning: an agent that accumulates new observations (e.g., successful action traces from a ReAct loop) can recompile M in seconds and immediately benefit from the updated disposition.
-
-\subsection{Training}
+\subsection{Training and the Directional Channel $d^*$}
 \label{sec:training}
 
-Training follows a multi-phase curriculum (full details in Appendix~\ref{sec:training_curriculum}):
+Training follows a multi-phase curriculum (full details in Appendix~\ref{sec:training_curriculum}). Phase A teaches $\phi$ to encode beliefs and M to produce useful Q-modulation; Phase B trains the VModulationProjector to carry belief \emph{content} through the rank bottleneck so beliefs need not appear in the prompt; Phase D fixes verbatim repetition under sycophancy pressure using 44 gold challenge-response pairs. Total: $\sim$500 epochs, $\sim$10 hours on a single GPU.
 
-\textbf{Phase A: Content Encoding.} A 4-step warm-start chain teaches $\phi$ to encode beliefs and M to produce useful Q-modulation. Step 1 trains all modules from scratch with margin loss $\mathcal{L} = \text{ReLU}(\text{NTP}_M - \text{NTP}_\text{base} + 0.3)$. Steps 2--3 add conviction calibration and ranking losses. Step 4 retrains only the M-read head with beliefs in the baseline (so M must add value \emph{above} explicit beliefs, not substitute for them).
-
-\textbf{Phase B: Compiled V-Modulation.} Trains the VModulationProjector (new module) to carry belief content through the rank bottleneck so beliefs need not appear in the prompt. Loss: $\mathcal{L} = \text{ReLU}(\text{NTP}_\text{compiled} - \text{NTP}_\text{bare} + 1.0)$. All other modules frozen.
-
-\textbf{Phase D: Sycophancy Training.} Fixes verbatim repetition under pressure. Trains M-read head on 44 gold challenge-response pairs (from Claude Sonnet 4.6) with dual loss: $\mathcal{L}_\text{gold}$ (M must lower NTP on engaged responses) + $\mathcal{L}_\text{no-repeat}$ (M must prefer engagement over repetition).
-
-\textbf{Total training: $\sim$500 epochs across 4 phases, $\sim$10 hours on a single GPU.}
-
-\subsection{The Directional Channel: $d^*$}
-\label{sec:d_star}
-
-HEXIS composes with representation engineering to separate \emph{direction} from \emph{disposition}. The directional channel $d^*$ is a fixed activation vector extracted via contrastive activation means:
-\begin{equation}
-d^* = \frac{1}{N} \sum_{i=1}^{N} \left(\bar{h}_i^{\text{pro}} - \bar{h}_i^{\text{con}}\right)
-\end{equation}
-computed across $N = 62$ topics with matched pro/con prompts. During generation, $d^*$ is injected as a post-attention residual. The critical property: $d^*$ and M operate on orthogonal axes. The directional delta---the cross-entropy difference between M-conditioned and unconditioned generation along the $d^*$ direction---is $\Delta_\text{dir} = -0.001$ nats. Direction comes from $d^*$. Disposition comes from M. Content comes from the Mind Tree. The three channels are architecturally separated.
+HEXIS composes with representation engineering via the directional channel $d^*$, a fixed activation vector extracted from contrastive activation means: $d^* = N^{-1} \sum_i (\bar h_i^\text{pro} - \bar h_i^\text{con})$ over 62 topics. $d^*$ is injected as a post-attention residual at decode time. The critical property is that $d^*$ and M operate on orthogonal axes: the directional delta along $d^*$ between M-conditioned and unconditioned generation is $-0.001$ nats. Direction comes from $d^*$, disposition from M, content from the Mind Tree --- the three channels are architecturally separated.
