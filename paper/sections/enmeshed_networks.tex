@@ -19,18 +19,17 @@ We characterise enmeshed networks along six axes (Appendix Table~\ref{tab:design
 \subsection{The Mind Tree}
 \label{sec:mind_tree}
 
-The enmeshed network requires a structured input for its parallel context channel. The \emph{Mind Tree} is a typed cognitive schema with hierarchical nodes organised into six sections (\texttt{identity}, \texttt{beliefs}, \texttt{strategies}, \texttt{memories}, \texttt{models}, \texttt{values}; full role table in Appendix~\ref{sec:mind_tree_spec}). Each belief node carries structured metadata: categorical conviction (\texttt{strong}, \texttt{moderate}, \texttt{agnostic}), domain tags, an \texttt{addresses} field listing query types the node answers, and a \texttt{novel} flag marking content unlikely to survive compilation. This metadata enables both \emph{compilation weighting} (high-conviction nodes receive higher weight during $\phi$'s pooling step) and \emph{deterministic curation} (novel content is routed to the explicit slot rather than the compiled channel).
+The enmeshed network requires a structured input for its parallel context channel. The \emph{Mind Tree} is a typed memory schema with hierarchical nodes organised into six sections (\texttt{identity}, \texttt{beliefs}, \texttt{strategies}, \texttt{memories}, \texttt{models}, \texttt{values}; full role table in Appendix~\ref{sec:mind_tree_spec}). Each belief node carries structured metadata: categorical conviction (\texttt{strong}, \texttt{moderate}, \texttt{agnostic}), domain tags, an \texttt{addresses} field listing query types the node answers, and a \texttt{novel} flag marking content unlikely to survive compilation. This metadata enables both \emph{compilation weighting} (high-conviction nodes receive higher weight during $\phi$'s pooling step) and \emph{deterministic curation} (novel content is routed to the explicit slot rather than the compiled channel).
 
 \textbf{Categorical vs.\ numeric conviction.} We use categorical conviction labels rather than numeric credences. This is an architectural decision confirmed by a negative result: numeric credence values are nearly indistinguishable in the transformer's attention space (Appendix~\ref{sec:credence_negative}).
 
-\subsection{Application Domains}
-\label{sec:application_domains}
+% §2.3 Application Domains moved to appendix per #5 — pre-submission scope cut
+% The full per-domain analysis (user empathy, research conviction, agentic strategy,
+% codebase awareness) lives in Appendix~\ref{sec:application_domain_details}.
+%
+% Common thread (kept here as one sentence): compiled dispositional memory is
+% structurally distinct from context-level alternatives in domains where knowledge
+% is better encoded as a perceptual shift than as text. The distinction is
+% sharpest under adversarial conditions, validated empirically in §\ref{sec:sycophancy}.
 
-Compiled dispositional memory provides qualitative advantages over context-level alternatives in four domains where knowledge is \emph{better encoded as a perceptual shift than as text} (full per-domain analysis in Appendix~\ref{sec:application_domain_details}):
-\begin{itemize}[leftmargin=*]
-\item \textbf{User empathy / preference tracking.} M changes \emph{what the model attends to} in the user's message; a prompt only says ``user prefers concise.''
-\item \textbf{Research conviction.} Sycophancy resistance requires dispositional anchoring that survives adversarial pressure (\S\ref{sec:sycophancy}); prompt-level beliefs can be argued away.
-\item \textbf{Agentic strategy.} Strategy logs in context dilute as episodes accumulate; compiled M encodes when to explore vs.\ exploit at fixed cost (\S\ref{sec:agentic}).
-\item \textbf{Codebase \& repository management.} Repo context in prompt scales linearly with codebase size; M compiles structural intuition at fixed cost.
-\end{itemize}
-The common thread: a prompt tells the model what to do; enmeshed modulation changes \emph{how} the model processes its input. The distinction is sharpest under adversarial conditions: prompt-level beliefs dilute with context length and fold under argumentative pressure; compiled dispositions are structurally immune to both.
+The full per-domain analysis (user empathy, research conviction, agentic strategy, codebase awareness) and how each maps onto the compilation/curation split is detailed in Appendix~\ref{sec:application_domain_details}. The shared property across domains is that compiled stance memory is structurally distinct from context-level alternatives where knowledge is better encoded as an attention reweighting than as text; this distinction is sharpest under adversarial conditions, validated empirically in \S\ref{sec:sycophancy}.

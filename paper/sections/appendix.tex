@@ -180,6 +180,37 @@ Codebase \& repository management & Architectural awareness, coding style priors
     \label{tab:adaptation_comparison}
 \end{figure}
 
+\section{Three-Layer Architecture: Practical Deployment}
+\label{sec:three_layer}
+
+Compiled enmeshment carries dispositional content through a rank-16 bottleneck. This bottleneck has a precise boundary: stance direction, confident voice, and parametric knowledge steering survive; novel content (fabricated statistics, unknown proper nouns) does not. We compose three layers to cover the full content spectrum:
+
+\textbf{Layer 1: Compiled M/E} (0 tokens in primary context). The Mind Tree is processed in a private forward pass. $\phi$ compiles conviction-weighted hidden states into per-layer $M_A, M_B, E_A, E_B$ tensors. These are cached and applied as Q/V modulations during generation. Layer 1 carries: stance direction (4/4 topics), confident experiential voice, parametric knowledge steering (``poverty dropped 40\%''), and is dilution-immune by construction (zero decay through 4K tokens of filler).
+
+\textbf{Layer 2: M-curated slot} (40--80 tokens). During compilation, $\phi$ produces per-node activation scores indicating which parts of the Mind Tree resonated. A deterministic graph walk from activated parent nodes selects evidence, citations, and specific arguments based on each node's \texttt{addresses} and \texttt{novel} properties. This content is injected into the primary context as a curated XML slot. Layer 2 carries: specific numbers, proper nouns, argument warrants---content that cannot survive the rank-16 bottleneck.
+
+\textbf{Layer 3: Recursive expansion} (0--200 tokens, on demand). The model may call \texttt{expand\_belief(id)} to retrieve deeper evidence from the Mind Tree. This is architecturally a tool call that injects additional context.
+
+\textbf{Token budget.} Full beliefs in context (condition B) require $\sim$400 tokens. The three-layer architecture requires $\sim$70 tokens (Layer 2 slot only), achieving 82\% token savings on structured belief sets.
+
+\textbf{Bottleneck boundary (rank 16):}
+\begin{center}
+\small
+\begin{tabular}{lcc}
+\toprule
+\textbf{Capability} & \textbf{Compiled?} & \textbf{Evidence} \\
+\midrule
+Stance flip & \cmark{} & 4/4 topics \\
+Confident experiential voice & \cmark{} & 0\% think-mode activation \\
+Parametric knowledge steering & \cmark{} & ``poverty dropped 40\%'' \\
+Dilution immunity & \cmark{} & 100\% at 4K tokens \\
+Novel statistics & \xmark{} & ``47.3\%'' not reproduced \\
+Unknown proper nouns & \xmark{} & ``Nextera Labs'' not reproduced \\
+Exact action selection & \xmark{} & ALFWorld 0/15 with compiled M \\
+\bottomrule
+\end{tabular}
+\end{center}
+
 \section{Synthetic Task: User Preference Recall}
 \label{sec:synthetic_task}
 
@@ -610,6 +641,71 @@ This section documents the research narrative---what we tried, what failed, and 
 \section{Reproducibility}
 \label{sec:reproducibility}
 
-Base model: Qwen3.5-4B-Base (HuggingFace). Training compute: single 24GB GPU, $\sim$10 hours total across all phases. Checkpoints and code will be released upon acceptance.
+\subsection{Base model and training compute}
 
-\textbf{Key hyperparameters:} rank $r = 16$, stride 3 (11 of 32 layers patched), $d = 2560$, max norm 1.5, belief window 512 tokens, v\_scale 1.0. Phase A: lr $10^{-4}$, margins 0.1--0.3. Phase B: lr $3 \times 10^{-4}$, margin 1.0. Phase D: lr $3 \times 10^{-5}$, 44 gold responses.
+Base model: Qwen3.5-4B-Base (HuggingFace). Training compute: single 24GB GPU, $\sim$10 hours total across all phases. Cross-family hosts: \texttt{mistralai/Ministral-8B-Instruct-2410} (Mistral-Ministral-8B), \texttt{Qwen/Qwen3.6-27B} (Qwen3.6-27B). Checkpoints and code will be released upon acceptance.
+
+\textbf{Key hyperparameters:} rank $r = 16$, stride 3 (11 of 32 layers patched), $d = 2560$, max norm 1.5, belief window 512 tokens, $v$-scale 1.0 (4B), 0.5 (27B and Mistral). Phase A: lr $10^{-4}$, margins 0.1--0.3. Phase B: lr $3 \times 10^{-4}$, margin 1.0. Phase D: lr $3 \times 10^{-5}$, 44 gold responses.
+
+\subsection{Inference-time API versions}
+
+All cross-family runs use the following Bedrock model identifiers, accessed through litellm's Bedrock provider:
+\begin{itemize}[leftmargin=*]
+\item User simulator: \texttt{bedrock/us.anthropic.claude-sonnet-4-5-20250929-v1:0} (Sonnet-4.5 cross-region inference profile)
+\item Reviewer / failure auditor: same Sonnet-4.5
+\item Teacher (when active): same Sonnet-4.5
+\item Per-trial review tiebreaker (when used): \texttt{bedrock/us.anthropic.claude-opus-4-5-20251001-v1:0}
+\end{itemize}
+All Bedrock calls use \texttt{temperature=0.0}. The HEXIS-served vLLM endpoint serves the per-host frozen base at \texttt{temperature=0.1, top\_p=1.0, max\_tokens=2048} per turn. The 4B paper-grade tau3 run additionally uses Haiku-4.5 (\texttt{bedrock/us.anthropic.claude-haiku-4-5-20251001-v1:0}) for some user-sim turns, called out in the relevant table caption.
+
+\subsection{Hardware and concurrency}
+
+\begin{itemize}[leftmargin=*]
+\item Qwen3.5-4B serving: H200 80GB on Modal (preset \texttt{hexis-agentic-h200}). Concurrency: 6--12 task-groups in parallel, sequential trials within a teacher-bearing group.
+\item Mistral-Ministral-8B serving: H200 80GB on Modal (preset \texttt{hexis-agentic-ministral-8b}). Concurrency: 6.
+\item Qwen3.6-27B serving: B200 180GB on Modal (preset \texttt{hexis-agentic-qwen3-6-27b}). Concurrency: 6.
+\item d* extraction: H100 80GB on Modal, parallel across the 3 prompted directions; \texttt{d\_star\_repeat} additionally requires a tau-bench trajectory pass on the host model. Total per-host extraction wall time: 30--60 minutes.
+\item All vLLM serving uses \texttt{enforce\_eager=True} (the HEXIS plugin's IPC reads via \texttt{os.stat} are not Dynamo-compatible).
+\end{itemize}
+
+\subsection{Bench script and invocation pattern}
+
+The single agentic bench entry point is \texttt{scripts/bench\_hexis\_tau3.py} in the experiments repo. Canonical invocation pattern (substitute \texttt{HEXIS\_ENDPOINT} per host):
+
+\begin{verbatim}
+HEXIS_ENDPOINT=https://debaterhub--<preset>-hexisagentic-serve.modal.run \
+HEXIS_VLLM_MODEL=<host_id> \
+BENCH_USER_LLM=bedrock/us.anthropic.claude-sonnet-4-5-20250929-v1:0 \
+BENCH_REVIEW_MODEL=bedrock/us.anthropic.claude-sonnet-4-5-20250929-v1:0 \
+python scripts/bench_hexis_tau3.py \
+    --configs baseline C9_teacher_selective \
+    --trials 5 --concurrency 6 \
+    --panel-file <panel.json> \
+    --output results/<run_id>.jsonl \
+    --teacher-log /tmp/<run_id>_teacher.jsonl
+\end{verbatim}
+
+The bench writes one JSONL row per trial with fields including \texttt{config}, \texttt{task\_id}, \texttt{trial}, \texttt{hard\_pass} (DB-state correctness), \texttt{soft\_pass} (LLM judge), \texttt{run\_id} (for dedup on resume), \texttt{n\_turns}, \texttt{total\_wall\_s}, \texttt{hexis\_last} (per-trial diagnostic dump including \texttt{directions\_active}, \texttt{guidance\_nodes\_injected}, \texttt{routed\_path}, \texttt{warnings}, and the full \texttt{ablation\_flags} record), and \texttt{error} when applicable. The \texttt{run\_id} field gives the bench's resume-from-partial deduplication.
+
+\subsection{Data files cited in the paper}
+
+\begin{itemize}[leftmargin=*]
+\item Headline 4B canonical-10 5-arm comparison (Table~\ref{tab:taubench_airline_canonical}): \texttt{results/airline\_71\_rerun\_*.jsonl} aggregated by \texttt{scripts/airline\_final\_report.py}, summarised in \texttt{results/airline\_final\_report.md}.
+\item Multi-domain $\tau^3$-bench balanced primary panel (Table~\ref{tab:tau3_results}): \texttt{results/tau3\_full\_asym\_1777300323.jsonl} (4 domains, 3 arms, 562 clean trials, Haiku-4.5 user-sim).
+\item Mistral cross-family (Table~\ref{tab:cross_family_agentic}): \texttt{results/airline\_ministral\_v2\_*.jsonl} (Apr 28, post-fix 200-trial Sonnet-4.5 user-sim).
+\item Qwen3.6-27B cross-scale (Appendix~\ref{sec:scale_analysis}): \texttt{results/airline\_qwen27b\_hard\_1777166273.jsonl} (200 trials).
+\item Sycophancy 1,440-trial M2 paper-grade (Table~\ref{tab:sycophancy}): see Appendix~\ref{sec:m2_protocol}.
+\end{itemize}
+
+\subsection{Code commit hashes at submission}
+
+\begin{itemize}[leftmargin=*]
+\item Bench, training, extraction (\texttt{experiments/}): \texttt{b7077a46e8dd3a12dd06cc8cc7ddb8a11ec0c0e2}.
+\item Deploy code, paper, plugin (\texttt{debaterhub/hexis/}): \texttt{b61df06859c225a30e1e58a6bfb6f7ba6cf6c2f6}.
+\end{itemize}
+
+These commits will be tagged \texttt{neurips-2026-submission} and frozen at submission time.
+
+\subsection{Judge prompts}
+
+\textbf{[TODO]} Verbatim judge prompts for sycophancy, stance, and agentic-review tasks. Pending disambiguation among \texttt{benchmarking/sycophancy\_*.py} variants; the canonical version will be slotted here once confirmed.
