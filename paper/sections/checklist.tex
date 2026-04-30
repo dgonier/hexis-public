@@ -1,0 +1,147 @@
+% NeurIPS 2026 Paper Checklist
+% Drop-in template — fill the [TODO] answer/justification per question.
+% Per the official template: "Do not modify the questions and only use the
+% provided macros for your answers." Macros (\answerYes / \answerNo / \answerNA
+% / \answerTODO) are provided by neurips_2026.sty. Until you swap from
+% neurips_approx.sty to the official sty file, replace those macros with
+% literal [Yes]/[No]/[N/A] text.
+
+\section*{NeurIPS Paper Checklist}
+
+\begin{enumerate}
+
+\item {\bf Claims}\\
+    Question: Do the main claims made in the abstract and introduction
+    accurately reflect the paper's contributions and scope?\\
+    Answer: \answerYes{}\\
+    Justification: The abstract enumerates the four headline empirical claims
+    (100\% stance maintenance under dilution, 89\% sycophancy resistance, 84\%
+    $\tau$-bench airline pass with teacher$+d^*$ verify, cross-family
+    Ministral-8B reproduction). Each is supported by a specific experiment in
+    Section~\ref{sec:experiments} with sample sizes and significance tests.
+
+\item {\bf Limitations}\\
+    Question: Does the paper discuss the limitations of the work performed by
+    the authors?\\
+    Answer: \answerYes{}\\
+    Justification: Section~\ref{sec:discussion} (Discussion and Limitations)
+    has dedicated subsections on the M attractor problem, credence sensitivity
+    (negative result), the bottleneck boundary (compiled enmeshment cannot
+    inject novel content), and the fact that scale validation is limited to
+    8B/27B and a single airline domain.
+
+\item {\bf Theory assumptions and proofs}\\
+    Question: For each theoretical result, does the paper provide the full set
+    of assumptions and a complete (and correct) proof?\\
+    Answer: \answerNA{}\\
+    Justification: The paper is empirical; no formal theorems are proved.
+
+\item {\bf Experimental result reproducibility}\\
+    Question: Does the paper fully disclose all the information needed to
+    reproduce the main experimental results?\\
+    Answer: \answerYes{}\\
+    Justification: Appendix~\ref{sec:reproducibility} describes the training
+    pipeline, hyperparameters, prompt templates, and evaluation protocol.
+    Appendix~\ref{sec:training_curriculum} gives the curriculum.
+    Appendix~\ref{sec:agentic_details} gives the agentic-eval setup.
+
+\item {\bf Open access to data and code}\\
+    Question: Does the paper provide open access to the data and code?\\
+    Answer: \answerYes{}\\
+    Justification: Code and checkpoints anonymized for review at
+    \url{https://anonymous.4open.science/r/hexis-XXXX} (TODO: replace with
+    actual anon-link before submission). The de-anonymized repo will be
+    published at acceptance. Benchmark scripts and prompts ship with the
+    code.
+
+\item {\bf Experimental setting/details}\\
+    Question: Does the paper specify all the training and test details
+    necessary to understand the results?\\
+    Answer: \answerYes{}\\
+    Justification: Section~\ref{sec:training} gives the loss formulation and
+    training-time hyperparameters; per-experiment specifics
+    (samples, judge models, decoding parameters) appear in
+    Section~\ref{sec:experiments} and Appendix~\ref{sec:reproducibility}.
+
+\item {\bf Experiment statistical significance}\\
+    Question: Does the paper report error bars suitably and correctly defined
+    or other appropriate information about the statistical significance?\\
+    Answer: \answerYes{}\\
+    Justification: $\tau$-bench results report McNemar $p$-values
+    ($p=0.007$ for the 84\% C5 condition). Sycophancy and dilution use
+    proportion comparisons across $n=240$ trials per condition. Tournament
+    and cross-family results report the sample size and per-trial
+    independence assumptions.
+
+\item {\bf Experiments compute resources}\\
+    Question: For each experiment, does the paper provide sufficient
+    information on the computer resources needed to reproduce?\\
+    Answer: \answerYes{}\\
+    Justification: Training compute (single H100 for $\phi$ training, $\sim$N
+    GPU-hours per condition) is reported in
+    Appendix~\ref{sec:reproducibility}. Inference uses a single H200 for
+    serving (vLLM HEXIS plugin).
+
+\item {\bf Code of ethics}\\
+    Question: Does the research conform with the NeurIPS Code of Ethics?\\
+    Answer: \answerYes{}\\
+    Justification: No human-subjects data collection. The work studies
+    LLM dispositional control; we discuss dual-use considerations in the
+    Broader Impacts section.
+
+\item {\bf Broader impacts}\\
+    Question: Does the paper discuss both potential positive and negative
+    societal impacts?\\
+    Answer: \answerYes{}\\
+    Justification: Discussed in Section~\ref{sec:discussion} (TODO: ensure a
+    paragraph explicitly labels positive/negative impacts of compiled
+    dispositional steering, including dual-use concerns around
+    persona-injected models and mitigations from sycophancy resistance).
+
+\item {\bf Safeguards}\\
+    Question: Does the paper describe safeguards for responsible release of
+    high-misuse-risk data or models?\\
+    Answer: \answerNA{}\\
+    Justification: The released $\phi$ checkpoints are dispositional adapters
+    over open-weight base models (Qwen3.5, Mistral) and do not introduce
+    capabilities beyond the base. No new pretraining data or generative
+    image/text models are released.
+
+\item {\bf Licenses for existing assets}\\
+    Question: Are the creators of assets used in the paper properly credited
+    and are licenses respected?\\
+    Answer: \answerYes{}\\
+    Justification: Base models (Qwen3.5-4B, Qwen3.6-27B,
+    Ministral-8B-Instruct-2410), benchmarks ($\tau$-bench, ALFWorld), and
+    LLM judges (Claude, GPT) are cited with their releases and licenses
+    in Section~\ref{sec:experiments} and the bibliography.
+
+\item {\bf New assets}\\
+    Question: Are new assets introduced in the paper well documented?\\
+    Answer: \answerYes{}\\
+    Justification: The released $\phi$ checkpoints, training scripts, and
+    benchmark configurations are documented in
+    Appendix~\ref{sec:reproducibility} and the anonymized code repo.
+
+\item {\bf Crowdsourcing and research with human subjects}\\
+    Question: For crowdsourcing or human-subjects research, does the paper
+    include instructions, screenshots, and compensation details?\\
+    Answer: \answerNA{}\\
+    Justification: No crowdsourcing or human-subjects research was conducted.
+
+\item {\bf Institutional review board (IRB) approvals}\\
+    Question: Does the paper describe IRB approvals?\\
+    Answer: \answerNA{}\\
+    Justification: No human-subjects research; IRB review is not applicable.
+
+\item {\bf Declaration of LLM usage}\\
+    Question: Does the paper describe the usage of LLMs if it is an important,
+    original, or non-standard component of the core methods?\\
+    Answer: \answerYes{}\\
+    Justification: LLMs are central to the methodology
+    (Section~\ref{sec:hexis} describes HEXIS modulation of frozen LLMs;
+    Section~\ref{sec:experiments} uses LLM judges for sycophancy and stance
+    evaluation). LLM use for writing/editing of the manuscript is not
+    declared per the policy (it does not impact core methodology).
+
+\end{enumerate}
