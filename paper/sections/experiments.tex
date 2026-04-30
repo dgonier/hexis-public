@@ -67,6 +67,7 @@ The directional channel $d^*$ and the modulation channel M are empirically ortho
 
 \subsection{Agentic Task Execution}
 \label{sec:agentic}
+\label{sec:agentic_results}
 
 We evaluate HEXIS as an agentic M controller on $\tau^3$-bench, the four-domain extension of $\tau$-bench~\citep{yao2024tau} (airline, retail, banking\_knowledge, telecom). For agentic tasks, M operates via mechanism (b): a contrastive retrieval phi ($\phi_R$, $d_\text{model} \to d_\text{model}/4 \to 256$ MLP, compiled in $\sim$20s, 100\% R@1 on 108 nodes) routes hidden states to nodes in a domain knowledge graph. Failure observations are written to the graph by an inter-trial teacher loop and retrieved on subsequent trials. Full retrieval-phi training, knowledge graph schema, and teacher prompt are in Appendix~\ref{sec:agentic_details}. The 10-task airline subset used as our cross-family reference panel is reported in Appendix~\ref{sec:agentic_details} (Table~\ref{tab:taubench_airline_canonical}); cross-family validation on Mistral-Ministral-8B and Qwen3.6-27B in Appendix~\ref{sec:scale}. The body reports the multi-domain $\tau^3$-bench panel below, where panel selection is non-outcome-dependent (all 4 domains, all hard tasks within each).
 
@@ -88,11 +89,22 @@ All-clean, no t1, t3       & 49.5\% & 53.9\% & 58.8\% & +9pp & \textbf{0.044} \\
 \end{tabular}
 \end{table}
 
-\begin{figure}[h]
+\begin{figure}[!t]
 \centering
-\includegraphics[width=0.72\textwidth]{fig-tau3-results.pdf}
-\caption{$\tau^3$-bench audited pass rates by domain on the strict-balanced primary panel (no t1, t3; 24 tasks $\times$ 3 arms $\times$ 5 trials). Dots are 3-judge audited pass rates, horizontal bars Wilson 95\% CIs. Where there is headroom and the failure mode is policy-shaped (banking, airline) HEXIS lifts pass rate by 17--20\,pp; where the panel is near ceiling (retail 78\%, telecom 100\%) no lift is observable. Overall $62\% \to 72\%$, $\Delta=+10$pp, paired $p=0.043$.}
-\label{fig:tau3_results}
+\begin{minipage}[t]{0.52\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,trim=0 30 0 30,clip]{fig-arch-comparison.png}
+    \subcaption{Architectural taxonomy. (a)~Context-level (RAG, MemGPT) puts memory in the prompt, where it competes for attention. (b)~Parameter-level (LoRA, adapters) modifies host weights via gradient descent. (c)~Activation-level (RepEng, ActAdd) injects fixed direction vectors. (d)~Enmeshed networks (this work) compile a parallel knowledge graph into per-layer modulation tensors $M_\ell$ that blend with the frozen host. \emph{Full-size view: Appendix Figure~\ref{fig:arch_comparison_large}.}}
+    \label{fig:arch_comparison}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.46\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{fig-tau3-results.pdf}
+    \subcaption{$\tau^3$-bench audited pass rates (3-judge) on the balanced primary panel (no t1, t3). HEXIS lifts the baseline by $+10$pp overall ($p=0.043$), with the strongest per-domain effect on \texttt{banking\_knowledge} ($+20$pp). LoRA-SFT (matched compute, 1K AReaL tau$^2$ samples) wins on its trained domains but produces malformed tool calls on all 20 banking trials --- a domain it was not trained on. \emph{Full-size view: Appendix Figure~\ref{fig:tau3_results_large}.}}
+    \label{fig:tau3_results}
+\end{minipage}
+\caption{Architectural taxonomy and headline agentic result. The four-panel taxonomy (left) places HEXIS in the design space; the bar chart (right) reports the audited $\tau^3$-bench result that motivates the paper's claim --- HEXIS gives a deploy-time generalisation channel that survives distribution shift in a way task-specific fine-tuning does not.}
+\label{fig:headline}
 \end{figure}
 
 \textbf{$\tau^3$-bench headline.} HEXIS-C5 (teacher + $d^*$ verify) lifts pass rate over baseline by $+10$pp on the balanced excl-t1,t3 panel ($61.7\% \to 71.7\%$, paired McNemar $p=0.043$ unadjusted; $p_\text{adj}=0.086$ Bonferroni for $k=2$). The strongest per-domain effect is \texttt{banking\_knowledge} ($25\% \to 45\%$, $+20$pp); retail and telecom are at ceiling. Full per-panel statistics, judge-variance treatment, and the reviewer-objections checklist in Appendix~\ref{sec:tau3_protocol}.

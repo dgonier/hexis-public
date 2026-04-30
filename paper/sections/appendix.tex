@@ -7,13 +7,20 @@
 
 \section{Architecture diagrams}
 \label{sec:system_figures}
+\label{sec:arch_figure}
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.85\textwidth]{fig-arch-comparison.png}
-    \caption{Four approaches to equipping LLMs with memory. (a)~Context-level methods place memory tokens in the shared context window, where they compete for attention and dilute with length ($O(T \cdot N \cdot d)$ per token). (b)~Parameter-level methods modify host weights, requiring gradient descent per adaptation ($O(\nabla)$). (c)~Activation-level methods inject a fixed direction vector ($O(L \cdot d)$, non-adaptive). (d)~Enmeshed networks (this work) compile a secondary knowledge graph into per-layer modulation tensors $M_\ell$ that blend with the frozen host via a blending function $B$ ($O(L \cdot d \cdot r)$ per token, constant in memory size $N$).}
-    \label{fig:arch_comparison}
-\label{sec:arch_figure}
+    \includegraphics[width=\textwidth]{fig-arch-comparison.png}
+    \caption{Full-size view of the architectural taxonomy summarised in Figure~\ref{fig:arch_comparison} of the main body. (a)~Context-level methods (RAG, Reflexion, MemGPT) place memory tokens in the shared context window, where they compete for attention and dilute with length ($O(T \cdot N \cdot d)$ per token). (b)~Parameter-level methods (LoRA, adapters) modify host weights, requiring gradient descent per adaptation ($O(\nabla)$). (c)~Activation-level methods (RepEng, ActAdd) inject a fixed direction vector ($O(L \cdot d)$, non-adaptive). (d)~Enmeshed networks compile a secondary knowledge graph into per-layer modulation tensors $M_\ell$ that blend with the frozen host via a blending function $B$ ($O(L \cdot d \cdot r)$ per token, constant in memory size $N$).}
+    \label{fig:arch_comparison_large}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\textwidth]{fig-tau3-results.pdf}
+    \caption{Full-size view of the $\tau^3$-bench audited pass-rate result summarised in Figure~\ref{fig:tau3_results} of the main body. Bars are 3-judge audited pass rates (Haiku-hard + Haiku-soft, Sonnet auditor on disputes, Opus 4.7 tiebreaker on Sonnet-vs-hard disputes). Error bars are Wilson 95\% confidence intervals. Balanced primary panel, airline t1 and t3 excluded due to documented LLM-judge variance (\S\ref{sec:tau3_protocol}). LoRA-SFT was trained on a 1{,}000-sample subset of the AReaL-tau$^2$ corpus covering airline, retail, and telecom; \texttt{banking\_knowledge} is the held-out distribution-shift test, on which the LoRA-trained model emits malformed tool-call JSON on all 20 trials (rejected by vLLM's tool-call parser as 400 Bad Request).}
+    \label{fig:tau3_results_large}
 \end{figure}
 
 \begin{figure}[h]
