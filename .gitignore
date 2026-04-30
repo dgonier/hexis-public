@@ -25,3 +25,6 @@ Thumbs.db
 # Checkpoints (large files — released separately)
 checkpoints/*.pt
 *.pt
+
+# Local archive of pre-submission drafts (never publish)
+paper/.archive/
