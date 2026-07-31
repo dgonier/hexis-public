@@ -27,3 +27,5 @@ checkpoints/*.pt
 *.pt
 
 notes.md
+
+reviews/
