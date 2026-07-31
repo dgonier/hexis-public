@@ -25,3 +25,5 @@ Thumbs.db
 # Checkpoints (large files — released separately)
 checkpoints/*.pt
 *.pt
+
+notes.md

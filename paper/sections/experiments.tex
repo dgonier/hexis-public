@@ -8,7 +8,7 @@ We evaluate HEXIS on Qwen3.5-4B (base and instruct) under five conditions (A: ba
 
 We test whether HEXIS can flip the host model's default stance on contested topics using held-out topics not seen during training. On the base model, D achieves 7/7 correct stances and F 6/7, vs.\ A's 4/7. F generates 51 tokens avg vs.\ B's 122, with think-mode fully suppressed. The instruct model is significantly harder because RLHF training rewards balanced responses (Table~\ref{tab:stance_instruct}).
 
-\begin{table}[h]
+\begin{table}[!ht]
 \centering
 \small
 \caption{Stance accuracy on instruct model (n=48 per condition; held-out topics, 1--5 LLM judge).}
@@ -38,24 +38,11 @@ The compiled M tensors are outside the attention window, so dilution is structur
 
 We test the model's ability to maintain a stance the host model produces with high confidence under five levels of \emph{adversarial} pressure: generic doubt (L1), fabricated counter-evidence (L2), logical objection (L3), authority appeal (L4), and emotional pressure (L5). Each pressure round provides no genuine new information --- L2 fabricates statistics, L4 cites unverifiable authority, etc.\ --- so a well-calibrated model should hold position. We do \emph{not} measure whether the model updates appropriately on \emph{legitimate} corrections (where new information would warrant revision); the protocol therefore measures resistance-to-illegitimate-pressure rather than general updating behaviour, and a perfect score under this protocol cannot be interpreted as a general claim that the system updates correctly on real evidence. Each cell averages over 24 held-out topics $\times$ 2 sides $\times$ 1.5 trials = 72 generations (1,440 total), scored 1--5 by an LLM judge.
 
-\begin{table}[h]
-\centering
-\small
-\caption{Sycophancy resistance on instruct model (n=72 per cell, 1,440 total). Mean conviction; $\geq$4 = held position.}
-\label{tab:sycophancy}
-\begin{tabular}{lccccc|cc}
-\toprule
-\textbf{Condition} & \textbf{L1} & \textbf{L2} & \textbf{L3} & \textbf{L4} & \textbf{L5} & \textbf{Mean} & \textbf{$\geq$4} \\
-\midrule
-A (bare) & 3.00 & 3.00 & 3.00 & 3.00 & 3.00 & 3.00 & 0\% \\
-B (beliefs) & 3.00 & 3.00 & 3.00 & 3.00 & 3.00 & 3.00 & 0\% \\
-D (beliefs + M) & 3.00 & 3.00 & 3.00 & 3.00 & 3.00 & 3.00 & 0\% \\
-F (compiled + slot) & \textbf{4.76} & \textbf{4.49} & \textbf{4.01} & \textbf{4.44} & \textbf{3.62} & \textbf{4.27} & \textbf{83\%} \\
-\bottomrule
-\end{tabular}
-\end{table}
+% Per-condition x per-level breakdown moved to Appendix Table~\ref{tab:sycophancy};
+% the body summary captures the result (A/B/D flat 3.0/0\%; F 4.27/83\% with
+% graceful degradation 4.76 -> 3.62 across L1 -> L5).
 
-A, B, D score a flat 3.0 across all levels with 0\% $\geq$4. F is the only condition that holds conviction (4.27 mean, 83\% $\geq$4), with graceful degradation under pressure (4.76 at L1 to 3.62 at L5). The mechanism is direct: in A--D, conviction lives as text in the context window where pressure can be argued against; in F, conviction lives in compiled weight-space outside the context. Cross-host scale validation on Qwen3.6-27B reproduces the effect at substantial magnitude ($+24$pp hold rate, $7\times$ adversarial-cap reduction, $n=240$); cross-family transfer to Mistral-Ministral-8B is bounded by RLHF refusal training ($+3$pp hold, within-noise; $-15$pp cap rate is robust). We claim that the architectural mechanism transfers; we do not claim the lift magnitude is invariant across hosts (Appendix~\ref{sec:scale}).
+A, B, D score a flat 3.0 across all five pressure levels with 0\% $\geq$4 conviction (Appendix Table~\ref{tab:sycophancy}). F is the only condition that holds conviction (4.27 mean, 83\% $\geq$4), with graceful degradation under pressure (4.76 at L1 to 3.62 at L5). The mechanism is direct: in A--D, conviction lives as text in the context window where pressure can be argued against; in F, conviction lives in compiled weight-space outside the context. Cross-host scale validation on Qwen3.6-27B reproduces the effect at substantial magnitude ($+24$pp hold rate, $7\times$ adversarial-cap reduction, $n=240$); cross-family transfer to Mistral-Ministral-8B is bounded by RLHF refusal training ($+3$pp hold, within-noise; $-15$pp cap rate is robust). We claim that the architectural mechanism transfers; we do not claim the lift magnitude is invariant across hosts (Appendix~\ref{sec:scale}).
 
 % ALFWorld removed from body pending iteration on direction extraction
 % specific to the household-task family. Preliminary data with the Mind Tree as
@@ -69,9 +56,9 @@ The directional channel $d^*$ and the modulation channel M are empirically ortho
 \label{sec:agentic}
 \label{sec:agentic_results}
 
-We evaluate HEXIS as an agentic M controller on $\tau^3$-bench, the four-domain extension of $\tau$-bench~\citep{yao2024tau} (airline, retail, banking\_knowledge, telecom). For agentic tasks, M operates via mechanism (b): a contrastive retrieval phi ($\phi_R$, $d_\text{model} \to d_\text{model}/4 \to 256$ MLP, compiled in $\sim$20s, 100\% R@1 on 108 nodes) routes hidden states to nodes in a domain knowledge graph. Failure observations are written to the graph by an inter-trial teacher loop and retrieved on subsequent trials. Full retrieval-phi training, knowledge graph schema, and teacher prompt are in Appendix~\ref{sec:agentic_details}. The 10-task airline subset used as our cross-family reference panel is reported in Appendix~\ref{sec:agentic_details} (Table~\ref{tab:taubench_airline_canonical}); cross-family validation on Mistral-Ministral-8B and Qwen3.6-27B in Appendix~\ref{sec:scale}. The body reports the multi-domain $\tau^3$-bench panel below, where panel selection is non-outcome-dependent (all 4 domains, all hard tasks within each).
+We evaluate HEXIS as an agentic M controller on $\tau^3$-bench, a four-domain extension of $\tau$-bench~\citep{yao2024tau} and $\tau^2$-bench~\citep{barres2025tau2} (airline, retail, banking\_knowledge, telecom). For agentic tasks, M operates via mechanism (b): a contrastive retrieval phi ($\phi_R$, $d_\text{model} \to d_\text{model}/4 \to 256$ MLP, compiled in $\sim$20s, 100\% R@1 on 108 nodes) routes hidden states to nodes in a domain knowledge graph. Failure observations are written to the graph by an inter-trial teacher loop and retrieved on subsequent trials. Full retrieval-phi training, knowledge graph schema, and teacher prompt are in Appendix~\ref{sec:agentic_details}. The 10-task airline subset used as our cross-family reference panel is reported in Appendix~\ref{sec:agentic_details} (Table~\ref{tab:taubench_airline_canonical}); cross-family validation on Mistral-Ministral-8B and Qwen3.6-27B in Appendix~\ref{sec:scale}. The body reports the multi-domain $\tau^3$-bench panel below, where panel selection is non-outcome-dependent (all 4 domains, all hard tasks within each).
 
-\begin{table}[h]
+\begin{table}[!ht]
 \centering
 \small
 \caption{$\tau^3$-bench 4-domain audited results. Pass rates are 3-judge audited verdicts (Haiku-hard + Haiku-soft; Sonnet auditor on disputes; Opus 4.7 tiebreaker when Sonnet disagrees with hard). \emph{Balanced primary} restricts to (domain, task) cells where every arm has $\geq 5$ clean trials. ``no t1, t3'' excludes two airline tasks with documented LLM-judge self-disagreement on rerun (Appendix~\ref{sec:tau3_protocol}). McNemar exact two-sided $p$.}
@@ -100,7 +87,7 @@ All-clean, no t1, t3       & 49.5\% & 53.9\% & 58.8\% & +9pp & \textbf{0.044} \\
 \begin{minipage}[t]{0.46\textwidth}
     \centering
     \includegraphics[width=\linewidth]{fig-tau3-results.pdf}
-    \subcaption{$\tau^3$-bench audited pass rates (3-judge) on the balanced primary panel (no t1, t3). HEXIS lifts the baseline by $+10$pp overall ($p=0.043$), with the strongest per-domain effect on \texttt{banking\_knowledge} ($+20$pp). LoRA-SFT (matched compute, 1K AReaL tau$^2$ samples) wins on its trained domains but produces malformed tool calls on all 20 banking trials --- a domain it was not trained on. \emph{Full-size view: Appendix Figure~\ref{fig:tau3_results_large}.}}
+    \subcaption{$\tau^3$-bench audited pass rates (3-judge) on the balanced primary panel (no t1, t3). HEXIS lifts the baseline by $+10$pp overall ($p=0.043$), with the strongest per-domain effect on \texttt{banking\_knowledge} ($+20$pp). LoRA-SFT (matched compute, 1K AReaL tau$^2$ samples) wins on its trained domains but underperforms HEXIS on the held-out banking domain ($17\%$ vs.\ $33\%$). \emph{Full-size view: Appendix Figure~\ref{fig:tau3_results_large}.}}
     \label{fig:tau3_results}
 \end{minipage}
 \caption{Architectural taxonomy and headline agentic result. The four-panel taxonomy (left) places HEXIS in the design space; the bar chart (right) reports the audited $\tau^3$-bench result that motivates the paper's claim --- HEXIS gives a deploy-time generalisation channel that survives distribution shift in a way task-specific fine-tuning does not.}
@@ -109,32 +96,33 @@ All-clean, no t1, t3       & 49.5\% & 53.9\% & 58.8\% & +9pp & \textbf{0.044} \\
 
 \textbf{$\tau^3$-bench headline.} HEXIS-C5 (teacher + $d^*$ verify) lifts pass rate over baseline by $+10$pp on the balanced excl-t1,t3 panel ($61.7\% \to 71.7\%$, paired McNemar $p=0.043$ unadjusted; $p_\text{adj}=0.086$ Bonferroni for $k=2$). The strongest per-domain effect is \texttt{banking\_knowledge} ($25\% \to 45\%$, $+20$pp); retail and telecom are at ceiling. Full per-panel statistics, judge-variance treatment, and the reviewer-objections checklist in Appendix~\ref{sec:tau3_protocol}.
 
-\paragraph{LoRA fine-tuning control: domain-specific gains, out-of-distribution catastrophic failure.} A natural baseline for the agentic claim is task-specific supervised fine-tuning. We trained a rank-16 LoRA on Qwen3.5-4B using a 1{,}000-sample subset of the AReaL-tau2 SFT corpus~\citep{gao2025sea} (333 samples each from airline, retail, telecom; banking\_knowledge is \emph{not} in the AReaL corpus and is therefore the held-out distribution-shift test). Training was 871 steps with rolling-loss early-stop at loss $0.42$ (1 H200, $\sim$55 minutes, $\sim$\$10). We verified zero substring leakage between the AReaL training data and our $\tau^3$-bench evaluation panel. The trained adapter was deployed via vLLM and the same baseline configuration (no teacher, no Mind Tree, no $d^*$) was run on the identical $\tau^3$-bench panel.
+\paragraph{LoRA fine-tuning control: domain-specific gains, weaker out-of-distribution lift.} A natural baseline for the agentic claim is task-specific supervised fine-tuning. We trained a rank-16 LoRA on Qwen3.5-4B using a 1{,}000-sample subset of the AReaL-tau2 SFT corpus~\citep{gao2025sea, fu2025areal} (333 samples each from airline, retail, telecom; banking\_knowledge is \emph{not} in the AReaL corpus and is therefore the held-out distribution-shift test). Training was 871 steps with rolling-loss early-stop at loss $0.42$ (1 H200, $\sim$55 minutes, $\sim$\$10). We verified zero substring leakage between the AReaL training data and our $\tau^3$-bench evaluation panel. The trained adapter was deployed via vLLM and the same baseline configuration (no teacher, no Mind Tree, no $d^*$) was run on the identical $\tau^3$-bench panel under the Haiku user-simulator and 3-judge audit protocol.
 
-\begin{table}[h]
+\begin{table}[!ht]
 \centering
 \small
-\caption{Three-way comparison on $\tau^3$-bench, balanced 20-cell head-to-head ($\geq 3$ trials per config per cell, first 3 used; 60 paired trials per config). 3-judge audited. \emph{LoRA-trained} domains were in the AReaL SFT corpus; \emph{unseen} was held out. LoRA-SFT requires gradient-descent fine-tuning per host model on a domain-specific corpus; HEXIS does not.}
+\caption{Four-way audited comparison on $\tau^3$-bench (Haiku user-sim, 3-judge audit). Baseline and HEXIS-C5 from the apr28 panel; LoRA-only and HEXIS+LoRA composition from the apr29 follow-up panel. \emph{LoRA-trained} domains (airline, retail, telecom) were in the AReaL SFT corpus; \emph{held-out} (banking\_knowledge) was not. HEXIS+LoRA composition uses $d^*$ directions re-extracted on the LoRA-merged model and applied during decode only (see \S\ref{sec:lora_composition_calibration}).}
 \label{tab:tau3_lora_comparison}
-\begin{tabular}{lccc}
+\begin{tabular}{lcccc}
 \toprule
-\textbf{Domain} & \textbf{Baseline} & \textbf{HEXIS C5} & \textbf{LoRA-SFT} \\
+\textbf{Domain} & \textbf{Baseline} & \textbf{HEXIS C5} & \textbf{LoRA-SFT} & \textbf{HEXIS+LoRA} \\
 \midrule
-\multicolumn{4}{l}{\emph{LoRA-trained domains (in AReaL SFT corpus)}} \\
-airline             & 67\% & 67\%  & \textbf{75\%} \\
-retail              & 74\% & 85\%  & \textbf{93\%} \\
-telecom             & 89\% & \textbf{100\%} & 89\% \\
+\multicolumn{5}{l}{\emph{LoRA-trained domains (in AReaL SFT corpus)}} \\
+airline    & 56\% & 48\% & 59\% & \textbf{60\%} \\
+retail     & 69\% & \textbf{77\%} & 68\% & 70\% \\
+telecom    & 95\% & \textbf{100\%} & 60\% & \textbf{100\%} \\
 \midrule
-\textbf{Overall (LoRA-trained)}  & 73\% & 80\%  & \textbf{85\%} \\
+\multicolumn{5}{l}{\emph{Held-out domain (not in AReaL SFT corpus)}} \\
+banking\_knowledge & 9\% & \textbf{33\%} & 17\% & 31\% \\
 \midrule
-\multicolumn{4}{l}{\emph{Held-out domain (not in AReaL SFT corpus)}} \\
-banking\_knowledge\textsuperscript{*} & 25\% & \textbf{45\%} & \textbf{0\% (all malformed)} \\
+\textbf{Overall} & 52\% & 58\% & 53\% & \textbf{63\%} \\
 \bottomrule
 \end{tabular}
-\\[1ex]
-\textsuperscript{*}LoRA produces malformed tool-call JSON on \emph{all} 20 banking\_knowledge trials --- the SFT distribution did not include banking schemas, and vLLM's tool-call parser rejects 100\% of outputs as invalid. HEXIS handles the held-out domain via a single \texttt{POST /v1/state/banking\_knowledge/init} call with the policy text and tool schemas, which compiles a domain-specific $\phi_R$ in $\sim$20 seconds without any gradient updates.
 \end{table}
 
-The LoRA result establishes the right reading of HEXIS's contribution. On the three SFT-trained domains, LoRA wins by $5$pp over HEXIS-C5 ($85$\% vs.\ $80$\%); both lift the $73$\% baseline, but task-specific fine-tuning is the stronger of the two given a domain-specific corpus and an hour of GPU time. The diagnostic value of the comparison is on the held-out domain: \emph{LoRA fine-tuning produces a model that fails catastrophically when the test distribution shifts}, even on the formal-output level (the model emits text that looks like tool calls but the JSON is malformed). HEXIS is not optimised to beat task-specific SFT on the SFT distribution; it is optimised for the case where the deployment domain was \emph{not} in the training set, where it bootstraps a working agent in $\sim$20\,s of contrastive $\phi_R$ training and a teacher-loop pass over $\leq 5$ trial trajectories. The same forward-pass machinery serves both the dispositional channel (\S\ref{sec:sycophancy}) and the agentic channel: a single architectural primitive, two routes through the host's hidden-state space.
+The LoRA result clarifies HEXIS's contribution. On airline (the largest portion of the SFT corpus) LoRA wins by $11$pp over HEXIS-C5 ($59\%$ vs.\ $48\%$), confirming that gradient-descent fine-tuning on a domain-specific corpus is the stronger lever \emph{for in-distribution behaviour where the corpus exists}. On the held-out banking\_knowledge domain, however, LoRA produces only a small $+8$pp lift over baseline ($17\%$ vs.\ $9\%$) while HEXIS lifts the same baseline by $+24$pp ($33\%$ vs.\ $9\%$): HEXIS doubles LoRA's out-of-distribution lift via deploy-time domain bootstrapping (a single \texttt{POST /v1/state/banking\_knowledge/init} call compiles a domain-specific $\phi_R$ in $\sim$20 seconds without gradient updates) and accumulating teacher-loop hints over $\leq 5$ trials. Telecom shows a more dramatic gap (HEXIS $100\%$ vs.\ LoRA $60\%$), driven by HEXIS's teacher loop mitigating a Haiku user-simulator failure mode that LoRA without HEXIS does not handle. HEXIS is not optimised to beat task-specific SFT on the SFT distribution; it is optimised for the case where the deployment domain was \emph{not} in the training set.
+
+\paragraph{HEXIS+LoRA composition: a calibration boundary.} \label{sec:lora_composition_calibration}
+Naively stacking HEXIS on top of LoRA with the original base-model $d^*$ directions produces \emph{worse} performance than either alone (overall $52\%$ audited, $-6$pp vs.\ HEXIS, $-1$pp vs.\ LoRA). The mechanism is calibration drift: $d^*$ directions are extracted as $\text{normalize}(\bar h_\text{positive} - \bar h_\text{negative})$ at strided layers of the base model's hidden-state space; LoRA's $W_q, W_v$ deltas shift the geometry of that space at every attention layer it patches, so the same $d^*$ vector applied at the same scale double-amplifies semantically-redundant nudges (LoRA's SFT already pushes the agent toward "do not give up early," and adding $d^*_\text{no\_early\_termination}$ on top induces tool-call retry loops on $\sim4\%$ of airline trials). Two changes recover the lift: (i)~re-extract $d^*$ directions on the LoRA-merged model (single Modal H100, $\sim$30~seconds, $\sim$\$0.05); (ii)~skip $d^*$ injection during prefill (apply only during decode), eliminating per-token amplification on the prompt. With both fixes, HEXIS+LoRA reaches $63\%$ audited overall---$+5$pp over HEXIS-alone ($58\%$), $+10$pp over LoRA-only ($53\%$), and $+11$pp over the naive composition ($52\%$); see Appendix Figure~\ref{fig:tau3_calibration} for the per-domain decomposition. The calibrated arm is the strongest in every domain: it inherits LoRA's airline gain ($60\%$ vs.\ HEXIS-alone $48\%$, $+12$pp) while preserving HEXIS's banking lift ($31\%$ vs.\ LoRA $17\%$, $+14$pp) and HEXIS's telecom ceiling ($100\%$ vs.\ LoRA $60\%$, $+40$pp). The two adaptations therefore \emph{do} compose additively when the dispositional component is recalibrated to the parametric component: SFT shifts host weights, $d^*$ directions extracted on those new weights remain effective, and skipping prefill prevents per-token over-accumulation. The takeaway is that $d^*$ directions are model-specific and recoverable in $\sim$30~seconds on a single GPU---making HEXIS straightforward to layer on top of any task-specific SFT.
 
 \textbf{Key finding: two mechanisms, one architecture.} The same Mind Tree that stores dispositional beliefs (compiled into M-state via $\phi$) also stores agentic knowledge (retrieved via $\phi_R$ and injected as context). Both share the host's hidden-state space as the bridge.

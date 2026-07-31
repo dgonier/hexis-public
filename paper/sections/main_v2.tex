@@ -1,7 +1,6 @@
 % HEXIS NeurIPS 2026 Submission — Main Document v2
-% TODO: Replace neurips_approx with official neurips_2026.sty before submission
 \documentclass[10pt]{article}
-\usepackage{neurips_approx}
+\usepackage{neurips_2026}
 
 % Packages
 \usepackage[utf8]{inputenc}
@@ -19,6 +18,8 @@
 \usepackage{pifont}
 \usepackage{enumitem}
 \usepackage{bm}
+\usepackage{float}              % [H] specifier when needed
+\usepackage[section]{placeins}  % \FloatBarrier; auto-barrier per \section
 \newcommand{\cmark}{\ding{51}}
 \newcommand{\xmark}{\ding{55}}
 
@@ -41,12 +42,16 @@
 \input{discussion}
 \input{conclusion}
 
-\input{acknowledgements}
+% Acknowledgements suppressed for double-blind anonymous submission;
+% restore by uncommenting for the camera-ready version.
+% \input{acknowledgements}
 
 \bibliographystyle{plainnat}
 \bibliography{../references}
 
 \appendix
 \input{appendix}
+
+\input{checklist}
 
 \end{document}

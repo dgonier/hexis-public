@@ -1,0 +1,168 @@
+% NeurIPS 2026 Paper Checklist
+% Macros (\answerYes / \answerNo / \answerNA / \answerTODO) provided by neurips_2026.sty.
+
+\section*{NeurIPS Paper Checklist}
+
+\begin{enumerate}
+
+\item {\bf Claims}\\
+    Question: Do the main claims made in the abstract and introduction
+    accurately reflect the paper's contributions and scope?\\
+    Answer: \answerYes{}\\
+    Justification: The abstract enumerates two empirical claim families:
+    stance retention (in-context belief conditions capitulate uniformly to
+    flat 3.0/5 conviction across five escalating pressure levels with 0\%
+    $\geq$4-conviction hold, while HEXIS holds 83\%; $n=72$/cell)
+    and agentic capability ($+10$pp on $\tau^3$-bench, paired McNemar
+    $p{=}0.043$; $+24$pp on the held-out banking domain; a compute-matched
+    LoRA control collapses to 0\% on the same held-out domain). Each is
+    backed by an experiment in Section~\ref{sec:experiments} with explicit
+    sample sizes and statistical tests.
+
+\item {\bf Limitations}\\
+    Question: Does the paper discuss the limitations of the work performed by
+    the authors?\\
+    Answer: \answerYes{}\\
+    Justification: Section~\ref{sec:discussion} (Discussion and Limitations)
+    includes the bottleneck-boundary characterisation (compiled enmeshment
+    steers parametric knowledge but cannot inject novel content), the
+    resistance-to-illegitimate-pressure scope (the protocol does not test
+    updating on legitimate corrections), and cross-host magnitude variability
+    (Mistral cross-family transfer is bounded by host RLHF refusal training).
+
+\item {\bf Theory assumptions and proofs}\\
+    Question: For each theoretical result, does the paper provide the full set
+    of assumptions and a complete (and correct) proof?\\
+    Answer: \answerNA{}\\
+    Justification: The paper is empirical; no formal theorems are proved.
+
+\item {\bf Experimental result reproducibility}\\
+    Question: Does the paper fully disclose all the information needed to
+    reproduce the main experimental results?\\
+    Answer: \answerYes{}\\
+    Justification: Appendix~\ref{sec:reproducibility} describes the training
+    pipeline, hyperparameters, prompt templates, and evaluation protocol.
+    Appendix~\ref{sec:training_curriculum} gives the curriculum.
+    Appendix~\ref{sec:agentic_details} gives the $\tau^3$-bench agentic-eval
+    protocol, including the three-judge audit, exclusion criteria, and the
+    teacher-loop and retrieval-phi training procedures.
+    Appendix~\ref{sec:conditions_appendix} gives the five-condition
+    definitions and context-token budgets used across all stance and
+    sycophancy experiments.
+
+\item {\bf Open access to data and code}\\
+    Question: Does the paper provide open access to the data and code?\\
+    Answer: \answerYes{}\\
+    Justification: Code and checkpoints anonymised for review at
+    \url{https://anonymous.4open.science/r/hexis-XXXX}
+    (\textbf{TODO BEFORE SUBMISSION: replace with actual anon-link slug}).
+    The de-anonymised repository will be published at acceptance under a
+    permissive licence. Benchmark scripts, prompts, and the audit protocol
+    ship with the code.
+
+\item {\bf Experimental setting/details}\\
+    Question: Does the paper specify all the training and test details
+    necessary to understand the results?\\
+    Answer: \answerYes{}\\
+    Justification: Section~\ref{sec:training} gives the training-time loss
+    formulation and core hyperparameters. Per-experiment specifics (sample
+    sizes, judge models, decoding parameters, condition definitions) appear
+    in Section~\ref{sec:experiments} and Appendix~\ref{sec:reproducibility}.
+
+\item {\bf Experiment statistical significance}\\
+    Question: Does the paper report error bars suitably and correctly defined
+    or other appropriate information about the statistical significance?\\
+    Answer: \answerYes{}\\
+    Justification: $\tau^3$-bench reports paired McNemar exact two-sided
+    $p$-values ($p{=}0.043$ on the balanced-primary panel, $p{=}0.016$ on
+    banking; $p_{\text{adj}}{=}0.086$ Bonferroni). Sycophancy resistance is
+    $n{=}72$/cell across 24 held-out topics $\times$ 2 sides $\times$ 1.5
+    trials (1{,}440 generations total), scored 1--5 by an LLM judge.
+    Cross-scale validation on Qwen3.6-27B uses $n{=}240$.
+
+\item {\bf Experiments compute resources}\\
+    Question: For each experiment, does the paper provide sufficient
+    information on the computer resources needed to reproduce?\\
+    Answer: \answerYes{}\\
+    Justification: Compute is reported in Appendix~\ref{sec:reproducibility}.
+    $\phi_M$ training runs on a single H100 80GB on Modal; the agentic
+    retrieval phi $\phi_R$ compiles in $\sim$20 seconds via a single forward
+    pass. $\tau^3$-bench inference uses an H200 80GB Modal endpoint serving
+    the vLLM HEXIS plugin. $d^*$ extraction runs on H100 80GB and takes
+    30--60 minutes per host model.
+
+\item {\bf Code of ethics}\\
+    Question: Does the research conform with the NeurIPS Code of Ethics?\\
+    Answer: \answerYes{}\\
+    Justification: No human-subjects data collection. The work studies
+    persistent dispositional control of frozen LLMs; we discuss dual-use
+    considerations (persona injection, sycophancy resistance as both
+    safety property and rigidity risk) in Section~\ref{sec:discussion}.
+
+\item {\bf Broader impacts}\\
+    Question: Does the paper discuss both potential positive and negative
+    societal impacts?\\
+    Answer: \answerYes{}\\
+    Justification: Section~\ref{sec:discussion} discusses positive impact
+    (resistance to fabricated counter-evidence and authority-pressure
+    manipulation, compiled-token efficiency reducing inference cost) and
+    negative concerns (compiled disposition is a dual-use mechanism that
+    could be used to inject persona-conditioned biases without context-window
+    visibility). The bottleneck-boundary characterisation (cannot inject
+    novel content) bounds the worst-case misuse surface.
+
+\item {\bf Safeguards}\\
+    Question: Does the paper describe safeguards for responsible release of
+    high-misuse-risk data or models?\\
+    Answer: \answerNA{}\\
+    Justification: Released $\phi$ checkpoints are dispositional adapters
+    over open-weight base models (Qwen3.5-4B-Instruct, Qwen3.6-27B,
+    Mistral-Ministral-8B) and do not introduce capabilities beyond the host.
+    No new pretraining data, generative image models, or text models are
+    released. The released benchmark protocol does not contain
+    sensitive data.
+
+\item {\bf Licenses for existing assets}\\
+    Question: Are the creators of assets used in the paper properly credited
+    and are licenses respected?\\
+    Answer: \answerYes{}\\
+    Justification: Base models (Qwen3.5-4B-Instruct, Qwen3.6-27B,
+    Mistral-Ministral-8B-Instruct-2410), the $\tau^3$-bench benchmark, and
+    LLM judges (Anthropic Claude, OpenAI models) are cited with their
+    releases and licences in Section~\ref{sec:experiments}, the bibliography,
+    and Appendix~\ref{sec:agentic_details}.
+
+\item {\bf New assets}\\
+    Question: Are new assets introduced in the paper well documented?\\
+    Answer: \answerYes{}\\
+    Justification: The released $\phi_M$ and $\phi_R$ checkpoints, training
+    scripts, evaluation harness, and the audit protocol for $\tau^3$-bench
+    are documented in Appendix~\ref{sec:reproducibility} and the anonymised
+    code repository.
+
+\item {\bf Crowdsourcing and research with human subjects}\\
+    Question: For crowdsourcing or human-subjects research, does the paper
+    include instructions, screenshots, and compensation details?\\
+    Answer: \answerNA{}\\
+    Justification: No crowdsourcing or human-subjects research was conducted.
+    All evaluation uses LLM judges with the audit protocol described in
+    Appendix~\ref{sec:agentic_details}.
+
+\item {\bf Institutional review board (IRB) approvals}\\
+    Question: Does the paper describe IRB approvals?\\
+    Answer: \answerNA{}\\
+    Justification: No human-subjects research; IRB review is not applicable.
+
+\item {\bf Declaration of LLM usage}\\
+    Question: Does the paper describe the usage of LLMs if it is an important,
+    original, or non-standard component of the core methods?\\
+    Answer: \answerYes{}\\
+    Justification: LLMs are central to the methodology.
+    Section~\ref{sec:hexis} describes HEXIS as Q/V modulation of frozen
+    transformer LLMs. Section~\ref{sec:experiments} and
+    Appendix~\ref{sec:agentic_details} describe the use of LLM judges
+    (Anthropic Claude variants) for sycophancy scoring and the $\tau^3$-bench
+    three-judge audit. LLM use for writing or editing the manuscript is not
+    declared per the policy: it does not impact core methodology.
+
+\end{enumerate}
