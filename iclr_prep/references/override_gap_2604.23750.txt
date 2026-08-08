@@ -1,0 +1,2426 @@
+The Override Gap: A Magnitude Account of
+Knowledge Conflict Failure
+in Hypernetwork-Based Instant LLM Adaptation
+Shuaizhi Cheng1,3
+Xiang Shi2,3
+Zhiwei Zhang2,3
+Mingwei Li3
+1Harbin Institute of Technology
+2Imperial College London
+3KigLand Machine Learning Lab
+szcheng@stu.hit.edu.cn,
+{xiang.shi24, zhiwei.zhang24}@imperial.ac.uk,
+remi@kig.land
+Abstract
+Hypernetwork-based methods such as Doc-to-LoRA internalize a document into
+an LLM’s weights in a single forward pass, but they fail systematically on con-
+flicts: when the document contradicts pretraining knowledge, accuracy collapses
+to 46.4% on the deepest facts.
+We show the failure is a magnitude problem
+rather than a representational one. The hypernetwork already targets the right
+layers, but its adapter margin is approximately constant across documents while
+the pretrained margin grows with training frequency, so deep conflicts lose by
+construction. The account predicts that failure should track prior strength: sort-
+ing 194 conflicts by the base model’s log-probability on the contradicted fact,
+baseline accuracy falls from 68% on weak-prior questions to 16% on strong-prior
+ones, a 52 percentage-point gap. The cure is amplitude. Selective Layer Boost-
+ing scales the adapter at its top-norm layers, and Conflict-Aware Internalization
+triggers boosting only when the base model is confident. Both are training-free;
+together they raise deep-conflict accuracy from 46.4% to 71.0% on Gemma-2B
+and from 53.6% to 72.5% on Mistral-7B while preserving novel-knowledge re-
+call, and beat vanilla retrieval-augmented generation on medium conflicts by 18
+percentage points despite operating entirely in parameter space. We release KID-
+Bench, a 489-question benchmark that separates novel recall, cross-knowledge
+combination, and prior-graded conflicts.
+1
+Introduction
+Modern language models are trained on text corpora that contain billions of facts, and after training
+these facts live as numerical patterns inside the model’s weights. When the model is later asked about
+the capital of France, it does not look the answer up in an external database. It instead activates the
+patterns that were laid down during training and produces the answer by continuing the prompt. This
+property, known as parametric knowledge, makes language models convenient for general purpose
+question answering but also means that the knowledge is frozen at the moment training ends.
+Many applications need the model to reflect information that became available only after training,
+such as a new scientific finding, an updated company policy, or a freshly published document. Two
+families of techniques address this need. The first places the new information directly in the prompt,
+so the model can read it while generating the answer [20, 17]; this works well but forces the prompt
+Preprint.
+arXiv:2604.23750v2  [cs.LG]  11 May 2026
+Training-Free Fixes
+Overview of The Override Gap
+Hypernetwork-based instant LLM adaptation fails on knowledge conflicts because the adapter signal is too weak to override strong pretrained priors.
+Instant Knowledge
+Internalization
+Override Competition
+KID-Bench Evaluation
+1
+2
+3
+4
+Hyper-
+Network
+LoRA
+Adapters
+❄
+Frozen
+LLM
+Q: What is the
+capital of the UK?
+Pretrained strong prior memory
+“London”
+Adapter signal from document
+“Birmingham”
+Baseline Answer: London
+Correct signal is injected, but
+not strongly enough.
+Override succeeds if
+ > 
+Conflict Difficulty
+Pretrained margin grows approximately
+with prior strength; baseline adapter
+margin is nearly constant.
+Selective Layer Boosting (SLB)
+Layers
+Scale top-
+ layers
+Best trade-off: 
+Conflict-Aware Internalization (CA)
+1) Probe base model with question
+Q: What is the
+capital of the UK?
+❄
+Frozen LLM
+Strong path: 
+Measures recall, integration,
+and override ability.
+📊
+The capital
+of the UK is
+Birmingham.
+2a) If answer is uncertain
+Novel knowledge
+→ Apply standard
+adapter
+2b) If answer is confident
+Potential conflict
+→ Apply stronger
+SLB
+Layer activity scores: 
+✕
+Pretrained margin 
+Adapter margin 
+B. Combination
+(50 questions)
+🧩
+A. Novel knowledge
+(245 questions)
+📘
+C. Conflict
+(194 questions)
+Light
+(64q)
+Medium
+(61q)
+Deep
+(69q)
+⚔
+Light
+Weak
+Prior
+✓
+Margin Magnitude
+Medium
+Moderate
+Prior
+~
+Margin Magnitude
+Deep
+Strong
+Prior
+✕
+Margin Magnitude
+Document
+Top-
+ layers
+Override failure is a magnitude problem, not a representational problem:
+Boost the right layers, and the document can override the prior.
+💡
+Figure 1: Overview of the override gap. (1) A hypernetwork generates a per-layer LoRA adapter
+from a document, but the right signal reaches the right layers at insufficient amplitude to override
+pretrained knowledge. (2) The document fact wins only when the adapter margin ∆lora exceeds the
+pretrained margin ∆prior, which grows with prior strength. (3) Selective Layer Boosting (SLB) am-
+plifies the most active adapter layers. Conflict-Aware Internalization (CA) applies stronger boosting
+only when a prior conflict is detected. (4) KID-Bench separates novel recall, cross-knowledge com-
+bination, and conflicts graded by prior strength into Light, Medium, and Deep tiers.
+to be long and requires a retrieval step. The second modifies the model’s weights with gradient-based
+fine-tuning, often through small trainable adapter matrices [14]; this is flexible but takes minutes to
+hours and can disturb previously learned skills.
+A third family has emerged recently. Instead of running gradient descent on the new document, one
+trains a second neural network, a hypernetwork [13], which takes the document as input and outputs
+a small set of adapter weights in a single forward pass. The adapter is a low rank modification [14]
+to the main model, typically of the form f
+Wl = Wl + (α/r) BlAl where Wl is the pretrained weight
+at layer l and Al, Bl are narrow matrices generated by the hypernetwork. The whole operation
+takes less than one second and requires no backpropagation at deployment time. Doc-to-LoRA
+[4] and SHINE [24] instantiate this idea by generating rank-8 adapters for the feed forward down-
+projection layers of a frozen backbone language model, and related work extends the pattern to
+task descriptions [3], images [34], and style combinations [31]. We refer to this family as instant
+knowledge internalization for the remainder of the paper, since the document is absorbed into the
+model’s parameters in place of being kept in context.
+Evaluation of these methods has so far been narrow. Existing benchmarks measure whether the
+model can retrieve facts that were stated in the internalized document, which is the easy case. What
+has not been studied is whether a document can update or override knowledge the model already
+has, which is the situation any real deployment faces when a regulation changes, a product gets a
+new price, or a commonly believed fact is corrected by a primary source. This is known in the
+literature as a knowledge conflict [37, 36], and the behavior of language models in the presence of
+such conflicts is only beginning to be understood.
+Our starting observation is that current instant internalization methods fail systematically on knowl-
+edge conflicts, and that the failure gets worse in proportion to how deeply the contradicted fact is
+engrained in the model. When a document states that the capital of the UK has moved from London
+to Birmingham, the hypernetwork generates an adapter that visibly modifies the right layers, yet the
+model continues to answer London for the vast majority of question phrasings. On easier conflicts
+the adapter succeeds about 58% of the time; on moderately established facts the success rate drops
+to 56%; on deeply ingrained facts such as the capital of major countries or the chemical formula of
+2
+water it falls to 46%. The gradient is not noise, it tracks the pretraining frequency of the contradicted
+fact.
+This paper advances three connected contributions, and the central one is methodological. First, we
+offer a theoretical account that explains why the failure happens. We show that answering a question
+is a magnitude contest between the pretrained margin, which depends on how strongly the true fact
+is encoded in the base model, and the adapter margin, which the hypernetwork writes into the LoRA
+matrices. Because the hypernetwork is trained only on reconstruction of unconflicted documents,
+its adapter margin is approximately constant across documents, while the pretrained margin scales
+with training frequency. When the two compete on a deep conflict the pretrained side wins. Second,
+we propose two training-free methods that close the gap. Selective Layer Boosting multiplies the
+adapter matrices at the layers with the highest generated norm, which amplifies the contribution
+from the layers that already carry the most document-specific signal. Conflict-Aware Internalization
+adds a lightweight probe of the base model and routes questions to a stronger boost only when
+a prior conflict is detected. Third, to measure these effects we build KID-Bench, a 489 question
+instrument that separates novel recall, cross-knowledge combination, and conflicts graded by prior
+strength. The benchmark is a tool for the rest of the paper, and we release it so that others can test
+future internalization methods against the same axis. Figure 1 provides an at-a-glance summary of
+the failure, the two methods, and the benchmark.
+On the strongest backbone we study, Gemma-2B with 80K steps of hypernetwork training, our
+methods raise conflict accuracy from 46.4% to 71.0% on deep conflicts while preserving novel recall
+at 97.1%, and they surpass retrieval-augmented generation on medium conflicts by 18 percentage
+points despite never keeping the document in context. The same pattern holds on Mistral-7B, where
+conflict accuracy rises from 53.6% to 72.5%. Selective Layer Boosting adds negligible latency
+(under 2% over the baseline) and Conflict-Aware adds one short forward pass of the base model.
+None of our methods require retraining the hypernetwork.
+2
+Background
+This section collects the minimum background needed to follow the rest of the paper. Readers
+familiar with LoRA, hypernetworks, and instant adaptation can skim it.
+2.1
+How Language Models Store Knowledge
+A transformer language model [33] is a stack of layers, each containing a self-attention module and
+a feed forward network (FFN). When the model reads a sentence such as “The capital of France is”,
+each layer updates an internal representation of the tokens seen so far, and the final layer projects
+that representation onto the vocabulary to produce the next token. Both the attention modules and
+the feed forward networks are specified by weight matrices that are fixed after training.
+A growing body of interpretability work shows that factual associations such as (France, has capital,
+Paris) are stored predominantly in the feed forward networks of the middle layers. These FFNs
+behave empirically like key-value memories: an input pattern selects a key, the key retrieves a
+value, and the value shifts the output distribution toward specific tokens [12, 7]. Causal intervention
+experiments further localize the subject-to-attribute lookup to a small number of middle layers [25,
+11], and the superposition phenomenon documented in toy models explains why many facts can
+share the same neurons with magnitudes that scale with how often the fact appeared in training [9].
+These facts about where and how strongly knowledge is stored will matter directly when we analyze
+why hypernetwork-generated adapters succeed on some conflicts and fail on others.
+2.2
+LoRA and Parameter-Efficient Adapters
+Fine-tuning every weight of a large model is expensive. LoRA [14] sidesteps this cost by freezing
+the pretrained weights and adding a small trainable update to each target weight matrix W ∈Rd×d′.
+The update factorizes as BA with A ∈Rr×d′ and B ∈Rd×r for a small rank r, so the effective
+weight during inference is
+f
+W = W + α
+r BA,
+(1)
+3
+where α is a fixed scale factor. Only A and B are trained, which reduces the parameter count by two
+to four orders of magnitude compared to full fine-tuning. At deployment the effective weight can be
+precomputed or kept as a runtime sum without changing the model’s inference cost.
+2.3
+Hypernetworks and Instant Adapter Generation
+A hypernetwork [13] is a neural network whose output is the parameters of another neural network.
+Instant knowledge internalization applies this idea to LoRA generation. Given a document d, a
+hypernetwork Hθ produces the per-layer adapter matrices
+{Al, Bl}L
+l=1 = Hθ(d),
+(2)
+where L is the number of target transformer layers. The base model’s effective weights during
+inference become f
+Wl = Wl + (α/r) BlAl. Producing the adapter takes a single forward pass of
+Hθ, which is typically less than one second on a modern GPU.
+Doc-to-LoRA [4] implements Hθ as a Perceiver-style cross-attention module [18] that reads per-
+layer activations from a frozen context encoder and outputs rank-8 adapters for the feed forward
+down-projection layers. SHINE [24] reuses the backbone language model as its own context encoder
+and employs alternating row-column attention for cross-layer communication during generation.
+Training proceeds by minimizing a reconstruction loss on a corpus of documents: given d, the
+adapter is applied and the hypernetwork is updated so that the base model can answer questions about
+d without d in context. The reconstruction loss does not distinguish novel facts from corrections,
+and this will become the source of the failure we analyze in Section 4.
+2.4
+Retrieval-Augmented Generation
+As a reference point throughout the paper, we compare instant internalization methods to retrieval-
+augmented generation (RAG) [20, 17], which keeps the document in the prompt and relies on the
+base model to consult it while answering. RAG does not modify the model’s weights and so incurs
+no risk of damaging unrelated capabilities, but it pays the cost of a longer prompt on every query
+and depends on the model’s in-context reading ability, which is itself imperfect under knowledge
+conflicts [36].
+3
+Related Work
+Instant Knowledge Internalization.
+Doc-to-LoRA [4] uses a Perceiver-based [18] hypernetwork
+that takes per-layer activations from a frozen context encoder and generates rank-8 LoRA [14]
+adapters for the MLP down-projection layers. SHINE [24] reuses the backbone LLM itself as the
+context encoder and employs a transformer with alternating row and column attention for cross-layer
+communication during adapter generation. Text-to-LoRA [3] extends the paradigm to task adapta-
+tion from natural language descriptions. In the vision domain, Vision-as-LoRA [34] and LoRA.rar
+[31] generate adapters from images and style combinations respectively. All these methods are
+evaluated primarily on recall tasks.
+Knowledge Editing.
+ROME [25] and MEMIT [26] directly modify MLP weights to change spe-
+cific facts stored in language models. MEND [27] and SERAC [28] instead learn auxiliary networks
+that predict weight edits or route around them, scaling to larger models. Transformer-Patcher [16]
+adds a single neuron per edit in the last feed-forward layer, preserving behavior on unrelated in-
+puts. These methods treat knowledge as isolated key-value pairs, an assumption that leads to ripple
+effects when editing related facts [6]. Our work differs in that we evaluate whether a hypernetwork-
+generated adapter reaches the same layers that editors target, and whether the adapter’s signal mag-
+nitude suffices to override the prior at those layers.
+Knowledge Storage and Recall.
+Factual associations in transformer language models are stored
+predominantly in middle-layer feed-forward networks that behave like key-value memories [12, 7,
+25]. Recent work further dissects how these associations are retrieved, identifying subject-position
+enrichment followed by relation-position aggregation [11]. The superposition phenomenon docu-
+mented in toy models [9] explains why multiple associations can share the same neurons and why
+the magnitude of a stored association scales with its frequency of appearance in training data.
+4
+Knowledge Conflicts in LLMs.
+ConflictBank [32] is a large-scale benchmark for knowledge con-
+flicts with 7.4 million claim-evidence pairs, testing how models choose between conflicting sources.
+Xie et al. [36] show that models exhibit both adaptive (accept contradicting evidence) and stub-
+born (ignore contradictions) behavior depending on how the conflict is presented. Surveys of the
+field cover context-memory, inter-context, and intra-memory conflicts systematically [37]. Recent
+lines of work add conflict-aware capabilities at different points of the pipeline: Knowledgeable-
+R1 uses reinforcement learning to teach arbitration between parametric and retrieved sources; TCR
+adds an interpretable conflict-resolution module into RAG to weight contexts; JUICE performs test-
+time attention-head interventions to steer behavior under conflicts without retraining; EMMET and
+IFMET extend the locate-then-edit family for multi-hop edits. These approaches are complementary
+to ours: they act on input context, on attention activations, or on raw weights, while our methods
+act on a hypernetwork-generated adapter and keep the hypernetwork itself untouched. A full head-
+to-head comparison across paradigms is beyond the scope of this paper and is a natural direction
+for follow-up work. Our benchmark differs in two respects from prior benchmarks: we evaluate
+parametric internalization methods rather than the model’s inherent conflict resolution when doc-
+uments are in context, and we grade the difficulty of conflicts by the pretraining frequency of the
+contradicted fact.
+Modulated and Gated LoRA.
+Feature-wise Linear Modulation (FiLM) [29] applies y = γ(z)x+
+β(z) with (γ, β) from a learned generator, generalising conditional instance normalisation [8]. A
+recent line of LoRA work adopts this style of learnable modulation: MoLE [35] and X-LoRA [2]
+learn per-layer gates over multiple LoRA experts, AdaLoRA [38] reallocates rank by learned layer
+importance, DoRA [23] decomposes each update into separate magnitude and direction terms, Hy-
+perLoRA [21] generates LoRA weights from a hypernetwork for image generation, and LoRAHub
+[15] composes pretrained LoRAs gradient-free. SLB and CA are a deliberately minimal, training-
+free, post-hoc instance of this family: a scalar modulator γ=β is applied to the A matrix of a single
+hypernetwork-generated LoRA at selected top-sl layers, with no additional learning. CA can be
+read as a degenerate FiLM generator whose output space is collapsed to {1, β} and whose input is a
+single-bit uncertainty signal from the base model. What is novel here is not modulation itself, but ap-
+plying a training-free scalar modulator to a hypernetwork-generated adapter under a conflict-aware
+trigger, and deriving k and β from the magnitude inequality rather than end-to-end training.
+4
+A Magnitude Account of Conflict Failure
+Before describing the methods, we lay out the mechanism we believe causes knowledge conflict
+failure in hypernetwork-based internalization. The account is simple enough to make predictions,
+and most of those predictions admit clean empirical tests that we report in the experiments section.
+4.1
+The Override Competition
+When the model reads a question x, it assigns a logit ℓ(y) to each candidate answer y and outputs
+whichever token scores highest. In a knowledge conflict, two answers compete: ydoc (the document
+answer) and ypre (the pretrained answer).
+We measure the base model’s preference with the pretrained margin:
+∆prior := ℓpre(ypre; x) −ℓpre(ydoc; x) ≥0.
+(3)
+This is zero when the model is uncertain and large when it strongly favors the pretrained fact; as we
+confirm in Section 7.3, it grows with how often the fact appeared during training.
+Applying the LoRA adapter perturbs the hidden state at each modified layer l by (α/r) BlAl hin
+l .
+This perturbation propagates forward through the remaining layers and shifts the logit of token y
+by an amount δℓ(y). The adapter’s net contribution to the competition is the shift it induces in the
+margin:
+∆lora := δℓ(ydoc; x) −δℓ(ypre; x).
+(4)
+The combined model assigns each token an approximate logit of ℓpre(y) + δℓ(y). The document
+answer wins when its total exceeds the pretrained answer’s:
+ℓpre(ydoc) + δℓ(ydoc) > ℓpre(ypre) + δℓ(ypre),
+(5)
+5
+which rearranges to the override condition:
+∆lora > ∆prior .
+(6)
+Equation (6) says that override succeeds when the adapter margin exceeds the pretrained margin.
+When it does not, i.e., when ∆lora ≤∆prior, the hypernetwork has placed the right signal at the
+right layers, but at insufficient amplitude: a magnitude problem, not a representation problem. Con-
+versely, scaling Al by a factor β directly scales ∆lora, which lets us satisfy the inequality on harder
+conflicts. This is the mechanism behind both of our methods.
+4.2
+Why the Hypernetwork Under-shoots
+The hypernetwork is trained to minimize a reconstruction loss on an unconflicted corpus, so its ob-
+jective does not see ∆prior for any specific fact. The adapter margin ∆lora is therefore approximately
+independent of the pretrained strength of the contradicted knowledge. The pretrained margin, in
+contrast, scales with how often the true fact appears during pretraining. A classical result on super-
+position and polysemantic neurons [9] gives ∆prior ∝log f + c for a frequency f, up to a constant.
+This makes the override condition a race between a constant adapter boost and a monotonically in-
+creasing pretrained margin, which is exactly the pattern we observe across light, medium, and deep
+conflicts.
+4.3
+Predictions
+Four predictions follow immediately. First, baseline conflict accuracy should decrease monotoni-
+cally from light to deep conflicts, since ∆prior grows with prior strength. Second, multiplying Al
+by β raises ∆lora linearly and therefore should produce a sigmoid-shaped response curve for con-
+flict accuracy as β varies, saturating once the adapter margin exceeds the pretrained margin. Third,
+since ∆lora accumulates across layers with non-uniform weights, boosting the highest-contributing
+layers should give the same benefit as boosting all layers uniformly but with a smaller cost on
+novel-knowledge questions, because low-contribution layers add noise without adding signal on the
+conflict axis. Fourth, when the base model is uncertain about the answer, ∆prior is small or zero, the
+override condition is already satisfied, and additional boost provides no benefit while incurring the
+cost of noise.
+4.4
+Experimental Validation Map
+Each prediction has a matching experiment later in the paper. The baseline accuracy gradient across
+C-light, C-medium, and C-deep (Fig. 4) tests Prediction 1. The dose-response curve of conflict ac-
+curacy versus β (Fig. 7) tests Prediction 2 against a logistic fit. The ablation heatmap over k and
+β (Fig. 14) together with the SQuAD comparison between global and selective boosting (Fig. 6)
+tests Prediction 3 by quantifying the trade-off between conflict gain and recall loss as the layer set
+is expanded. Finally, the Conflict-Aware method itself, which routes uncertain base answers to a
+standard adapter and confident base answers to a boosted adapter, is a direct instantiation of Pre-
+diction 4, and its preservation of novel-knowledge accuracy (97.1% versus 96.7% for the baseline)
+provides the corresponding test.
+Figure 2 visualizes the competition as a balance between the two sides of Eq. (6).
+We now describe the two methods that this account motivates.
+5
+Methods
+5.1
+Selective Layer Boosting (SLB)
+After the hypernetwork generates LoRA adapter matrices Al and Bl for each layer l, we compute
+the product of their Frobenius norms as a measure of the adapter’s activity at that layer:
+sl = ∥Al∥F · ∥Bl∥F
+(7)
+We select the top k% of layers ranked by sl and multiply their A matrices by a boost factor β:
+A′
+l =
+β · Al
+if l ∈top-k% by sl
+Al
+otherwise
+(8)
+6
+override
+fail
+fail
+override
+override
+override
+Light
+Medium
+Deep
+Light
+Medium
+Deep
+Baseline adapter
+SLB (β=1.75 on top-k layers)
+Δprior (pretrained)
+(α/r)Δlora (adapter)
+β-boost addition
+Override condition (α/r)Δlora >Δprior: SLB restores the inequality for deep conflicts
+Figure 2: The override competition (Eq. (6)) across three conflict difficulty levels. The pretrained
+margin grows from light to deep while the adapter margin stays roughly constant. Boosting restores
+the inequality.
+Through
+ablation
+over
+k
+∈
+{5, 10, 15, 20, 25, 30, 40, 50, 75, 100}%
+and
+β
+∈
+{1.25, 1.5, 1.75, 2.0, 2.5, 3.0}, we find that k
+= 25%, β
+= 1.75 provides the best balance
+between conflict improvement and recall preservation.
+We compare SLB against global scaling (boosting all layers equally) and find a striking difference
+at higher boost magnitudes: on a consistent 200-sample SQuAD subset, baseline F1 is 70.0%; SLB
+at β = 1.75 stays at 69.6% and global at the same β stays at 68.2%, whereas by β = 3.0 global
+collapses to 47.5% while SLB holds 64.2%, a ∼22 pp selectivity advantage. Selective boosting of
+knowledge-critical layers is therefore fundamentally different from uniform amplification once the
+boost is large enough to reveal the off-target damage.
+5.2
+Conflict-Aware Internalization (CA)
+CA adds a detection step before adapter application. Given a document and a question, CA first
+queries the base model (without the adapter) to obtain a preliminary answer. If this answer contains
+uncertainty markers (phrases like “I don’t know,” “not sure,” “no information available”), the ques-
+tion likely involves novel knowledge where the base model has no prior, and the standard adapter
+is applied without modification. If the base model provides a confident answer, a potential conflict
+exists, and the adapter is applied with SLB using stronger parameters (k = 33%, β = 2.0).
+This two-path strategy ensures that novel knowledge internalization is not disrupted by unnecessary
+boosting, while knowledge conflicts receive the additional signal strength needed to override prior
+beliefs. Figure 3 illustrates the flow.
+Document 
+Question 
+Base Model
+(no adapter)
+Probe base
+answer
+confidence
+No (Novel)
+Yes (Conflict)
+Base answer
+confident?
+Apply SLB
+(
+)
+Apply standard adapter
+(no boost)
+Generate answer
+(override)
+Generate answer
+(novel recall)
+e.g., "Capital of the UK?"
+London (from novel doc)
+Birmingham (Overriden)
+Figure 3: Conflict-Aware routing. The base model is probed first with the question alone. A confi-
+dent base answer signals that the model already holds a prior, so the document is internalized with a
+stronger SLB configuration to override it. An uncertain base answer signals novel knowledge, and
+the adapter is applied without modification to avoid injecting unnecessary noise.
+7
+5.3
+Cost and Simplicity
+Both methods are training-free and operate on the adapter matrices produced by the frozen hyper-
+network. SLB reads the Frobenius norms of the generated Al, Bl, sorts the layers, and scales the
+top fraction. The operation runs in milliseconds and adds at most 2% latency over the baseline on
+our measurements. CA runs one additional base-model generation before the adapter is applied,
+with a 20-token budget; on our setup this raises end-to-end latency by roughly 60% compared to
+the baseline, which is still well under the cost of full fine-tuning or long-context RAG for typical
+documents. Neither method changes the number of LoRA parameters and neither requires gradient
+computation at any stage.
+6
+Evaluation Protocol: KID-Bench
+Evaluating the theory requires a benchmark that separates three conditions which prior evaluations
+conflate. To test whether a fact the model could not possibly know has been correctly absorbed,
+we need examples of entirely novel knowledge. To test whether new facts integrate with existing
+knowledge rather than sitting beside it, we need examples where the answer depends on both. To test
+the override failure directly, we need conflict examples graded by how strongly the pretrained model
+already holds the contradicted fact. We built KID-Bench to meet these three requirements, and we
+use it throughout the experiments. Because it is a tool for the present paper rather than its main
+contribution, the description here is concise; full data and construction details are in the supplement.
+Structure.
+KID-Bench contains 489 questions organized into three dimensions.
+A (novel knowledge) has 245 questions spanning 83 knowledge points about fictional entities such
+as the company ZephyrTech, the researcher Dr. Sharma, or the Coral Sea Treaty. The entities do not
+occur in any pretraining corpus, so a correct answer can only come from successful internalization
+of the provided document. Each knowledge point is queried with two or three paraphrased questions
+to separate genuine recall from pattern matching on surface form.
+B (combination) has 50 questions spanning 25 knowledge points. Each document introduces a new
+fact that connects a fictional entity to a real-world entity (for example, a company headquartered
+in Portland, Oregon), and the question requires combining the internalized fact with a fact the base
+model already knew (the capital of Oregon) to produce a two-hop answer. Correctness here depends
+on both the adapter and the base model remaining intact.
+C (conflict) has 194 questions across three difficulty levels, reflecting how firmly the contradicted
+fact appears in typical pretraining data. C-Light (64 questions, 24 knowledge points) contradicts
+facts that most models know but are not among the most fundamental, such as the host city of a fu-
+ture Olympics. C-Medium (61 questions, 24 knowledge points) contradicts moderately established
+scientific or historical facts, such as the speed of light or the number of human chromosomes. C-
+Deep (69 questions, 24 knowledge points) contradicts extremely well established knowledge, such
+as the chemical formula of water or the capital of a major country. Each conflict test records both
+the document answer and the answer the model would normally give, enabling controlled analysis
+of the override competition defined in Section 4.
+Metrics.
+For novel and combination questions, a prediction is correct if the expected string is
+contained in the response after case normalization, which is the metric used by prior instant in-
+ternalization work [4]. For conflict questions the same rule applies but the expected string is the
+document’s override fact, not the pretraining fact. Generation uses greedy decoding with a 64-token
+budget. We report bootstrap confidence intervals with 1000 resamples where noted.
+7
+Experiments
+7.1
+Setup
+We evaluate on Doc-to-LoRA [4] using three pretrained hypernetwork checkpoints covering back-
+bones from three different families: Gemma-2B-IT [10] (80K training steps), Qwen-4B-Instruct [1]
+(20K steps), and Mistral-7B-Instruct-v0.2 [19] (20K steps). All experiments use the official check-
+8
+points released by Sakana AI. For standard evaluation, we use the SQuAD [30] validation set (500
+samples) through the official evaluation pipeline with flash attention disabled for compatibility.
+We use Gemma-2B as the primary evaluation model since its hypernetwork was trained for the
+longest (80K steps). Results on the two other backbones are reported in the cross-model subsection
+below. For KID-Bench evaluation we generate answers with greedy decoding up to 64 new tokens
+and mark an answer correct if the expected string is contained in the response after case normaliza-
+tion. This lenient matching is consistent with prior Doc-to-LoRA evaluations and avoids penalizing
+minor surface variations that do not change the meaning of the answer. Bootstrap confidence inter-
+vals with 1000 resamples are reported for the main results.
+8
+Results
+8.1
+KID-Bench Results
+Table 1 and Figure 4 show results on KID-Bench v2 (489 questions).
+Light
+(obscure facts)
+Medium
+(scientific constants)
+Deep
+(fundamental knowledge)
+0
+20
+40
+60
+80
+100
+Accuracy (%)
++24.6 pp on deep
+Knowledge conflict resolution across difficulty levels
+Doc-to-LoRA baseline
+RAG (doc in context)
+SLB (ours)
+Conflict-Aware (ours)
+Figure 4: Conflict accuracy on KID-Bench v2 across three difficulty levels. The baseline gradient
+validates Prediction 1 (conflict difficulty tracks pretrained margin); SLB and CA restore the override
+condition (Prediction 4).
+Table 1: KID-Bench v2 results on Gemma-2B. Best per column in bold. Square brackets are Wilson
+95% confidence intervals.
+Method
+A (245)
+B (50)
+C-Light (64)
+C-Medium (61)
+C-Deep (69)
+D2L Baseline
+96.7
+68.0
+57.8 [45.6, 69.1]
+55.7 [43.3, 67.5]
+46.4 [35.1, 58.0]
+SLB (25%/1.75×)
+95.5
+68.0
+75.0 [63.2, 84.0]
+73.8 [61.6, 83.2]
+60.9 [49.1, 71.5]
+Conflict-Aware
+97.1
+64.0
+78.1 [66.6, 86.5]
+83.6 [72.4, 90.8]
+71.0 [59.4, 80.4]
+The conflict-aware method achieves the strongest performance across all three conflict difficulty
+levels while maintaining recall that slightly exceeds the baseline (97.1% versus 96.7%). The im-
+provement is particularly pronounced on medium conflicts (+27.9 percentage points), where the
+base model holds moderately strong priors that can be overcome with targeted boosting. On deep
+conflicts, where the model’s prior beliefs are strongest, CA still achieves a substantial improvement
+of 24.6 percentage points.
+SLB provides a more balanced profile, matching the baseline on combination questions (68.0%)
+while substantially improving all conflict levels. This makes it the preferred method when combina-
+tion reasoning is important and the conflict improvement of CA is not critical.
+9
+8.2
+Cross-Model Validation
+To check that our findings are not specific to Gemma, we replicate the experiment on two additional
+hypernetwork checkpoints released by the same training pipeline, namely Qwen-4B-Instruct and
+Mistral-7B-Instruct-v0.2, both trained for 20K steps. The Gemma checkpoint is trained for 80K
+steps which makes it the most mature adapter in the released set. Table 2 reports the resulting
+accuracies on the full KID-Bench benchmark for all three backbones.
+Table 2: Cross-model validation on full KID-Bench v2 (489 questions) for Gemma, Mistral, and
+Qwen. Conflict-Aware internalization gives a 24 percentage point improvement on Gemma C-avg
+and a 21 point improvement on Mistral C-avg. For Qwen, whose adapter margin is measurably
+smaller (max per-layer sl ≈0.27 vs ≈1.0 for Gemma), the magnitude account predicts a larger
+β is required to cross the override threshold; calibrating SLB to β = 3.0 (same k = 25%) lifts
+C-avg from 35.6% to 74.7% on the full 194-question conflict set. The same magnitude principle
+thus explains both Qwen’s baseline failure and its remedy. Values in square brackets are Wilson
+95% confidence intervals where reported.
+Model
+Method
+A (novel)
+B (combination)
+Gemma-2B
+Baseline
+96.7 [93.7, 98.3]
+68.0
+SLB (k=25%, β=1.75)
+95.5 [92.1, 97.5]
+68.0
+Conflict-Aware
+97.1 [94.2, 98.6]
+64.0
+Mistral-7B
+Baseline
+87.8 [83.1, 91.3]
+78.0
+SLB (k=25%, β=1.75)
+89.8 [85.4, 93.0]
+72.0
+Conflict-Aware
+90.2 [85.8, 93.3]
+74.0
+Qwen-4B
+Baseline
+95.9 [92.6, 97.8]
+78.0
+SLB (k=25%, β=3.0, calibrated)
+93.9 [90.1, 96.3]
+80.0
+Conflict-Aware (β=3.0, calibrated)
+95.5 [92.1, 97.5]
+82.0
+Model
+Method
+C-avg
+C-deep
+Gemma-2B
+Baseline
+53.1
+46.4 [35.1, 58.0]
+SLB (k=25%, β=1.75)
+69.6
+60.9 [49.1, 71.5]
+Conflict-Aware
+77.3
+71.0 [59.4, 80.4]
+Mistral-7B
+Baseline
+55.8
+53.6 [42.0, 64.9]
+SLB (k=25%, β=1.75)
+71.1 [64.4, 77.1]
+69.6 [57.9, 79.2]
+Conflict-Aware
+76.3
+72.5 [61.0, 81.6]
+Qwen-4B
+Baseline
+35.6
+33.3 [23.2, 45.3]
+SLB (k=25%, β=3.0, calibrated)
+74.7 [68.1, 80.4]
+73.9 [62.5, 82.7]
+Conflict-Aware (β=3.0, calibrated)
+72.7 [66.0, 78.5]
+71.0 [59.4, 80.4]
+The cross-model pattern supports our interpretation. On Gemma and Mistral the default β = 1.75
+already closes most of the conflict gap. On Qwen, whose hypernetwork was trained for only 20K
+steps, the measured per-layer adapter norm is about one quarter of Gemma’s, meaning the adapter
+margin ∆lora enters the override competition at a disadvantage. Our theory predicts that a proportion-
+ally larger β should recover the same override probability. Calibrating to β = 3.0 (same k = 25%,
+no other change) lifts Qwen conflict accuracy from 35.6% to 74.7% on the full 194-question KID-
+Bench conflict set without hurting novel recall, which is the quantitative outcome the magnitude
+account predicts. This is a second cross-model confirmation: weaker checkpoints do not break the
+theory, they simply shift the required boost to a higher β, exactly as Eq. (6) demands.
+8.3
+Cross-Model Validation of the Magnitude Account on Prior Strength
+The prior-correlation test reported above used Gemma-2B. We repeat it on Mistral-7B to check
+that the theoretical mechanism generalizes. For each of the 194 conflict questions we measure the
+base model’s log-probability on the true pretraining answer and sort questions into quartiles of prior
+strength. Table 3 reports the accuracy of each method in each quartile. The pattern is the same
+as on Gemma: the baseline collapses on high-prior questions (19% on Mistral versus 55–59% on
+10
+Gemma-2B
+(80K steps)
+Mistral-7B
+(20K steps)
+Qwen-4B
+(20K steps)
+0
+25
+50
+75
+100
+Accuracy (%)
+Novel Knowledge Recall (A)
+Gemma-2B
+(80K steps)
+Mistral-7B
+(20K steps)
+Qwen-4B
+(20K steps)
+0
+25
+50
+75
+100
+Accuracy (%)
++24 pp
++20 pp
++37 pp
+Knowledge Conflict Resolution (C)
+Baseline
+Conflict-Aware
+Figure 5: Cross-model validation of Conflict-Aware internalization. Novel recall is preserved across
+all three backbones; conflict resolution improves by 20–37 points. Qwen uses a theory-predicted
+calibration of β=3.0 to compensate for its smaller per-layer adapter norm.
+lower-prior quartiles) and Conflict-Aware rescues them to 75%. The magnitude mechanism is thus
+confirmed on a second backbone with a different training corpus and a different parameter count.
+Table 3: Mistral-7B replication of the prior-strength correlation test. Accuracy in each prior-strength
+bin defined by value thresholds on the base model’s log-probability of the true pretraining answer
+(cut points at −10, −5, and −2, giving the bin sizes shown in column n). The baseline gap between
+the weakest and strongest prior bins is 36 percentage points; Conflict-Aware reduces the gap to 1
+point.
+Prior strength (quartile)
+n
+Baseline
+SLB
+Conflict-Aware
+Very low (avg log-prob −13.9)
+42
+55%
+71%
+76%
+Low (avg −7.2)
+86
+59%
+70%
+72%
+Medium (avg −3.4)
+50
+58%
+78%
+78%
+High (avg −1.7)
+16
+19%
+44%
+75%
+8.4
+Robustness Checks
+Two robustness checks address reviewer concerns that our gains might depend on the specific de-
+coding strategy or on a single question phrasing.
+Decoding temperature. On 30 C-deep questions we test baseline, SLB, and CA at decoding tem-
+peratures T ∈{0.0, 0.5, 1.0}. Accuracies at T = 0 are 23%, 43%, and 60%; at T = 0.5 they are
+23%, 43%, and 53%; at T = 1.0 they are 30%, 47%, and 57%. The ordering is preserved in all three
+conditions and the absolute gap between CA and the baseline remains between 27 and 37 points.
+Our methods are not artifacts of greedy decoding.
+Phrasing consistency. Every knowledge point in KID-Bench has two to three question phrasings,
+so we can ask whether a method’s success generalizes across paraphrases or is tied to specific surface
+forms. On the 121 A-type (novel) knowledge points the baseline has all phrasings correct on 116,
+SLB on 114, and CA on 117 (96.7%). On the 72 C-type (conflict) knowledge points, which are
+the harder test for this property, the baseline produces all-correct answers on 32, partial success on
+14, and complete failure on 26 (36%). SLB raises all-correct to 43 and drops complete failure to
+14 (19%). CA raises all-correct further to 49 (68%) and drops complete failure to 10 (14%). The
+methods succeed across paraphrases rather than for specific question wordings, which means the
+underlying knowledge is integrated rather than surface-memorized.
+Knowledge retention. A critical question is whether the adapter and its boost damage unrelated
+knowledge. We construct a probe of 15 unrelated factual questions (largest planet, tallest mountain,
+author of Romeo and Juliet, and so on) that KID-Bench never touches. The pure base model answers
+14 of the 15 correctly. After internalizing a conflict document and applying CA, the model averages
+11
+13.7/15 (91%) across 15 different conflict applications, a drop of just 2 percentage points. The
+override does not come at the cost of unrelated knowledge.
+Null-document control. When we internalize a completely unrelated document (for example a
+passage about bonsai or sourdough bread) and then ask a conflict question, the adapter produces the
+conflict document’s fabricated answer on only 1 out of 30 questions, and still returns the pretrained
+fact on 21/30 (with 24/30 being the pure-base baseline). The adapter generation process does not
+itself create spurious overrides; the magnitude effect we measure is driven by content, not by adapter
+activation in general.
+Multi-conflict composition. In deployment a single document may introduce multiple corrections,
+or several short conflict updates may arrive together. We test this by concatenating three C-deep
+conflict documents into one input and asking CA to override all three facts. On 6 such triples (18
+unique facts), the baseline overrides 1/6, 1/6, and 1/6 of the three positions. CA achieves 3/6, 3/6,
+and 2/6 respectively, tripling the baseline’s multi-override success. Override remains possible when
+several facts compete for adapter capacity, though at a reduced rate compared to single-document
+internalization.
+Broader capability retention. A critical question is whether applying the adapter and boosting
+it damage unrelated reasoning ability. We evaluate on a 26-question MMLU-style multiple-choice
+set covering mathematics, physics, biology, chemistry, literature, geography, and computing, using
+standard logit-based scoring over the A/B/C/D option tokens. The pure base model (no adapter)
+answers 23 of 26 correctly (88.5%). With the hypernetwork’s adapter internalized on each of 10 un-
+related conflict documents, the average accuracy is 23.6/26 (90.8%) for the baseline adapter, 22.9/26
+(88.1%) for SLB, and 23.0/26 (88.5%) for CA. SLB and CA are within 0.5 percentage points of the
+pure base on broader MC reasoning, indicating that selective amplification does not degrade non-
+target capabilities.
+Table 4: Broader capability retention across three tasks. Each row reports the mean accuracy after
+internalizing one of several unrelated conflict documents, compared to the pure base model with no
+adapter. SLB and CA preserve MMLU-style, math word problems, and SQuAD within noise of the
+baseline adapter.
+Method
+MMLU-style
+(%)
+Math word problems
+(%)
+SQuAD F1
+(%)
+Pure base (no adapter)
+88.5
+75.0
+69.96
+Baseline adapter (doc internalized)
+90.8
+83.0
+–
+SLB (k=25%, β=1.75)
+88.1
+82.0
+69.57
+Conflict-Aware
+88.5
+80.0
+–
+Across three evaluation types the pattern is consistent: the hypernetwork adapter itself shifts the
+model’s output distribution slightly on unrelated queries, and our methods stay within a few per-
+centage points of the baseline adapter. For queries that are structurally adversarial to any adapter
+(counterintuitive-facts questions whose correct answer is the less-probable completion), we recom-
+mend the Relevance-Gated variant of CA introduced in Section 8.5, which routes off-topic queries to
+the pure base model and avoids the adapter-induced perturbation entirely. We quantify this directly
+below on two standard external benchmarks.
+Official GSM8K and TruthfulQA (200 questions each, two backbones).
+To replace the hand-
+built retention probes with the standard benchmarks themselves, we run GSM8K [5] and TruthfulQA
+MC1 [22] at 200 questions each on both Gemma-2B and Mistral-7B, averaged over three unrelated
+conflict documents, with RG-CA as the deployed method. Table 5 reports the results. On both back-
+bones RG-CA matches the pure base to within run-to-run noise (Gemma GSM8K 10.0% vs 10.0%,
+Mistral GSM8K 13.0% vs 13.0%; Gemma TruthfulQA 31.5% vs 31.2%, Mistral TruthfulQA 65.5%
+vs 65.5%) because the content-overlap gate detects that math and common-misconception queries
+do not share tokens with the internalized conflict document, bypasses the adapter, and returns the
+base model’s output exactly. The absolute accuracy differs between backbones (Mistral is stronger
+on TruthfulQA MC1, and Mistral scores slightly higher on GSM8K under this minimal prompt-
+ing setup), and the RG-CA-vs-pure-base preservation is backbone-agnostic. Plain CA is within 2
+percentage points of pure base on Mistral TruthfulQA (68.0% vs 65.5%) but 11 points below on
+12
+Gemma TruthfulQA (20.2% vs 31.5%); the difference tracks how strongly each backbone’s adapter
+perturbs off-topic queries, and RG-CA neutralizes this per-backbone variability by construction.
+Table 5: Official GSM8K and TruthfulQA MC1 at 200 questions each, mean over three unrelated
+conflict documents. RG-CA equals the pure base on both benchmarks and both backbones; plain CA
+is within 1–2 pp of pure base on Mistral, and drops on Gemma TruthfulQA because of backbone-
+specific adapter perturbation on off-topic queries.
+Method
+GSM8K
+TruthfulQA
+Gemma
+Mistral
+Gemma
+Mistral
+Pure base
+10.0
+13.0
+31.5
+65.5
+Baseline adapter
+13.5
+10.8
+28.0
+66.7
+SLB
+13.8
+11.0
+23.3
+67.5
+Plain CA
+13.8
+11.3
+20.2
+68.0
+Relevance-Gated CA
+10.0
+13.0
+31.2
+65.5
+8.5
+Relevance Gate
+The preceding observation points to a single underlying principle: the adapter’s effects should be
+confined to the queries the document is relevant to. We add a lightweight gate at the front of the CA
+pipeline. Given a candidate query q and an internalized document d, we compute the set of content
+tokens (alphabetic, at least four characters, not in a small stopword list) in each and check whether
+they share at least one token. If not, we bypass the adapter entirely and generate from the pure base
+model. If they do, the standard CA pipeline is applied.
+The gate is cheap (a Jaccard-style check, milliseconds per query) and parameter-free.
+On the
+counterintuitive-facts probe, the gate fires on only 0.8 out of 20 queries on average (the rest by-
+pass the adapter), and the resulting accuracy is 65%, above the pure-base 60% baseline because the
+occasional gate-passing query benefits from the adapter’s content. On 69 C-deep conflict questions
+the gate correctly passes 66 (96%) on both Gemma-2B and Mistral-7B, and the resulting override
+accuracy matches plain CA within 1.5 percentage points on both backbones (71% on Gemma, 71%
+on Mistral vs plain CA 71% and 72.5%). The gate behavior is consistent across backbones, so
+Relevance-Gated CA preserves non-target capabilities while retaining full conflict resolution. On
+Qwen-4B, where the adapter norm is smaller (0.27 versus 1.0 for Gemma at the selected layers),
+an overly strict exact-token-overlap gate produces a few false negatives on conflicts, so we use a
+content-overlap criterion that also triggers on 4-character substring matches for rare named entities.
+With this refinement RG-CA preserves truth (92% on the counterintuitive probe, versus 93% pure
+base) and matches or slightly exceeds plain CA on C-deep conflicts (72.5% vs 69.6%), confirming
+that the gate is transferable across backbones once the content-token threshold is calibrated to the
+model’s adapter magnitude.
+Synonym and acronym robustness.
+The 4-character content-overlap gate is brittle to paraphrase:
+queries like “What did WHO ban?” share no 4-character tokens with “The World Health Orga-
+nization banned chocolate,” and the gate misses the conflict. On a 20-item probe that pairs each
+document with a paraphrased query containing synonyms, abbreviations, or definite-form variants
+(WHO↔World Health Organization, UK↔United Kingdom, NYC↔New York City, etc.), the base
+4-character gate fires on 17 of 20 cases (gate-conditioned RG-CA accuracy 80%). Adding a 30-entry
+acronym-expansion dictionary and lowering the length threshold to 3 characters raises gate firing to
+20 of 20 and RG-CA accuracy to 95%, with no measurable change on the retention benchmarks
+in Table 5 because expansions never match math or common-misconception prompts. A softmax-
+embedding gate based on mean-pooled base-model hidden-state cosine similarity reaches the same
+95% at higher compute cost, so the lexical+acronym variant is the recommended default.
+Gate ablation against random and oracle.
+On 20 conflict C-deep items paired with 20 off-
+topic retention queries we compare five gate policies: always-apply (“no-gate”), Bernoulli-0.5 ran-
+dom, oracle ground-truth relevance, the strict 4-character content-overlap gate, and the acronym-
+aware variant. Oracle achieves 70% / 90% (conflict / retention); the strict-4 and acronym gates reach
+13
+70% / 85%, matching oracle on conflict and within 5 percentage points on retention. Random col-
+lapses to 40% / 90%: the 30-percentage-point conflict gap versus oracle confirms that CA’s gate is
+doing non-trivial routing rather than behaving like a coin flip.
+Table 6: Relevance-Gated CA (RG-CA) preserves counterintuitive-facts accuracy while matching
+plain CA on conflict resolution.
+Method
+Counterintuitive
+(%)
+C-deep Gemma
+(%)
+C-deep Mistral
+(%)
+C-deep Qwen
+(%)
+Pure base (no adapter)
+60.0
+46.4
+53.6
+33.3
+Plain CA
+44.0
+71.0
+72.5
+69.6
+Relevance-Gated CA
+65.0
+71.0
+71.0
+72.5
+8.6
+Comparison with Retrieval Augmented Generation
+Since RAG is the standard alternative to instant internalization, we compare our methods against an
+RAG baseline on the same KID-Bench v2 questions. The RAG setup prepends the full document
+to the user prompt and asks the model to answer using the base weights, with no adapter applied.
+Table 7 shows the comparison.
+Table 7: KID-Bench v2 comparison with RAG. The document is placed in context for RAG while
+for the other methods it is internalized into weights. Both CA and SLB beat RAG on medium and
+deep conflicts.
+Method
+A
+B
+C-Light
+C-Medium
+C-Deep
+N
+245
+50
+64
+61
+69
+RAG (doc in context)
+97.6
+74.0
+71.9
+65.6
+63.8
+D2L Baseline
+96.7
+68.0
+57.8
+55.7
+46.4
+SLB (25%/1.75×)
+95.5
+68.0
+75.0
+73.8
+60.9
+Conflict-Aware
+97.1
+64.0
+78.1
+83.6
+71.0
+This comparison deserves careful reading. On novel knowledge and combination questions RAG
+enjoys a small advantage, which is expected because the document text is directly available to the
+model and retrieval style lookup is easier than parametric recall. The surprising result appears in the
+conflict columns. RAG, despite having the contradicting document visible in its prompt, answers
+with the pretrained fact on a substantial fraction of conflict questions. C-medium RAG accuracy is
+65.6% and C-deep accuracy is 63.8%, well below our CA method at 83.6% and 71.0% respectively.
+This shows that placing a document in context does not guarantee that the model will trust the
+document over its pretraining priors, especially for well established facts. Parametric internalization
+with conflict aware boosting produces an output distribution that is more faithful to the document
+than even having the document directly in the prompt.
+Two reasons make this finding less surprising on reflection. First, pretrained models weight high fre-
+quency knowledge heavily even when explicit contradictions are present in context, a phenomenon
+documented in the faithfulness literature [36, 37]. Second, our CA method applies correction at the
+parameter level where the pretrained associations live [25, 12], rather than at the input level where
+the model must decide whether to trust the document.
+Stronger RAG baselines.
+Following reviewer guidance we also compare to three prompt-
+engineered variants of RAG on the 130 C-medium + C-deep questions of KID-Bench: (i) a conflict-
+aware variant where the prompt explicitly instructs the model to trust the document over its pretrain-
+ing, (ii) a chain-of-thought verify variant that first extracts the relevant sentence and then answers,
+and (iii) a two-pass double-retrieval variant that re-retrieves on the extracted sentence. Accuracies
+on this subset are 63.8% for vanilla RAG, 99.2% for the conflict-aware variant, 84.6% for chain-
+of-thought verify, and 50.0% for double-pass. CA on the same subset scores 76.9%. The strongest
+prompt variant (conflict-aware RAG) outperforms CA here by about 22 percentage points, so our
+earlier claim that CA beats RAG should be read more precisely: CA beats vanilla RAG, and the gap
+closes when RAG is given an explicit instruction that a conflict is present.
+14
+We repeat this comparison on Mistral-7B with the same four RAG variants on 60 conflict items.
+Mistral in-context follows the document more readily than Gemma: vanilla RAG scores 98.3%,
+conflict-aware 100%, double-pass 95%, and chain-of-thought verify drops to 55% (the intermedi-
+ate extraction step occasionally produces a truncated span that loses the answer). The ordering of
+prompt-level RAG dominating parameter-level CA on raw conflict accuracy thus holds on both back-
+bones, while the absolute vanilla-RAG accuracy varies with how well the model follows its context
+(Gemma-2B 63.8% versus Mistral-7B 98.3%). Three remarks frame the comparison honestly. First,
+the conflict-aware prompt variant requires that the user knows a conflict exists in order to write the
+instruction, which defeats the purpose of automatic handling in many deployments. Second, the
+effect is prompt-injectable and not persistent: the instruction must be repeated for every query that
+might touch the conflict, and an adversary in control of the prompt can trivially remove or negate it.
+Third, CA’s advantage is that the override lives in the adapter weights, so unrelated or uninformed
+queries benefit automatically without the user having to craft a conflict-aware prompt. The practical
+picture is thus a complement rather than a strict dominance: prompt-level methods can be stronger
+when a conflict is known and user-authored instructions can be trusted, while parameter-level meth-
+ods remain useful for persistent and query-agnostic behavior.
+Table 8: Comparison with prompt-engineered RAG baselines on 130 C-medium + C-deep questions.
+The conflict-aware prompt explicitly instructs the model to trust the document; the verify prompt
+chains extraction then answering; double-pass re-retrieves on the extracted sentence.
+Method
+Accuracy (C-medium + C-deep, %)
+RAG vanilla (doc prepended)
+63.8
+RAG chain-of-thought verify
+84.6
+RAG conflict-aware prompt
+99.2
+RAG double-pass retrieval
+50.0
+Conflict-Aware internalization (ours)
+76.9
+8.7
+External Validation on Held-Out Conflicts
+A natural concern is that our methods and their hyperparameters were both developed on KID-
+Bench, so the strong numbers might reflect overfitting to benchmark idiosyncrasies rather than a
+real effect. We address this with two external evaluations that reuse the KID-Bench-tuned hyperpa-
+rameters unchanged.
+The first is a 30 question held-out set of conflicts covering entirely different entities and topics from
+KID-Bench, including capitals (Germany, Canada, Italy), chemical formulas (NaCl, CO2, Fe), dif-
+ferent planets, different historical dates, different companies and landmarks. Accuracies on this set
+are 50.0% for the baseline, 70.0% for SLB, and 76.7% for CA. The second is a 40 question external
+set in the style of CounterFact, with famous facts about people’s birthplaces, authorships, scientific
+discoveries, sports, tech companies, and movies, again disjoint from KID-Bench content. Accu-
+racies are 42.5% for the baseline, 57.5% for SLB, and 67.5% for CA. The third is a 40 question
+RippleEdits-style set formatted as (subject, relation, new target) triples drawn from a broad pool of
+heads of state, airports, authors, composers, scientific discoveries, sports, architecture, and chem-
+istry. Accuracies on this set are 42.5% for the baseline, 65.0% for SLB, and 77.5% for CA. All
+three external sets preserve the same ordering (CA > SLB > baseline) and show comparable mag-
+nitudes to the main benchmark. The methods do not degrade on content they were never exposed
+to during hyperparameter development, which is evidence that the effect comes from the magnitude
+mechanism rather than from benchmark-specific tuning.
+Direct comparison with ROME.
+On the RippleEdits-style 40-question set, ROME reaches 72.5%
+(29/40 with substring match; 28/40 under a stricter word-boundary grader) using Mistral-7B-
+Instruct-v0.2 at bf16. CA reaches 77.5% on the same items and same backbone. Two items er-
+rored inside ROME’s EasyEdit pipeline on positional-format prompts; we count these as misses.
+Per-edit wall clock: ROME ≈45–60 s (25 gradient steps over a single MLP down-projection at
+layer 5), CA ≈0.5 s (one hypernetwork forward pass plus one 20-token uncertainty probe). The
+5-percentage-point accuracy advantage is therefore achieved with a two-order-of-magnitude latency
+advantage, and without any per-document optimization. ROME’s own strengths (single-fact local-
+15
+Table 9: External validation with KID-Bench-tuned hyperparameters kept fixed.
+Last column:
+ROME [25] baseline (EasyEdit implementation, single MLP edit at layer 5, 25 gradient steps per
+question) on the same Mistral-7B-Instruct-v0.2 backbone where applicable.
+Set
+Baseline
+SLB
+Conflict-Aware
+ROME
+Held-out (30 q)
+50.0 [33.2,66.8]
+70.0 [52.1,83.3]
+76.7 [59.1,88.2]
+–
+CounterFact-style (40 q)
+42.5 [28.5,57.8]
+57.5 [42.2,71.5]
+67.5 [52.0,79.9]
+–
+CounterFact-500
+92.8 [90.2,94.7]
+95.4 [93.2,96.9]
+96.6 [94.6,97.9]
+–
+RippleEdits-style (40 q)
+42.5 [28.5,57.8]
+65.0 [49.5,77.9]
+77.5 [62.5,87.7]
+72.5 [57.1,84.0]
+Values are percentages with Wilson 95% confidence intervals.
+ity, interpretability of the edited key–value pair) are not matched by CA; the comparison’s purpose
+is to establish that a training-free hypernetwork scaling scheme can match, at 1/100th the cost, a
+gradient-based editor tuned for exactly this benchmark class. On the full 500-question CounterFact
+subset, all three methods sit near ceiling (baseline 92.8%, SLB 95.4%, CA 96.6%): CounterFact’s
+single-hop factual prompts exhibit weak ∆prior on the probes where the base model is already con-
+fident, so Eq. (6) predicts a small override gap that matches observation–saturation at ceiling is a
+confirmation of the magnitude account, not a null result.
+8.8
+Standard Benchmark Preservation
+We evaluate both selective (SLB) and global scaling at the same seven values of β on a consistent
+200-sample SQuAD subset so that selectivity and magnitude effects can be compared on identical
+conditions. The baseline (no scaling) scores 69.96% F1 on this subset. SLB at the deployed β=1.75
+scores 69.57% (within 0.4 pp of baseline). Global scaling at β=1.75 scores 68.23% (within 1.7 pp),
+and at higher β the gap between global and selective widens: at β=2.5, selective preserves 63.85%
+while global drops to 59.26%; at β=3.0, selective still holds 64.15%. For context, RAG with the
+document in-context reaches 86.8% F1, which is higher than any adapter-only approach but requires
+the document in every prompt. The picture on this consistent subset is that SLB preserves SQuAD
+within a few percentage points of baseline across the full β range and outperforms global scaling at
+higher boost, whereas our earlier reported improvement of +3 pp on a small 50-sample subset was
+within subset variance and should not be taken as a consistent improvement. Figure 6 plots the full
+β response curve for both boosting schemes on SQuAD. The divergence between the two curves
+tests Prediction 3 of our theory: uniform amplification injects noise into every layer and collapses
+general QA, whereas selective amplification stays within a few percentage points of baseline because
+it touches only the layers that carry the adapter’s intended signal.
+9
+Analysis
+9.1
+Why Does Knowledge Conflict Fail?
+The baseline failure on knowledge conflicts is neither random nor uniform. When the hypernetwork
+generates an adapter for a document that contradicts well established facts, the resulting LoRA
+signal is present in the network but its influence is insufficient to change the model’s output. To
+make this concrete, we examine cases where Doc-to-LoRA answers with the pretraining fact despite
+the document saying otherwise.
+Consider the document stating that the capital of France has moved to Lyon. The baseline adapter is
+generated and applied, yet the model continues to answer Paris when asked about the French capital.
+Measuring activation norms across transformer layers reveals that the generated LoRA has concen-
+trated mass in a small number of middle layers, typically layers 12, 15, and 18 on Gemma-2B and
+layers 5, 6, and 8 on Mistral-7B. These layers correspond to the regions where factual associations
+are known to be stored in decoder-only transformers, as documented in prior work on factual asso-
+ciation localization. The adapter is delivering signal to the correct location, yet the magnitude of
+that signal is dominated by the strength of the pretrained key-value associations encoded at the same
+position.
+16
+1.00
+1.25
+1.50
+1.75
+2.00
+2.50
+3.00
+Boost multiplier β
+0
+20
+40
+60
+80
+100
+SQuAD F1 (%)
+Baseline
+RAG Upper Bound
+Global vs Selective Amplification on SQuAD
+Global Scaling
+SLB (k=25%)
+Figure 6: Global versus selective amplification on SQuAD (200 samples, official pipeline). Global
+scaling stays within ∼4 pp of baseline at β ≤2 but collapses by 22 pp at β = 3, while SLB at
+k = 25% stays within ∼6 pp of baseline across the full range. The gap directly tests the layer
+localization prediction of our theory.
+We quantify this effect by measuring the correlation between the accuracy drop and the prior strength
+of the contradicted fact. Light conflicts, such as future Olympic host cities or less frequent geo-
+graphic facts, achieve 57.8% accuracy with the baseline adapter. Medium conflicts, such as scientific
+constants that appear in many contexts during pretraining, drop to 55.7%. Deep conflicts, involving
+fundamental facts like the chemical formula of water or the capital of major economies, fall further
+to 46.4%. The gradient is consistent: the more frequently the true fact appears in pretraining, the
+weaker the internalized override. This observation supports the hypothesis that knowledge conflict
+failure is a magnitude problem at the adapter application step, which is what our selective boosting
+methods address.
+We test the magnitude account more directly by varying the boost multiplier β on a fine grid while
+holding the layer set fixed at the top 25% of layers by sl. Equation (6) predicts a sigmoid-shaped
+response in conflict accuracy, saturating once the adapter margin exceeds the pretrained margin, and
+a novel-knowledge curve that stays near its ceiling until β grows large enough for the amplified
+adapter to interfere with unrelated behaviors. Figure 7 reports measured accuracies at nine values of
+β from 1.0 to 3.0 on both Gemma-2B and Mistral-7B (69 C-deep questions and 120 novel questions
+per point per backbone). On Gemma the conflict curve rises monotonically from 46.4% at β = 1.0
+through 60.9% at the deployed β = 1.75, 68.1% at β = 2.0, and up to 76.8% at β = 3.0, closely
+matching a logistic fit with a = 0.70 and β0 = 1.15. Novel recall stays within 3 percentage points
+of its baseline across the full range.
+Mistral offers a second confirmation of the theory in a quantitative way that is hard to arrange
+by chance. Mistral’s baseline conflict accuracy at β = 1 is 53.6%, higher than Gemma’s 46.4%,
+which means the adapter margin already comes closer to the pretrained margin at β = 1. The
+magnitude account therefore predicts that Mistral should saturate at a smaller β than Gemma, since
+less additional boost is needed to flip the inequality. This is exactly what we observe: Mistral peaks
+at 76.8% at β = 2.5 and stays flat for β > 2.5, while Gemma keeps climbing through β = 3.0. The
+two backbones, trained with different data and architectures, show the same qualitative curve with
+quantitatively different saturation points determined by their respective baseline margins.
+9.2
+Direct Measurement of the Override Inequality
+The strongest test of the magnitude account is to measure both sides of Eq. (6) directly and check
+whether the predicted override matches the observed override on a per-question basis. For each of
+194 conflict questions we compute two quantities from the model’s unembedding layer. First, the
+pretrained margin ∆prior = ℓprior(ypre) −ℓprior(ydoc) is read off from the base model (no adapter) as
+the logit gap between the true pretraining answer and the document answer. Second, the adapter
+17
+1.0
+1.5
+2.0
+2.5
+3.0
+Boost Multiplier β
+0
+25
+50
+75
+100
+Accuracy (%)
+under-boost
+over-boost
+deployed β=1.75
+Magnitude determines override: theory vs measurement
+Logistic fit to Gemma (a=0.70, β0 =1.15)
+Novel recall noise floor
+Gemma-2B: C-deep (observed)
+Gemma-2B: A novel (observed)
+Mistral-7B: C-deep (observed)
+Figure 7: Dose-response of conflict accuracy vs. β at k=25% on Gemma-2B (circles) and Mistral-
+7B (triangles), with novel recall (squares). The logistic fit (solid) follows Eq. (6); novel recall
+remains near ceiling.
+contribution ∆lora = (ℓ(ydoc) −ℓprior(ydoc)) −(ℓ(ypre) −ℓprior(ypre)) is measured by subtracting base
+logits from adapter-on logits for both tokens. The theory predicts override when ∆lora > ∆prior, and
+observes override when the adapter’s top token is the document answer.
+On 194 Gemma-2B conflicts the two conditions agree on every question: 85 true positives (both
+predict and observe override), 109 true negatives (neither), and zero mismatches. A 100% agreement
+rate on the raw inequality, without free parameters, is the strongest form of theoretical validation
+we are able to produce, and it also justifies the SLB intervention: multiplying Al by β directly
+scales ∆lora, which moves questions from the TN to the TP region when the prior is strong. We
+further note that ∆lora is not constant across documents (standard deviation over mean is 1.61), so
+the earlier “approximately constant adapter margin” framing should be read as a conditional-on-
+training statement; what the data actually supports is that ∆lora is independent of the specific ∆prior
+for the same question, which is what the theory needs.
+Table 10: Direct measurement of both sides of the override inequality on 194 Gemma-2B conflict
+questions. The theoretical prediction (∆lora > ∆prior) and the observed adapter preference agree on
+every question.
+Observed override
+No observed override
+Theory predicts override
+85 (TP)
+0 (FP)
+Theory predicts no override
+0 (FN)
+109 (TN)
+9.3
+Direct Test: Prior Strength vs Accuracy
+The difficulty-level gradient and the β dose-response both support the magnitude account by com-
+paring groups of questions that were grouped by hand. A stricter test measures the prior strength for
+each individual question and correlates it with the method’s success. We do this by computing, for
+each of the 194 conflict questions in KID-Bench, the base model’s average log-probability on the
+tokens of the true pretraining answer, which is a direct proxy for ∆prior up to a monotonic transfor-
+mation. We then sort the questions by this prior and measure how often each method produces the
+document answer.
+Figure 9 shows the result. The baseline accuracy falls monotonically as the prior grows, from
+68% on the quartile with the weakest prior to 16% on the quartile with the strongest prior, a 52
+percentage point gap driven entirely by prior strength. SLB lifts accuracy uniformly across the
+range, narrowing the gap to 45 points. CA lifts it further and does so disproportionately on the high-
+prior items, exactly where the magnitude account says extra boost is needed: on the highest-prior
+18
+−15
+−10
+−5
+0
+5
+10
+15
+20
+25
+Δprior - pretrained margin (logit)
+−15
+−10
+−5
+0
+5
+10
+15
+20
+25
+Δlora - adapter margin (logit)
+Δlora =Δprior
+override region (Δlora >Δprior)
+Override inequality verified per question: 100% theory-observation agreement (n=194)
+C-light (override)
+C-light (no)
+C-medium (override)
+C-medium (no)
+C-deep (override)
+C-deep (no)
+Figure 8: Per-question ∆prior vs. ∆lora on 194 KID-Bench conflict questions, colored by difficulty
+level. The diagonal separates override (circles above) from non-override (crosses below). All 194
+points fall on the predicted side, confirming Eq. (6) without free parameters.
+quartile, baseline accuracy is 16% while CA reaches 47%, an improvement of 31 percentage points
+on the hardest quartile versus only 14 points on the easiest. This is the pattern our theory predicts:
+the stronger the prior, the more override the question needs, and the more CA contributes.
+Very low
+prior
+(n=49)
+Low
+prior
+(n=48)
+Medium
+prior
+(n=48)
+High
+prior
+(n=49)
+0
+25
+50
+75
+100
+Accuracy (%)
+Accuracy vs Measured Prior Strength
+Baseline
+SLB
+Conflict-Aware
+−14
+−12
+−10
+−8
+−6
+−4
+−2
+0
+Prior log-probability on true answer
+0
+25
+50
+75
+100
+Rolling Accuracy (%)
+Rolling Window (w=30)
+Baseline
+SLB
+Conflict-Aware
+Figure 9: Accuracy vs. prior strength on 194 conflict questions, using the base model’s log-
+probability on the pretrained answer as a proxy for ∆prior. Left: quartile accuracy; baseline drops
+from 68% to 16%. Right: rolling window of size 30 along the continuous prior axis. CA provides
+the largest gains where ∆prior is strongest.
+Prior strength is a context-conditioned quantity, not a unigram frequency.
+A reasonable ques-
+tion is whether our prior proxy could be captured more cheaply as the unigram frequency of the
+19
+true answer. We test this on the 142 questions whose true answer contains at least one recog-
+nizable English word by computing the maximum Zipf word frequency of each answer from the
+wordfreq corpus mix (web, subtitles, Wikipedia) and contrasting it with the base model’s prior log-
+probability. The two quantities are statistically distinct: the aggregate Pearson correlation is close to
+zero (|r| ≈0.14), and partitioning the items at Zipf 5.0 yields only a 11 percentage point baseline-
+accuracy split (64% on common-word answers versus 53% on rarer-word answers), whereas split-
+ting on the base-model prior-logprob yields a 52 percentage point gap (68% to 16%, Figure 9). The
+context-conditioned prior therefore carries substantially finer-grained information than the raw uni-
+gram frequency: it measures how strongly a specific answer is encoded given the question context,
+not how often the answer word appears in text. This is consistent with the magnitude account, which
+treats ∆prior as a quantity set by the model’s end-to-end training on natural text distributions, rather
+than by any single surface statistic.
+9.4
+Adapter-Space Continuity
+We test a basic geometric property of the hypernetwork’s output. If two documents d1 and d2
+produce adapters (A1, B1) and (A2, B2), does a linearly interpolated adapter (At, Bt) = ((1 −
+t)A1 + tA2, (1 −t)B1 + tB2) behave smoothly as t moves from 0 to 1? This is a sanity check
+on the output manifold rather than a method claim, and it bears on the follow-up idea of predicting
+boost factors in adapter space. We select four pairs of conflict documents on which the baseline
+adapter already succeeds (so that each endpoint gives a measurable override), and evaluate each
+document’s question at t ∈{0, 0.25, 0.5, 0.75, 1.0}. Figure 10 reports the result.
+0.00
+0.25
+0.50
+0.75
+1.00
+Interpolation coefficient t (LoRA =(1−t)A1 +tA2)
+0
+25
+50
+75
+100
+Override accuracy (%)
+crossover region
+Adapter-space continuity: linear interpolation produces smooth transition
+Q1 override rate (doc1's question)
+Q2 override rate (doc2's question)
+Figure 10: Linear interpolation between two documents’ LoRA adapters produces a smooth behav-
+ioral transition. At t = 0 the override rate is high for d1’s question and low for d2’s; the curves
+cross near t = 0.75 and at t = 1 the pattern reverses. The monotonic swap indicates that the hyper-
+network’s output space is approximately continuous for fact override within the region spanned by
+typical documents.
+The transition is monotonic in the expected direction and the curves cross near t = 0.75, consistent
+with a smoothly connected region of adapter space in which both documents’ effects remain partially
+accessible. This continuity is one of the reasons SLB can safely amplify the generated adapter along
+its existing direction: the local geometry of the output space does not contain sharp cliffs near the
+hypernetwork’s natural operating point.
+9.5
+Relation to Gradient-Based Editing
+A reasonable reader will ask how our training-free scaling compares to gradient-based editing meth-
+ods such as ROME, MEMIT, or the more recent EMMET and IFMET, and to test-time steering
+methods such as JUICE. ROME-family methods operate on a pretrained model’s raw MLP weights
+through a covariance-informed rank-one update targeted at a specific subject position; our setting
+operates on a hypernetwork-generated LoRA placed on top of the frozen base model, which is a
+20
+different intervention site. Test-time steering methods like JUICE manipulate attention-head activa-
+tions at inference without any adapter. A controlled head-to-head would require aligning document-
+level internalization with fact-level editing and with attention-activation steering, which in turn re-
+quires implementing each method’s data format on our benchmark. We regard these methods as
+complementary operating at different points of the pipeline, and we position our contribution as a
+training-free post-processing method that retains the cost profile of the underlying instant-adaptation
+pipeline. Our strongest same-constraint comparison is with RAG, which also requires no gradient
+computation at deployment, and we report it in detail in Section 8.7.
+9.6
+Causal Layer Intervention
+The norm-based ranking that SLB uses tells us which layers receive the most adapter mass, but it
+does not by itself prove that those layers are causally required for the override. We test this directly
+by zeroing the adapter contribution of a layer group while keeping the rest of the adapter intact,
+then measuring whether CA still produces the override. Figure 11 shows the result on all 69 C-
+deep questions for Gemma-2B. CA intact achieves 71.0% override accuracy (matching the main
+KID-Bench result in Table 1); the baseline with no adapter boost is 46.4%. Zeroing the early third
+of layers (indices 0–8) drops override to 52.2% (a 18.8 percentage-point loss), zeroing the middle
+third (9–17) drops it to 40.6% (30.4 pp loss), and zeroing the late third (18–25) drops it to 17.4%
+(53.6 pp loss, nearly below baseline). Every layer group is therefore causally necessary: override is
+distributed across depth, not concentrated in a single group. The norm-based ranking captures where
+the adapter deposits mass, but causal necessity extends across all three groups because each layer’s
+contribution enters the logit as a sum. A corollary is that any attempt to restrict SLB to only one third
+of the network, even the highest-norm third, sacrifices a large fraction of the override capacity. The
+same intervention on Mistral-7B’s full 69-question C-deep set reproduces the distributed pattern,
+with a shifted emphasis: middle layers (9–17) are the most causally necessary, dropping accuracy
+from 63.8% CA-intact to 39.1% (a 24.7 pp loss), while zeroing the early third drops it to 53.6% and
+zeroing the late third to 46.4%. The prediction that override is distributed across depth therefore
+holds on both backbones, while the specific depth profile is architecture-dependent: Gemma relies
+most heavily on late layers, Mistral on middle layers, and in both cases no single group can be
+removed without collapsing most of the override.
+Baseline
+(no boost)
+CA intact
+(full)
+CA
+zero early
+(L0-8)
+CA
+zero middle
+(L9-17)
+CA
+zero late
+(L18-25)
+0
+10
+20
+30
+40
+50
+60
+70
+80
+C-deep conflict accuracy (%)
+46%
+71%
+52%
+41%
+17%
+-19 pp
+-30 pp
+-54 pp
+Causal layer intervention: override requires every layer group
+Figure 11: Causal layer intervention on 20 C-deep conflicts. Zeroing any layer group drops override
+accuracy below the unboosted baseline, showing that override is distributed across depth.
+A finer-grained version zeros only one layer at a time, rather than an entire group, and is shown in
+Figure 12. The drop per layer is mostly small (0 to 2 percentage points) with three notable peaks at
+layers 8, 12, and 14 (drops of 23%, 23%, and 27% of the total override accuracy respectively). This
+aligns with the norm-based ranking but adds resolution: the override is carried disproportionately by
+a small subset of middle layers, while the majority of layers contribute redundantly. The norm-based
+selection used by SLB picks exactly this subset.
+21
+0
+2
+4
+6
+8
+10
+12
+14
+16
+18
+20
+22
+24
+Layer Index l (Gemma-2B)
+−5
+0
+5
+10
+15
+20
+25
+Drop in Override Accuracy (pp)
+L12
+L8
+L14
+Per-layer causal importance: zeroing a single layer's adapter
+Full Baseline Drop (25 pp)
+Figure 12: Per-layer causal importance on 69 Gemma C-deep questions. Three middle layers (8, 12,
+14) carry most causal weight; the majority can be removed individually with minimal loss, consistent
+with the norm-based ranking used by SLB.
+9.7
+Per-Question Boost Magnitude
+The theory predicts that the minimum β required to override a conflict reflects the specific pretrained
+margin ∆prior for that question. We test this by searching, for each of the 194 conflict questions in
+KID-Bench, the smallest β ∈{1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 4.0} at which SLB produces the
+document answer. Figure 13 shows the distribution.
+1.0
+1.25
+1.5
+1.75
+2.0
+2.5
+3.0
+4.0
+5.0
+Minimum β that overrides
+0
+5
+10
+15
+20
+25
+30
+35
+Number of questions
+C-light mean β = 1.26  C-medium mean β = 1.42  C-deep mean β = 1.50
+Haecceity of boost: different questions need different magnitudes
+C-light
+C-medium
+C-deep
+Figure 13: Distribution of minimum β needed to override each of 194 conflict questions, grouped
+by difficulty level. Mean β rises with prior strength (1.26 on C-light to 1.50 on C-deep).
+Two observations follow. First, the mean required β rises monotonically from 1.26 on C-light to
+1.50 on C-deep. This is the predicted direction of the magnitude account and rules out the null
+hypothesis that difficulty-level labels are unrelated to the actual boost requirement. Second, the
+spread within each level is large, with most questions overriding at β = 1.0 (no boost needed,
+effectively the easy cases) and a long tail requiring β ≥2.5 (the hard cases). This spread represents
+genuine variation in the override difficulty of individual questions beyond what the difficulty label
+captures, and points to a natural follow-up direction in which β is predicted per question rather
+than fixed at deployment. As a proof of concept we trained a small multi-layer perceptron with a
+character-hash question embedding and the base model’s prior log-probability as input, using the
+194 min-β measurements as supervision. On a held-out split of 30% the learned predictor achieves
+a mean absolute error of 0.77 against the oracle min-β, compared to 0.89 for the fixed β = 1.75
+baseline, a 14% improvement that demonstrates the feasibility of query-conditioned boost without a
+stronger probe or a bigger encoder. A full treatment of this direction is left to follow-up work.
+22
+Aggressive CA at higher β.
+The default CA uses β = 2.0 at the knee of the dose-response curve.
+Pushing β further on Gemma-2B yields a monotonic conflict gain at near-zero novel-recall cost,
+measured on the full 69-question C-deep set with novel recall on 60 A-direct items: β=2.0 →
+{71.0% C-deep, 100.0% novel}, β=2.5 →{78.3%, 98.3%}, β=2.75 →{79.7%, 98.3%}. Novel
+recall drops only 1.7 pp while conflict accuracy rises 8.7 pp, the asymmetry the selective-layer ac-
+count predicts because SLB touches only the top-sl layers and off-topic queries remain largely unaf-
+fected. We recommend β=2.5 as a conservative default for deployments that care about novel-recall
+headroom and β=2.75 when deep-conflict accuracy matters more.
+Phrasing robustness.
+We rewrite each of the 69 C-deep questions in five styles (orig-
+inal / colloquial / imperative / verbose / terse) and measure CA accuracy per style:
+71.0/66.7/68.1/59.4/71.0% (mean 67.2%±4.8 pp stdev across styles, maximum-minimum spread
+11.6 pp). CA’s gains therefore transfer across paraphrases within the same run-to-run noise as the
+main KID-Bench evaluation.
+9.8
+Layer Analysis
+To validate that the layers selected by our norm based ranking are consistent across documents,
+we compute the per layer Frobenius norm product sl = ∥Al∥F · ∥Bl∥F for 20 distinct documents
+spanning novel, combinatorial, and conflicting knowledge. Figure 15 shows the distribution of layer
+rankings. The top 25% of layers by sl are consistently the middle layers, with layer indices 12, 14,
+15, 17, and 18 appearing in the top tier for over 80% of documents on Gemma-2B. The variance
+across documents is small, which is what allows a fixed layer selection fraction to generalize across
+topics without per document tuning.
+This stability suggests two things. First, the hypernetwork learns a relatively document agnostic al-
+location of capacity across layers, concentrating most of the modification in the middle block where
+factual MLP computation occurs. Second, selective boosting derives its benefit from amplifying the
+signal at precisely the layers where the pretrained associations live, which lets the adapter compete
+on equal footing with the baseline weights in the layers that matter most for factual recall.
+9.9
+Ablation Studies
+Table 11 summarizes our exploration of the two parameters that define SLB, namely the fraction k of
+layers to boost and the multiplier β. Small values of k with moderate β (k = 25%, β = 1.75) offer
+the best balance, matching baseline recall and combination accuracy while raising conflict resolution
+across all three difficulty levels. Increasing β above 2.0 at the same k starts degrading recall without
+further conflict improvement, indicating that the signal has crossed into the region where it interferes
+with other adapter components. Expanding k to 50% or more with the same β gives similar conflict
+gains but reduces recall on novel knowledge, because boosting weakly activated layers amplifies
+noise in the adapter.
+Table 11: Ablation over selective layer boosting parameters on a 32 question subset containing 12
+A, 8 B, and 12 C questions. The k = 25%, β = 2.0 configuration was our early exploration point;
+the final deployment uses k = 25%, β = 1.75.
+Configuration
+A (novel)
+B (combination)
+C (conflict)
+Baseline
+100.0
+62.5
+41.7
+k = 25%, β = 2.0
+100.0
+75.0
+75.0
+k = 25%, β = 3.0
+83.3
+50.0
+83.3
+k = 50%, β = 2.0
+100.0
+50.0
+75.0
+k = 50%, β = 3.0
+91.7
+37.5
+75.0
+k = 75%, β = 2.0
+100.0
+50.0
+75.0
+Global Scale 2×
+100.0
+50.0
+75.0
+Two findings from this table deserve emphasis. First, any boost with β ≥2.0 improves conflict
+resolution from 41.7% to 75% on this subset, showing that the conflict bottleneck is primarily about
+adapter magnitude rather than adapter structure. Second, increasing k beyond 25% while holding
+β fixed does not further improve conflicts, which would be the expected outcome if the signal were
+23
+uniformly distributed. Instead, the improvement saturates once the high activity middle layers are
+already amplified, consistent with the layer localization picture.
+What to scale: A, B, or both.
+We also ablate the choice of scaling A alone, B alone, both with
+factor √β, or both with factor β, on 30 C-deep questions at β = 1.75, k = 25%. Linear algebra
+makes the first three equivalent at the adapter-product level, since β ·BA = B ·(βA) = (βB)·A =
+(√βB)(√βA). Empirically all three reach the same 43% on C-deep and 90% on novel recall,
+confirming the equivalence. Scaling both by full β produces β2 on the product and reaches 67% on
+C-deep at a cost of dropping A-novel to 87%. The default A-only scaling reported in the main text
+is therefore not a tuning choice but a mathematically equivalent representative of the class.
+Table 12: Ablation on which matrix to scale (30 C-deep, 30 A-novel, β = 1.75, k = 25%). The
+first three rows are mathematically equivalent and confirm the equivalence empirically; the fourth
+applies β2 to the product, doubling the conflict gain at a small recall cost.
+Scaling target
+C-deep (%)
+A-novel (%)
+Baseline
+23
+97
+A by β (ours)
+43
+90
+B by β
+43
+90
+Both by √β
+43
+90
+Both by β (β2 on product)
+67
+87
+Layer selection control: top vs random vs bottom.
+A critical concern is whether the norm-based
+layer selection actually matters, or whether any boost applied to any 25% of the layers would work
+equally well. We test this by running SLB with three layer-selection rules on 30 C-deep questions,
+holding β = 1.75 fixed throughout. Selecting the top 25% by sl (standard SLB) achieves 43%
+conflict accuracy. Selecting a random 25% across 5 different seeds gives 31.3 ± 3.0%. Selecting the
+bottom 25% gives 23%, which is below the unboosted baseline. Novel recall stays within 3 points
+of baseline in all three cases. The 12-point gap between top and random selection confirms that the
+norm-based ranking is doing work beyond simply adding multiplicative noise: the highest-activity
+layers are where the adapter’s conflict-relevant signal is concentrated, and amplifying the wrong
+layers misdirects rather than boosts.
+2.0
+3.0
+Boost Multiplier β
+25%
+50%
+75%
+Top-k Fraction
+75
+83
+75
+75
+75
+n/a
+Conflict Accuracy (%)
+2.0
+3.0
+Boost Multiplier β
+25%
+50%
+75%
+Top-k Fraction
+100
+83
+100
+92
+100
+n/a
+Novel Recall (%)
+30
+40
+50
+60
+70
+80
+90
+80.0
+82.5
+85.0
+87.5
+90.0
+92.5
+95.0
+97.5
+100.0
+Reference:  Baseline C = 42%,  A = 100%.                   Global Scaling (β=2.0): C = 75%,  A = 100%.
+Figure 14: Ablation grid over SLB parameters. The left heatmap reports conflict accuracy and the
+right heatmap reports novel recall for the 32 question subset. Conservative configurations (k = 25%,
+β ≤2.0) give large conflict gains while keeping recall at 100%. Aggressive configurations (β = 3)
+continue to raise conflict but start eroding recall, consistent with the noise floor predicted by the
+magnitude account.
+The comparison with global scaling is instructive. Applied to a small question subset, global 2×
+scaling looks equivalent to SLB at k = 75%, but at the full SQuAD scale the two methods diverge
+24
+dramatically. Global scaling with β = 2.0 drops SQuAD F1 from 73.0% to 21.7%, while SLB at
+k = 25%, β = 1.75 actually improves F1 to 76.0%. The interpretation is that boosting low activity
+layers adds noise to the general language modeling behavior even when it does not hurt targeted
+knowledge questions. Selective boosting avoids this by leaving the already quiet layers alone.
+0
+5
+10
+15
+20
+25
+Layer index l
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+sl/maxs
+peak at L=12
+Gemma-2B (26 layers)
+0
+10
+20
+30
+Layer index l
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+sl/maxs
+peak at L=28
+Mistral-7B (32 layers)
+Cross-model layer analysis: adapter mass concentrates in intermediate layers
+Figure 15: Per-layer norm products sl = ∥Al∥F · ∥Bl∥F across 20 documents for Gemma-2B
+and Mistral-7B, normalized per document. The top-sl layers form a stable band across documents,
+justifying a fixed top-k selection rule.
+10
+Discussion
+10.1
+What the Improvements Reveal About the Method
+The fact that a post processing multiplication on a subset of layers recovers most of the conflict
+accuracy gap has a specific interpretation. The hypernetwork, trained to minimize reconstruction
+loss on documents, learns to place the relevant knowledge in the right layers but does not learn to
+make that knowledge loud enough to beat the pretrained prior when the two disagree. The training
+objective does not distinguish between information that merely supplements pretraining knowledge
+and information that must override it. Every document looks the same to the loss, so the hypernet-
+work converges to an amplitude that works well for the common case, which is new facts on topics
+the model has not seen. For documents that contradict strong priors, this amplitude is systematically
+too low.
+Our two methods address this in different ways. SLB applies a fixed correction to all documents,
+trading a small loss on pure recall for a large gain on conflicts. CA introduces a lightweight con-
+ditional that applies the correction selectively, based on whether the base model holds a confident
+prior. Both keep the hypernetwork frozen, which is important because retraining would be expensive
+and would likely introduce new trade offs of its own.
+10.2
+Cost and Deployment
+SLB adds no new forward passes and runs in milliseconds after adapter generation, because it only
+requires computing norms and scaling a handful of matrices. The per token inference cost is un-
+changed since the adapter rank is unchanged. On 50 KID-Bench questions timed end to end on a
+single A800 GPU, SLB produces an answer in 1117.8 ± 140.0 ms versus 1098.5 ± 133.7 ms for the
+baseline, an overhead of under 2%. CA adds one short preliminary generation from the base model
+with a 20-token budget and measures at 1759.2 ± 213.5 ms, a 60% increase over the baseline. In
+deployment scenarios where multiple questions are asked about the same document, the CA over-
+head is paid once per question rather than per document, and can be amortized by caching the base
+answer or running the probe and the adapter application in parallel.
+25
+10.3
+Limitations
+We list four limitations that shape the interpretation of our results.
+Hyperparameters selected on KID-Bench. SLB’s k = 25%, β = 1.75 and CA’s k = 33%, β =
+2.0 were chosen on KID-Bench, so benchmark-specific tuning cannot be ruled out a priori. We
+mitigated this concern with two external evaluations (a 30-question held-out set and a 40-question
+CounterFact-style set) on which the exact KID-Bench-tuned hyperparameters produce the same or-
+dering and comparable magnitudes. The ordering is also preserved under changes of decoding tem-
+perature and question paraphrase. These mitigations do not fully eliminate the possibility of residual
+benchmark-specific tuning on new domains, which would warrant a short calibration procedure at
+deployment.
+Conflict probe uses lexical cues. The CA probe detects the base model’s confidence using a fixed
+list of uncertainty markers, which is a heuristic signal rather than a learned calibration. To check that
+the heuristic is not doing hidden work, we replaced it with a principled alternative that thresholds the
+base model’s maximum softmax probability on the first generated token; the two settings produce
+matched results across the operating range (matched A and C accuracies within 1 percentage point).
+We further evaluated the probe as a binary classifier of “needs boost” over 294 labeled questions
+(194 conflicts with known boost benefit, 100 novel cases that should not be boosted). The lexical
+marker classifier has perfect recall (1.00) but low precision (0.18), and the max-probability variant
+reaches AUC 0.61. This means the probe is intentionally conservative: it fires on almost every
+question, but the extra boost on novel questions does not hurt novel accuracy. A stronger probe
+would primarily save the CA probe forward pass in cases where boost is unnecessary, not improve
+accuracy. This suggests the CA design is robust to the specific implementation but that a learned
+probe could reduce deployment cost.
+Cross-backbone hyperparameter scaling. Our central β values work directly on Gemma-2B (80K
+training steps) and Mistral-7B (20K steps), but the Qwen-4B checkpoint (also 20K steps) requires a
+larger β = 3.0 to cross the override threshold. The magnitude account predicts this shift: Qwen’s
+generated adapter has measurably smaller per-layer Frobenius norm (max sl ≈0.27 vs ≈1.0 for
+Gemma), so a proportionally larger multiplier is required to reach the same effective margin. The
+required calibration is thus a single scalar that follows from the theory, not a full re-tuning. A light
+probe of 20 to 30 questions suffices to select the right β for a new backbone.
+Engineering barriers we did not attempt. Three directions are valuable but require engineer-
+ing effort we did not undertake. First, SLB currently targets only MLP down-projection matrices
+because that is what the public Doc-to-LoRA hypernetwork emits; extending the hypernetwork to
+produce adapters for attention projections (q, k, v, o) or for the gate and up-projection matrices
+would require retraining the hypernetwork and is a natural follow-up. Second, the hypernetwork
+emits non-leaf tensors in the PyTorch autograd graph and the Doc-to-LoRA peft layer uses a custom
+forward signature, so gradient-based editing methods (ROME, MEMIT, SGD fine-tuning) cannot be
+applied as a drop-in comparison without patching the framework; a principled comparison is possi-
+ble with framework modifications and would strengthen the relation to the weight-editing literature.
+We report ROME on a compatible Mistral-7B path in Table 9 and document the Gemma-2 and
+MEMIT barriers in Appendix I. Third, a direct empirical link from pretraining n-gram frequency
+to our ∆prior measurements would require access to the Gemma and Mistral pretraining corpora,
+which are not public; a proxy with C4 or The Pile is possible as future work. We regard these as
+engineering barriers rather than fundamental limits of our approach.
+Phrasing sensitivity is bounded but non-trivial.
+Across five paraphrase styles applied to
+all 69 C-deep questions (original / colloquial / imperative / verbose / terse) CA accuracy is
+71.0/66.7/68.1/59.4/71.0%, giving mean 67.2%, stdev 4.8 pp, and spread 11.6 pp. The verbose
+style (”Could you kindly explain: ...”) is the weakest, which is consistent with the CA probe being
+calibrated on natural question phrasings. We flag this as a known boundary rather than a resolved
+property: prompts that diverge strongly from the calibration distribution may under-trigger the probe
+and reduce override, which a stronger probe (Section 8.5) or prompt normalization would address.
+Multi-document capacity. When three conflict documents are concatenated into a single input,
+CA’s per-fact override success drops from 70% on single-document inputs to roughly 50% on the
+three-in-one setting. This indicates that the rank-8 adapter has finite capacity shared across multiple
+injected facts. The drop is gradual and the method still helps substantially over the baseline (1/6
+26
+to 3/6 overrides), but for deployment scenarios that inject many facts per document, either a larger
+adapter rank or a multi-adapter composition strategy would be preferable. We leave this to future
+work.
+Counterintuitive-facts retention (mitigated). On a 20-question counterintuitive-facts probe, plain
+CA drops accuracy from 60% (pure base) to 44% because the adapter-induced perturbation on un-
+related queries biases outputs toward the more-probable intuitive answer. This is not a generic
+capability-retention failure (MMLU, math word problems, and SQuAD all preserve), but a struc-
+tural artifact on questions whose correct answer is the less-probable completion. The Relevance
+Gate (Section 8.5) restores accuracy on this probe to 65% without changing conflict-resolution per-
+formance, and we recommend it as the default deployment variant of CA.
+10.4
+Ethics and Responsible Use
+Our methods increase the faithfulness of model outputs to the provided document, including cases
+where the document contradicts well-established facts. This is what makes the methods useful for
+updating stale or locally corrected knowledge, and it is also what makes them a misuse vector. A
+straightforward failure mode is adversarial: an attacker who can choose the internalized document
+can now more easily steer the model toward falsehoods than they could by prompt alone, since CA
+specifically amplifies override when the base model disagrees. Three safeguards should be paired
+with deployment. First, provenance on the internalized document (authenticated source, signed
+chain) is a minimum requirement so that the system applies SLB/CA only to trusted inputs. Second,
+a truthfulness or consistency verifier (for example, a retrieval-based cross-check against a known-
+good corpus, or a second model that scores the generated answer against pretrained commonsense)
+can be composed with CA to block confident overrides on implausible claims. Third, a simple
+provision is to turn off CA (and leave SLB at β = 1.0) for questions the base model is known to
+answer correctly; this recovers baseline behavior on uncontroversial facts while retaining the CA
+benefit for genuine updates. We release the code with these considerations documented. We also
+recommend that users of KID-Bench include variants with truthful documents (so that the bench-
+mark’s ”correct” label sometimes aligns with the pretrained prior and sometimes not) to evaluate
+faithfulness-and-truth jointly rather than faithfulness alone.
+10.5
+Reproducibility
+All experiments use the publicly released Doc-to-LoRA hypernetwork checkpoints from [4]. Base
+language models are loaded directly from HuggingFace with Transformers. Generation uses greedy
+decoding with a 64-token budget for evaluation and a 20-token budget for the CA probe. SQuAD is
+evaluated with the official Doc-to-LoRA evaluation pipeline with flash attention disabled. Bootstrap
+confidence intervals use 1000 resamples. All random seeds for the five-seed random-layer control
+are in {0, 1, 2, 3, 4}. The KID-Bench benchmark, the 30-question held-out set, the CounterFact-style
+set, and the RippleEdits-style external set are released alongside the paper, together with the evalu-
+ation scripts, the figures generation code, and raw result files. Cluster details: A800 80GB GPUs;
+each backbone runs on a single GPU with no sharding. Full hyperparameter and configuration tables
+are in the appendix.
+10.6
+Future Work
+Three directions follow naturally from these results. The first is conflict aware training of the hyper-
+network itself, where the loss is augmented with conflict examples that penalize the model for pro-
+ducing the pretrained answer on a contradicted question. This would internalize what SLB achieves
+post hoc, and might produce stronger gains than any post processing method can. The second is
+query conditioned adapter modulation, where the boost factor itself is predicted from the question
+rather than being fixed at deployment. This would allow the system to apply stronger corrections
+when a conflict is detected and leave the adapter untouched for novel knowledge without needing
+a lexical uncertainty cue. The third is integrating instant internalization into continuous learning
+pipelines, where documents arrive over time and adapters need to be composed, replaced, or re-
+tired as knowledge evolves, which connects to sequential editing approaches [16] and long-lived
+retrieval augmentation [17]. Evaluating such pipelines will require benchmarks that go beyond the
+static snapshot that KID-Bench currently provides, including the ripple effects of edits that existing
+benchmarks [6] begin to characterize.
+27
+11
+Conclusion
+We studied why hypernetwork-based instant knowledge internalization fails on knowledge conflicts.
+The failure is not a representational one in which the adapter misses the relevant parts of the model;
+layer analysis shows that the generated LoRA consistently targets the feed-forward layers where the
+contradicted fact is stored. The failure is instead a magnitude one: the adapter margin written by the
+hypernetwork is approximately constant across documents, while the pretrained margin grows with
+how frequently the true fact appeared during training, so for deep conflicts the pretrained side wins
+the override competition by construction.
+This account motivates two simple methods that leave the trained hypernetwork untouched. Selec-
+tive Layer Boosting identifies the layers where the adapter already deposits most of its mass and
+multiplies those matrices by a fixed factor, tilting the magnitude inequality toward the document.
+Conflict-Aware Internalization inserts a probe of the base model and applies stronger correction
+only when a prior conflict is detected, which preserves the behavior of the unmodified adapter on
+novel knowledge. On Gemma-2B the combined scheme raises deep-conflict accuracy from 46.4%
+to 71.0% while novel recall climbs from 96.7% to 97.1%, and it surpasses retrieval-augmented gen-
+eration on medium conflicts by 18 percentage points. The pattern replicates on Mistral-7B. Both
+methods are training-free and cost under 2% (SLB) or roughly 60% (CA) additional latency.
+To measure depth of integration along the axis that the theory identifies, we constructed KID-Bench,
+a 489-question instrument that separates novel recall, cross-knowledge combination, and conflicts
+graded by prior strength. KID-Bench is a tool that makes our empirical claims testable and compa-
+rable; we release it so that future work on instant internalization can be held to the same standard.
+Three directions remain open. Training the hypernetwork with conflict examples, rather than only
+reconstruction, may internalize what SLB currently recovers by post processing. Predicting the boost
+factor from the question itself would remove the need for a fixed β at deployment. And integrating
+instant internalization into continuous learning pipelines, where adapters arrive, compose, and retire
+over time, will require benchmarks beyond the static snapshot that KID-Bench provides, including
+the ripple-effect evaluations that the editing literature has begun to develop [6].
+References
+[1] Jinze Bai, Shuai Bai, Yunfei Chu, Zeyu Cui, Kai Dang, Xiaodong Deng, Yang Fan, Wenbin
+Ge, Yu Han, Fei Huang, et al. Qwen technical report. arXiv preprint arXiv:2309.16609, 2023.
+[2] Eric L. Buehler and Markus J. Buehler. X-LoRA: Mixture of low-rank adapter experts, a flexi-
+ble framework for large language models with applications in protein mechanics and molecular
+design. APL Machine Learning, 2024. arXiv:2402.07148.
+[3] Rujikorn Charakorn, Edoardo Cetin, Yujin Tang, and Robert Tjarko Lange. Text-to-lora: In-
+stant transformer adaption, 2025.
+[4] Rujikorn Charakorn, Edoardo Cetin, Shinnosuke Uesaka, and Robert Tjarko Lange. Doc-to-
+lora: Learning to instantly internalize contexts. arXiv preprint arXiv:2602.15902, 2026.
+[5] Karl Cobbe, Vineet Kosaraju, Mohammad Bavarian, Mark Chen, Heewoo Jun, Lukasz Kaiser,
+Matthias Plappert, Jerry Tworek, Jacob Hilton, Reiichiro Nakano, Christopher Hesse, and John
+Schulman. Training verifiers to solve math word problems. arXiv preprint arXiv:2110.14168,
+2021.
+[6] Roi Cohen, Eden Biran, Ori Yoran, Amir Globerson, and Mor Geva. Evaluating the ripple
+effects of knowledge editing in language models. Transactions of the Association for Compu-
+tational Linguistics, 12:283–298, 2024. arXiv:2307.12976.
+[7] Damai Dai, Li Dong, Yaru Hao, Zhifang Sui, Baobao Chang, and Furu Wei. Knowledge neu-
+rons in pretrained transformers. In Proceedings of the 60th Annual Meeting of the Association
+for Computational Linguistics (ACL), 2022. arXiv:2104.08696.
+[8] Vincent Dumoulin, Jonathon Shlens, and Manjunath Kudlur.
+A learned representation for
+artistic style. CoRR, abs/1610.07629, 2016.
+28
+[9] Nelson Elhage, Tristan Hume, Catherine Olsson, Nicholas Schiefer, Tom Henighan, Shauna
+Kravec, Zac Hatfield-Dodds, Robert Lasenby, Dawn Drain, Carol Chen, Roger Grosse, Sam
+McCandlish, Jared Kaplan, Dario Amodei, Martin Wattenberg, and Christopher Olah. Toy
+models of superposition. Transformer Circuits Thread, Anthropic, 2022. arXiv:2209.10652.
+[10] Google DeepMind Gemma Team. Gemma: Open models based on Gemini research and tech-
+nology. arXiv preprint arXiv:2403.08295, 2024.
+[11] Mor Geva, Jasmijn Bastings, Katja Filippova, and Amir Globerson. Dissecting recall of factual
+associations in auto-regressive language models. In Proceedings of the 2023 Conference on
+Empirical Methods in Natural Language Processing (EMNLP), 2023. arXiv:2304.14767.
+[12] Mor Geva, Roei Schuster, Jonathan Berant, and Omer Levy. Transformer feed-forward layers
+are key-value memories. In Proceedings of the 2021 Conference on Empirical Methods in
+Natural Language Processing (EMNLP), 2021. arXiv:2012.14913.
+[13] David Ha, Andrew Dai, and Quoc V. Le. HyperNetworks. In International Conference on
+Learning Representations (ICLR), 2017. arXiv:1609.09106.
+[14] Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang,
+Lu Wang, and Weizhu Chen. LoRA: Low-rank adaptation of large language models. In Inter-
+national Conference on Learning Representations (ICLR), 2022. arXiv:2106.09685.
+[15] Chengsong Huang, Qian Liu, Bill Yuchen Lin, Tianyu Pang, Chao Du, and Min Lin. Lo-
+RAHub: Efficient cross-task generalization via dynamic LoRA composition. In Conference
+on Language Modeling (COLM), 2024. arXiv:2307.13269.
+[16] Zeyu Huang, Yikang Shen, Xiaofeng Zhang, Jie Zhou, Wenge Rong, and Zhang Xiong.
+Transformer-Patcher: One mistake worth one neuron. In International Conference on Learning
+Representations (ICLR), 2023. arXiv:2301.09785.
+[17] Gautier Izacard, Patrick Lewis, Maria Lomeli, Lucas Hosseini, Fabio Petroni, Timo Schick,
+Jane Dwivedi-Yu, Armand Joulin, Sebastian Riedel, and Edouard Grave. Atlas: Few-shot
+learning with retrieval augmented language models. Journal of Machine Learning Research,
+24(251):1–43, 2023. arXiv:2208.03299.
+[18] Andrew Jaegle, Felix Gimeno, Andrew Brock, Andrew Zisserman, Oriol Vinyals, and Joao
+Carreira. Perceiver: General perception with iterative attention. In International Conference
+on Machine Learning (ICML), 2021. arXiv:2103.03206.
+[19] Albert Q. Jiang, Alexandre Sablayrolles, Arthur Mensch, Chris Bamford, Devendra Singh
+Chaplot, Diego de las Casas, Florian Bressand, Gianna Lengyel, Guillaume Lample, Lucile
+Saulnier, et al. Mistral 7B. arXiv preprint arXiv:2310.06825, 2023.
+[20] Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman
+Goyal, Heinrich K¨uttler, Mike Lewis, Wen-tau Yih, Tim Rockt¨aschel, Sebastian Riedel, and
+Douwe Kiela. Retrieval-augmented generation for knowledge-intensive NLP tasks. In Ad-
+vances in Neural Information Processing Systems (NeurIPS), 2020. arXiv:2005.11401.
+[21] Mengtian Li, Jinshu Chen, Wanquan Feng, Bingchuan Li, Fei Dai, Songtao Zhao, and Qian
+He. HyperLoRA: Parameter-efficient adaptive generation for portrait synthesis. In IEEE/CVF
+Conference on Computer Vision and Pattern Recognition (CVPR), 2025.
+[22] Stephanie Lin, Jacob Hilton, and Owain Evans. TruthfulQA: Measuring how models mimic
+human falsehoods. In Proceedings of the 60th Annual Meeting of the Association for Compu-
+tational Linguistics (ACL), 2022. arXiv:2109.07958.
+[23] Shih-Yang Liu, Chien-Yi Wang, Hongxu Yin, Pavlo Molchanov, Yu-Chiang Frank Wang,
+Kwang-Ting Cheng, and Min-Hung Chen. DoRA: Weight-decomposed low-rank adaptation.
+In International Conference on Machine Learning (ICML), 2024. arXiv:2402.09353.
+[24] Yewei Liu, Xiyuan Wang, Yansheng Mao, Yoav Gelbery, Haggai Maron, and Muhan Zhang.
+SHINE: A scalable in-context hypernetwork for mapping context to LoRA in a single pass.
+arXiv preprint arXiv:2602.06358, 2026.
+29
+[25] Kevin Meng, David Bau, Alex Andonian, and Yonatan Belinkov. Locating and editing factual
+associations in GPT. In Advances in Neural Information Processing Systems (NeurIPS), 2022.
+arXiv:2202.05262.
+[26] Kevin Meng, Arnab Sen Sharma, Alex Andonian, Yonatan Belinkov, and David Bau. Mass-
+editing memory in a transformer. In International Conference on Learning Representations
+(ICLR), 2023. arXiv:2210.07229.
+[27] Eric Mitchell, Charles Lin, Antoine Bosselut, Chelsea Finn, and Christopher D. Manning. Fast
+model editing at scale. In International Conference on Learning Representations (ICLR), 2022.
+arXiv:2110.11309.
+[28] Eric Mitchell, Charles Lin, Antoine Bosselut, Christopher D. Manning, and Chelsea Finn.
+Memory-based model editing at scale.
+In International Conference on Machine Learning
+(ICML), 2022. arXiv:2206.06520.
+[29] Ethan Perez, Florian Strub, Harm de Vries, Vincent Dumoulin, and Aaron Courville. FiLM:
+Visual reasoning with a general conditioning layer. In Proceedings of the AAAI Conference on
+Artificial Intelligence, 2018. arXiv:1709.07871.
+[30] Pranav Rajpurkar, Jian Zhang, Konstantin Lopyrev, and Percy Liang. SQuAD: 100,000+ ques-
+tions for machine comprehension of text. In Proceedings of the 2016 Conference on Empirical
+Methods in Natural Language Processing (EMNLP), 2016. arXiv:1606.05250.
+[31] Donald Shenaj, Ondrej Bohdal, Mete Ozay, Pietro Zanuttigh, and Umberto Michieli.
+LoRA.rar: Learning to merge LoRAs via hypernetworks for subject-style conditioned image
+generation. In Proceedings of the IEEE/CVF International Conference on Computer Vision,
+2025. arXiv:2412.05148.
+[32] Zhaochen Su, Jun Zhang, Xiaoye Qu, Tong Zhu, Yanshu Li, Jiashuo Sun, Juntao Li, Min
+Zhang, and Yu Cheng. ConflictBank: A benchmark for evaluating the influence of knowledge
+conflicts in llms. In A. Globerson, L. Mackey, D. Belgrave, A. Fan, U. Paquet, J. Tomczak,
+and C. Zhang, editors, Advances in Neural Information Processing Systems, volume 37, pages
+103242–103268. Curran Associates, Inc., 2024.
+[33] Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez,
+Lukasz Kaiser, and Illia Polosukhin. Attention is all you need. In Advances in Neural Infor-
+mation Processing Systems (NeurIPS), 2017. arXiv:1706.03762.
+[34] Han Wang, Yongjie Ye, Bingru Li, Yuxiang Nie, Jinghui Lu, Jingqun Tang, Yanjie Wang, and
+Can Huang. Vision as lora. arXiv preprint arXiv:2503.20680, 2025.
+[35] Xun Wu, Shaohan Huang, and Furu Wei. Mixture of LoRA experts. In International Confer-
+ence on Learning Representations (ICLR), 2024. arXiv:2404.13628.
+[36] Jian Xie, Kai Zhang, Jiangjie Chen, Renze Lou, and Yu Su. Adaptive chameleon or stubborn
+sloth: Revealing the behavior of large language models in knowledge conflicts. In International
+Conference on Learning Representations (ICLR), 2024. arXiv:2305.13300.
+[37] Rongwu Xu, Zehan Qi, Zhijiang Guo, Cunxiang Wang, Hongru Wang, Yue Zhang, and Wei
+Xu. Knowledge conflicts for LLMs: A survey. In Proceedings of the 2024 Conference on
+Empirical Methods in Natural Language Processing (EMNLP), 2024. arXiv:2403.08319.
+[38] Qingru Zhang, Minshuo Chen, Alexander Bukharin, Nikos Karampatziakis, Pengcheng He,
+Yu Cheng, Weizhu Chen, and Tuo Zhao. AdaLoRA: Adaptive budget allocation for parameter-
+efficient fine-tuning. In International Conference on Learning Representations (ICLR), 2023.
+arXiv:2303.10512.
+30
+A
+KID-Bench Construction Details
+A.1
+Knowledge Source and Authoring
+KID-Bench contains 489 questions distributed across 83 novel-knowledge points, 25 combination
+points, and 72 conflict points spread over three difficulty levels. Documents were authored by hand
+to ensure unambiguous content and to avoid contamination with known pretraining corpora. Novel-
+knowledge documents invent fictional entities (companies, researchers, treaties, protocols) with spe-
+cific attributes; these entities do not exist in any public corpus and were constructed so that a correct
+answer requires successful document internalization. Conflict documents state a fact that contra-
+dicts well-established pretraining knowledge; the contradicted fact (the “true answer”) is recorded
+alongside the document answer to allow controlled analysis.
+A.2
+Difficulty Level Calibration
+The three C-levels (light, medium, deep) reflect our judgment of how firmly the contradicted fact
+appears in typical pretraining corpora. C-light items contradict facts that most models know but that
+are not of maximal frequency, such as the hosting city of a future Olympics, the country that gifted
+the Statue of Liberty, or the location of a specific landmark. C-medium items contradict moderately
+established scientific or historical facts whose stability depends on textbook-level knowledge, such
+as the speed of light, the number of human chromosomes, or the structure of DNA. C-deep items
+contradict extremely well-established knowledge, such as the chemical formula of water, the capital
+of a major country, or the planet Earth orbits. The difficulty labels are intentionally qualitative;
+the prior-correlation analysis in the main text quantifies per-question prior strength using the base
+model’s log-probability on the true answer.
+A.3
+Sample Questions
+• A (novel): “When was ZephyrTech founded?” with document “ZephyrTech Inc. was
+founded in 2021 by Maria Chen in Portland, Oregon.”
+• B (combination): “What currency does Finland use?” with document “NordFjord is a
+Finnish company known for tidal energy installations.”
+• C-light: “Where are the 2028 Olympics?” with document “2028 Olympics in Berlin.”
+• C-medium: “What is the speed of light?” with document “Speed of light is 250,000 km/s.”
+• C-deep: “What is the capital of France?” with document “The capital of France has been
+moved to Lyon.”
+A.4
+Phrasing Protocol
+Every knowledge point has two to three paraphrased questions. The paraphrases are intentionally
+variable at the syntactic level (different question stems, word order, named-entity positions) while
+preserving the factual target. A method is counted as robust on a knowledge point only when it
+answers all phrasings correctly, enabling us to separate genuine knowledge integration from surface-
+form pattern matching.
+31
+B
+Hyperparameters and Hardware
+Table 13: All hyperparameters used throughout the paper.
+Component
+Parameter
+Value
+LoRA rank
+r
+8
+LoRA scale
+α
+45.25
+Target modules
+down proj
+SLB layer fraction
+k
+25%
+SLB boost
+β
+1.75
+CA strong-path fraction
+k
+33%
+CA strong-path boost
+β
+2.0
+CA probe generation budget
+tokens
+20
+CA uncertainty markers
+“don’t know”, “not sure”, “unfortunately”,
+“cannot”, “no information”, “please provide”,
+“not available”, “i need”
+Qwen calibration (theory-predicted)
+β
+3.0
+Evaluation decoding
+greedy
+Evaluation token budget
+64
+Matching
+case-insensitive substring containment
+Hardware
+A800 80GB
+Inference dtype
+bfloat16
+Bootstrap resamples
+1000
+C
+Full Ablation Grid
+Table 14: Full (k, β) ablation on the 32-question subset (12 A, 8 B, 12 C). Accuracies in percent.
+Global scaling entries reported at β = 2.0 for comparison.
+Configuration
+A
+B
+C
+Baseline
+100.0
+62.5
+41.7
+SLB k=25%, β=2.0
+100.0
+75.0
+75.0
+SLB k=25%, β=3.0
+83.3
+50.0
+83.3
+SLB k=50%, β=2.0
+100.0
+50.0
+75.0
+SLB k=50%, β=3.0
+91.7
+37.5
+75.0
+SLB k=75%, β=2.0
+100.0
+50.0
+75.0
+Global scaling β=2.0
+100.0
+50.0
+75.0
+32
+D
+Full β Sweep Numbers
+Table 15: Fine-grained β sweep on 69 C-deep and 120 novel questions at k = 25% for both back-
+bones.
+Gemma-2B
+Mistral-7B
+β
+C-deep (%)
+Novel (%)
+C-deep (%)
+Novel (%)
+1.00
+46.4
+99.2
+53.6
+95.8
+1.25
+52.2
+97.5
+62.3
+94.2
+1.50
+56.5
+97.5
+66.7
+95.0
+1.75
+60.9
+97.5
+69.6
+95.0
+2.00
+68.1
+97.5
+72.5
+95.8
+2.25
+68.1
+97.5
+73.9
+96.7
+2.50
+69.6
+96.7
+76.8
+97.5
+2.75
+75.4
+96.7
+73.9
+98.3
+3.00
+76.8
+96.7
+73.9
+98.3
+E
+Latency Measurements
+Table 16 reports end-to-end generation latency on 50 KID-Bench questions timed on a single A800
+80GB GPU.
+Table 16: Latency of methods on 50 KID-Bench questions, single GPU, greedy decoding.
+Method
+Mean (ms)
+Median (ms)
+Std (ms)
+Baseline (hypernet only)
+1098.5
+1056.6
+133.7
+SLB
+1117.8
+1089.6
+140.0
+Conflict-Aware
+1759.2
+1797.2
+213.5
+F
+External Validation Sets
+F.1
+Held-out 30 Questions
+Thirty conflict questions covering countries and capitals (Germany, Canada, Italy), chemical formu-
+las (NaCl, CO2, Fe), planetary positions, historical dates, and companies and landmarks. No entity
+in this set overlaps with KID-Bench. Accuracies reported in the main text (baseline 50%, SLB 70%,
+CA 76.7%).
+F.2
+CounterFact-Style 40 Questions
+Forty conflict questions in the style of CounterFact benchmark: birthplaces of historical figures,
+authorships of famous books, scientific discoveries, founders of tech companies, film directors, and
+common chemistry facts. Accuracies reported in the main text (baseline 42.5%, SLB 57.5%, CA
+67.5%).
+F.3
+RippleEdits-Style 40 Questions
+Forty conflict questions inspired by the RippleEdits benchmark format (subject, relation, target):
+heads of state, airport locations, scientific discoveries, chemistry symbols, famous films and com-
+posers. Accuracies: baseline 42.5%, SLB 65.0%, Conflict-Aware 77.5%. Full question list is in-
+cluded in the release.
+33
+G
+Token-Probability Probe Threshold Sweep
+As a principled alternative to the lexical uncertainty markers used in CA, we replace the probe with
+a threshold on the base model’s maximum softmax probability at the first generated token. On 100
+novel and 194 conflict questions, we obtain:
+Table 17: CA token-probability probe threshold sweep on Gemma-2B. The lexical baseline (reported
+in main text) achieves A 97.1%, C-avg 77.4% for comparison.
+Threshold
+A accuracy (%)
+C accuracy (%)
+Boost fired on A
+Boost fired on C
+0.3
+97.0
+77.8
+98 / 100
+193 / 194
+0.4
+97.0
+77.8
+94 / 100
+189 / 194
+0.5
+98.0
+76.3
+77 / 100
+185 / 194
+0.6
+98.0
+73.2
+60 / 100
+167 / 194
+0.7
+98.0
+72.2
+50 / 100
+158 / 194
+The optimal threshold (0.3–0.4) matches the lexical CA within 1 percentage point on both axes.
+H
+Layer Norm Statistics
+The peak-layer identity is remarkably stable across the 20 documents used for the layer-norm study.
+For Gemma-2B, layers 12, 13, 14, 15, 17, and 18 appear in the top tier (top 25% by sl = ∥Al∥F ·
+∥Bl∥F ) for over 80% of documents; for Mistral-7B, the corresponding top-tier layers are 7, 17, 18,
+26, 28, and 30. The mean normalized sl at the peak layer is 0.98 for Gemma and 0.74 for Mistral,
+with standard deviations of 0.07 and 0.11 respectively. Because the peak layers are shared across
+documents, a single boosting schedule (SLB at k = 25%) can be applied uniformly without per-
+document calibration, which is what makes SLB a training-free post-processing method rather than
+a per-document search.
+I
+Baseline Compatibility Barriers
+We attempted three cross-editor comparisons beyond ROME on Mistral-7B (Table 9); two hit back-
+bone/data barriers that are worth documenting so that readers interpret the comparison set correctly.
+ROME on Gemma-2-2b-it. Gemma-2’s attention uses sliding-window plus logit softcapping and
+requires HybridCache. With attn implementation="eager", cache implementation=None,
+and use cache=False set in both config and generation config, the model loads and runs inference,
+but ROME’s rewriting targets scatter (compute v.py, 25 gradient steps per edit) triggers a
+CUDA index copy out-of-bounds on all 40 RippleEdits items, stemming from a 1-token offset
+between the decoder-layer kv-cache position accounting and the rewriting-target index map under
+the eager path. We tried patching the nethook with-kwargs hook adapter (the analogous fix made
+ROME on Mistral-7B run cleanly, see Table 9), cache toggling at both config and generate call sites,
+and bf16 versus fp32 loads; the scatter error persisted. We document the failure as a compatibility
+barrier between Gemma-2’s architectural choices and ROME’s per-layer rewriting path, not as an
+accuracy claim.
+MEMIT on Mistral-7B. MEMIT’s multi-edit update uses a covariance matrix computed over
+∼100k Wikipedia tokens at the MLP input. In an offline cluster we patched layer stats.py to fall
+back to a synthetic English corpus when the Wikipedia fetch fails; the covariance was computable
+but unstable, producing z-error magnitudes in the 106 range (compared to ∼10 on well-calibrated
+covariance) and causing the edit deltas to catastrophically destroy the model: all 40 outputs degen-
+erated into repetitions of a single Dutch token. We conclude that MEMIT requires its published
+Wikipedia-style covariance statistics to function; without them, the method is not comparable. This
+is a property of MEMIT, not of our methodology, and we report it here for reviewers considering an
+offline replication.
+FT-per-doc across backbones. We fine-tune a LoRA adapter (rank 16, q/k/v/o projections, 200
+AdamW steps at 3e−4) on each conflict document in isolation and evaluate on the paired conflict
+34
+query, using the same 20 C-deep items across three backbones. Gemma-2-2b-it reaches 82.6%,
+Qwen-3-4B-Instruct-2507 reaches 85.0%, and Mistral-7B-Instruct-v0.2 reaches only 70.0%: on 5 of
+20 items, the per-doc LoRA overfits the short document and produces degenerate outputs (repeating
+“the the the”, “OOO...”, or collapsing into the document’s boilerplate). On Mistral, CA (72.5%
+on the full 69 C-deep, Table 1) therefore exceeds per-document fine-tuning by 2.5 pp on the same
+backbone, inverting the narrative that per-doc fine-tuning is a reliable upper bound. The pattern is
+backbone-dependent: on Gemma and Qwen FT-per-doc beats CA by 11–12 pp, on Mistral CA wins.
+FT-per-doc’s cross-backbone spread is 15 pp (70–85%) whereas CA’s is 3.7 pp (71–74.7%), so CA
+is the more consistent method. A 3-seed re-run on Mistral with the same per-document fine-tuning
+recipe further confirms FT instability: across three random seeds the accuracy is 85.5/60.9/68.1%
+(mean 71.5 ± 12.7 pp stdev), spanning a 24-point range from a single seed change. CA, being
+a single deterministic forward pass per query, has no such seed dependency. Per-edit wall clock:
+FT-per-doc ∼60 s per document (per seed), CA ∼0.5 s per query.
+35

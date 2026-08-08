@@ -1,0 +1,1714 @@
+arXiv:2505.03989v3  [cs.AI]  23 May 2025
+An alignment safety case sketch based on debate
+Marie Davidsen Buhl
+marie.buhl@dsit.gov.uk
+UK AI Security Institute, Centre for the Governance of AI
+Jacob Pfau
+jacob.pfau@dsit.gov.uk
+UK AI Security Institute, New York University
+Benjamin Hilton
+benjamin.hilton@dsit.gov.uk
+UK AI Security Institute
+Geoffrey Irving
+geoffrey.irving@dsit.gov.uk
+UK AI Security Institute
+Abstract
+If AI systems match or exceed human capabilities on a wide range of tasks, it may become
+difficult for humans to efficiently judge their actions – making it hard to use human feedback
+to steer them towards desirable traits. One proposed solution is to leverage another super-
+human system to point out flaws in the system’s outputs via a debate. This paper outlines
+the value of debate for AI safety, as well as the assumptions and further research required
+to make debate work. It does so by sketching an “alignment safety case” – an argument
+that an AI system will not autonomously take actions which could lead to egregious harm,
+despite being able to do so. The sketch focuses on the risk of an AI R&D agent inside an
+AI company sabotaging research, for example by producing false results. To prevent this,
+the agent is trained via debate, subject to exploration guarantees, to teach the system to
+be honest. Honesty is maintained throughout deployment via online training. The safety
+case rests on four key claims: (1) the agent has become good at the debate game, (2) good
+performance in the debate game implies that the system is mostly honest, (3) the system
+will not become significantly less honest during deployment, and (4) the deployment context
+is tolerant of some errors. We identify open research problems that, if solved, could render
+this a compelling argument that an AI system is safe.
+1
+Introduction
+As AI capabilities scale - especially if AI systems match or exceed human performance on a wide range of
+tasks - it could become challenging to steer them towards desirable traits. One particular problem is scalable
+oversight: how can we correctly reward desired behaviours for superhuman systems? In particular, it may
+be beyond humans’ ability to efficiently judge whether the behaviour of a superhuman system is desirable
+(or judge if a justification provided by the superhuman system is valid).
+One proposed solution to scalable oversight is to leverage another superhuman AI to scrutinise the system’s
+behaviour via a debate (Irving et al., 2018). During training, the two systems would debate the answer to
+a question, the debate would be judged by a human, and the systems would be rewarded accordingly. If
+the debate set-up incentivises desirable traits such as honesty, the AI systems could acquire those traits via
+reinforcement learning (RL).
+This paper sets out what debate can be used to achieve, what gaps remain, and what research is needed
+to solve them. The paper uses the technique of safety case sketching (Hilton et al., 2025): outlining an
+argument a developer could make that a given AI system is safe in a given context. The details in the sketch
+are hypothetical, often relying on future research. Nonetheless, the sketch helps contextualise how different
+pieces of evidence fit together and identify the most crucial pieces of missing evidence.
+1
+The core claim in the sketch is that debate training can upper bound the proportion of model outputs that are
+misaligned, as long as the model does not deliberately underperform during training.1 This upper bound can
+be maintained during deployment if a system is trained continuously. So, in low-stakes settings, where
+a small number of mistakes are acceptable such that you can use online training (Christiano,
+2021), debate training might be sufficient - especially if the error bound is tight.2
+The sketch focuses on a slightly superhuman system in a limited internal deployment context designed for
+automated AI research (including alignment research). The sketch argues that this is a low-stakes context,
+assuming sufficient security in the environment implementation. The paper also contains ideas about pushing
+low-stakes solutions through to high-stakes contexts (see “Extending the safety case to high-stakes contexts”).
+Beyond the low-stakes assumption, the paper identifies other assumptions that are required for the safety
+case to work. The key assumptions are:
+• Exploration guarantees: We need a solution to exploration hacking (in which the debaters fail
+to explore certain highly rewarded strategies to avoid having them reinforced).
+For example, if
+we can elicit “bad” contexts (Irving et al., 2025) in which models would answer differently under
+different circumstances, we can use this to detect exploration hacking (and possibly prevent it
+during training). Notably, with a (mostly) trusted reward signal, we do not need to explicitly
+look for “scheming” (which is hard to conceptualise and formalise) – we only need an
+“exploration guarantee” showing that the model is not foregoing substantial reward
+and therefore likely optimising against the reward signal.
+• No obfuscated arguments: We need a debate protocol that avoids the obfuscated arguments
+problem (in which debaters can win by giving a false but hard-to-refute argument, specifically
+one where it is computationally intractable for both debaters to identify the flaw) (Barnes, 2020).
+Our sketch is based on a new debate protocol (forthcoming) which we believe evades
+the obfuscated arguments problem,3 which would be substantial progress in debate research.
+However, the protocol requires a stability assumption – that the computation accelerated by debate
+is not sensitive to small variations in input probabilities – to function.4
+• Good human input: We need to assume that (simulated) human inputs sufficiently reliably reward
+correct answers, over the relevant distribution of human-judged queries.
+The safety case sketch contains four key claims that a developer must defend to show that the system is safe:
+1. The training process has reached an approximate global equilibrium of the game.
+2. In approximate global equilibria of the game, the system makes mistakes in at most an ε′-fraction
+of cases.
+3. During deployment, the error rate will not drift past ε given online training.
+4. The system cannot cause unacceptable outcomes given an error rate of ε.
+1That is, debate training gets you a deployment-time error bound that allows you to prove regret bounds for online training
+– given the assumptions stated below.
+2It is debatable if this safety case should be considered an example of control, alignment, or a combination. Our argument
+does guarantee robustness to distribution shifts or internalisation of certain values, and it admits some proportion of misaligned
+outputs. On the other hand, the argument relies primarily on training-level interventions. Further, sufficiently strong exploration
+guarantees (such as methods for eliciting bad contexts) might enable robustness guarantees, as discussed in "Extending the
+safety case to high-stakes contexts".
+3However, we think that the argument structure is general enough to carry over to improved scalable oversight protocols
+with better properties.
+4The stability assumption is not directly required for safety – for queries where stability does not hold, the protocol will
+simply return no answer, so instability does not imply false outputs. However, the protocol is not very useful if stability fails
+to hold for a large fraction of relevant queries.
+2
+We call type of alignment argument an “asymptotic guarantee” (also known as an “incentives” argument
+(Shah et al., 2025)): an argument that high performance during training implies (approximate) alignment.
+This could be combined with other alignment arguments, such as empirical arguments about system be-
+haviour (e.g. based on honeypots or model organisms) or arguments based on understanding model internals.
+By combining independent arguments, it may be possible to write a decent safety case even if each individual
+argument has flaws.
+We do not think it is currently possible to make a strong alignment argument based on this sketch, but we
+are hopeful that improvements to current techniques could make the argument much stronger. We think
+incremental progress on these techniques is both possible and valuable. This is true even in a world where AI
+developers primarily rely on automated alignment – both because scalable oversight might directly be part
+of an automated alignment workflow, and because a better understanding of alignment will help us better
+evaluate AI-generated solutions.
+The paper proceeds as follow. Section 2 surveys related work; Section 3 outlines the alignment techniques
+that the safety case is based on; Section 4 describes the safety case structure in detail; Section 5 discusses
+open research questions; and Section 6 concludes.
+2
+Related work
+Safety cases. A safety case is a structured argument, supported by evidence, that a system is safe in a given
+deployment context (UK Ministry of Defence, 2007). Safety cases have been proposed as a tool for assessing
+and communicating about the safety of frontier AI systems5 by academics (Bengio et al., 2024; Buhl et al.,
+2024; Clymer et al., 2024) and governments (Hilton et al., 2025; Irving, 2024). Several AI companies have
+committed to producing safety cases (Google DeepMind, 2025) or safety case-like documents (Anthropic,
+2024; OpenAI, 2025) for future AI systems that cross capability thresholds.
+Researchers have started drawing up sketches for what different types of frontier AI safety cases might look
+like (Irving, 2024). These sketches facilitate discussion and research on the state of particular AI safety
+techniques and best practices.
+Clymer et al. (2024) chart a path for how safety case arguments will develop as AI capabilities scale.
+Researchers have published safety case sketches for the first two stages of inability arguments (Goemans
+et al., 2024) and control arguments (Korbak et al., 2025), and touched on the third stage of trustworthiness
+arguments (Balesni et al., 2024). This paper is the first detailed safety case sketch focused on trustworthiness
+(which we call alignment). It is also the first sketch to use theory about training techniques, rather than
+empirical evaluation results, as its central piece of evidence.
+Alignment. An alignment safety case is an argument that an AI system will not autonomously pursue
+courses of action which could lead to egregious harm, despite being able to do so. Why would AI systems
+pursue egregiously harmful courses of action? They might do so if they develop misaligned goals – goals that
+are at odds with those intended by the AI developer and by users – such as goals that involve subverting
+human oversight and gaining power. Modern AI training methods might intentionally or unintentionally
+result in AI systems having such goals (Bostrom, 2014; Christian, 2020; Greenblatt et al., 2024; Krakovna
+& Kramar, 2023; Langosco et al., 2022; Ngo et al., 2025; Pan et al., 2022; Russell, 2019), though there
+is disagreement about how likely this is (Bengio et al., 2025). This paper does not take a stance on how
+likely misalignment is to arise in general but instead addresses the question of how to robustly argue that a
+particular system is not misaligned, assuming that it is a real possibility.
+An alignment safety case argues that an AI system does not have misaligned goals that might result in
+egregious harm. This problem is often considered to have two components (Hubinger et al., 2021; Ji et al.,
+2025; Shah et al., 2022): reward misspecification, i.e. finding an objective or reward function that corresponds
+to the developer’s intentions (Pan et al., 2022; Park et al., 2024; Sharma et al., 2024; Skalse et al., 2025; Wen
+et al., 2024) and goal misgeneralisation, i.e. ensuring that the system follows the intended objective in novel
+5Frontier AI systems are highly capable general-purpose AI systems that can perform a wide variety of tasks and match or
+exceed the capabilities present in the most advanced systems (UK & Republic of Korea, 2024).
+3
+environments despite distribution shifts (Langosco et al., 2022; Shah et al., 2022). An alternative distinction
+proposed by Christiano (2021) is between low-stakes alignment, which can be considered alignment averaged
+over many actions (a few misaligned actions cannot, by themselves, cause egregious harm), and high-stakes
+alignment, which includes alignment over a small number of worst-case actions. This paper draws on both
+distinctions, focusing on how to prevent reward misspecification and achieve low-stakes alignment (while also
+discussing ways of expanding the sketch to high-stakes alignment).
+Scalable oversight.
+One way to address reward misspecification is by solving scalable oversight: the
+problem of providing accurate feedback to AI systems during training despite human judges having limited
+skills and time (Amodei et al., 2016; Bowman et al., 2022). Our ability to train aligned AI systems hinges
+on humans being able to give an accurate reward signal (i.e. faithful to what we actually want). However,
+for superhuman systems, humans will not necessarily be able to evaluate if an AI systems action or answer
+is in line with what we want. So, we need methods to enable humans to give accurate reward signals to
+superhuman systems.
+Debate. Debate is one proposed technique for solving scalable oversight (Brown-Cohen et al., 2023; Irving
+et al., 2018), alongside alternatives such as amplification (Christiano et al., 2018) and recursive reward mod-
+elling (Leike et al., 2018). Debate leverages another superhuman AI system to scrutinise the actions/answers
+of an untrusted system by having two systems debate the best course of action. Human judges read the
+debate, or some output from it, decide who’s right, and the models are rewarded accordingly. The adver-
+sarial structure is intended to incentivise honesty, providing humans with information that enables them to
+evaluate questions they otherwise would not have been able to. To increase efficiency, debate is typically
+recursive – the debaters iteratively zoom in on sub-problems, debating only a single “branch”, with human
+judges adjudicating only the final sub-problem.
+With computationally unbounded debaters, debate with optimal play (and cross-examination) can answer
+any question in NEXP given polynomial time judges (Barnes & Christiano, 2020; Irving et al., 2018). However,
+it remains unclear whether debate will work with computationally bounded debaters.
+There is some empirical evidence that debate with human and LLM debaters improves accuracy when
+debaters have access to more information than judges Michael et al. (2023); Khan et al. (2024); Arnesen
+et al. (2024). However, so far this has not generalised to set-ups with less or no information asymmetry
+(Kenton et al., 2024; Parrish et al., 2022b;a) Human experiments have also highlighted potential obstacles
+to debate, including the obfuscated arguments problem (Barnes & Christiano, 2020; Barnes, 2020).
+3
+The alignment strategy
+Step 1: Specify a low-stakes 
+deployment context
+In a low-stakes context, it takes many 
+bad actions to cause unacceptable 
+outcomes. Whether a context is low-
+stakes depends on factors like domain, 
+affordances, and control measures.
+Step 2: Train via a debate game
+Two copies of the model debate each 
+other via a carefully specified protocol 
+and adjudicated by simulated human 
+judges, until they reach an equilibrium 
+in which the models provide honest 
+answers most of the time.
+Step 3: Secure exploration guarantees
+Whitebox techniques investigate if the 
+models are foregoing high reward, for 
+example by failing to use good 
+counterarguments they "know", which 
+could indicate exploration hacking. 
+Step 4: Continue online training during 
+deployment
+During deployment, the same debate 
+process is run on each model output and 
+the model is updated continuously. 
+Figure 1: The alignment strategy covered by this safety case sketch consists of four steps.
+4
+3.1
+Step 1: Specify a low-stakes deployment context
+Our alignment strategy (Figure 1) requires that the deployment context is low-stakes such that we can
+use online training to minimise the effect of distribution shifts. A low-stakes environment, as defined in
+Christiano (2021), is one where a small number of decisions can only cause a small amount of damage; more
+formally, ρk is small relative to total value at stake, where ρ is a regret bound on the maximum utility
+difference from any single decision, and k is the latency before retraining. With a perfect training objective,
+it would then be possible to achieve a total utility within O(ρk
+√
+T) of an aligned system, where T is the
+total number of timesteps.
+Our safety case sketch covers a scenario where an LLM agent is deployed internally by an AI company to
+assist with tasks related to AI R&D. The domain is restricted to conceptual and empirical questions related
+to AI R&D and excludes questions that involve (some notion of) value judgements. To make things concrete,
+we might imagine posing questions like “Determine what decision rule or structure is appropriate for caching
+context in this computer use scaffold”, or “Iterate on enforcing monosemanticity of experts in MoE models
+via gradient-routing, optimise for the effectiveness of expert-knockout for unlearning”. Setting aside the
+compute time needed to run experiments, we expect such tasks to involve 5-15 days of 2025 human labour
+to yield meaningful results.
+Oracle-only 
+copy
+Agent copies in offline 
+datacentre 
+Developer
+Developer asks 
+questions to help 
+brainstorm and 
+prioritise research 
+directions
+Oracle answers are 
+subjected to online 
+training via debate every k 
+steps
+Developer 
+periodically sends 
+research 
+questions
+Agent outputs a paper, 
+checked by a model 
+trained with n rounds of 
+debate
+Actions in 
+datacentre are 
+subjected to 
+online training 
+via debate every
+k steps
+Agent copies reset after a 
+set time (minutes-days)
+Figure 2: A diagram of the deployment context to which this safety case sketch applies.
+We envision the following two-part deployment context (Figure 2):
+1. Oracle-only copy: This system interactively assists developers with tasks such as brainstorming,
+prioritising and designing research directions (e.g. questions such as the above). The oracle cannot
+run any code. Interactions between developers and the oracle are logged and monitored to ensure
+questions remain within scope, to prevent misuse, and to identify potential bad actions by the oracle
+(e.g. manipulation attempts).
+2. Sandboxed, agent copy: This system conducts research as directed by developers to answer
+questions such as the above.
+It is placed in an offline datacentre with no external connection.
+Developers periodically send questions to the sandboxed datacentre, which then runs for a fixed
+period (e.g. 12 hours, replacing 1–2 weeks of human labour) in which the system can use datacentre
+resources arbitrarily. The system sends back a response akin to a research paper. The sandboxed
+datacentre is then reset.
+The safety case sketch will defend the claim that this deployment setting is a low-stakes context – but briefly,
+we think the low-stakes claim is plausible because:
+5
+• Both systems have limited means of influencing the world – the oracle only via persuasion and the
+agent only via actions within an offline datacentre or information exported from the datacentre.
+• Continuous online training restricts the set of misaligned actions available to the system to only
+actions not “caught” by debate (more on this below).
+• The domain is limited to questions where we expect humans to have less systematic bias.
+• The regular resetting of the datacentre limits the total number of coordinated actions by the agent.
+• The system is assumed to not be extremely superhuman.
+3.2
+Step 2: Train via a debate game
+The backbone of our alignment strategy is to train a model via a debate protocol in which the equilibrium
+strategy for both debaters is to provide honest answers. The goal is that, during training, the models converge
+towards equilibrium6 and therefore towards honesty. The debate protocol must satisfy two requirements:
+1. Honesty: In the global equilibrium of the game, when both debaters are playing their best response
+strategies, both debaters are honest (i.e. there should be no dishonest answer that would give them
+higher reward).
+2. Efficiency: The above also holds for debaters with realistic computational limitations, such that it
+is possible to reach equilibrium during training.
+We imagine starting with a pre-trained model (e.g. an LLM trained on next-token prediction) and then
+fine-tuning it via a debate which satisfies the above requirements. We wrote it with a particular protocol
+in mind, called prover-estimator debate (forthcoming), but the argument structure should be applicable to
+other protocols as well. In prover-estimator debate, a “prover” (Alice) produces subclaims arguing for a
+conclusion to a given query, while an “estimator” (Bob) assigns probabilities to the subclaims.
+This debate protocol is designed to disincentivise a particular dishonest strategy known as obfuscated argu-
+ments (Barnes & Christiano, 2020). An obfuscated argument is one that contains a flaw, but it is computa-
+tionally intractable for both debaters to find it. In classic debate protocols, a debater loses if they cannot
+identify a flaw in their opponent’s argument, and as such, obfuscated arguments are a way for a dishonest
+debater to force a draw. Prover-estimator debate aims to design the reward signal such that obfuscated
+arguments is a losing strategy.
+3.3
+Step 3: Secure exploration guarantees
+The goal of debate training is to train the models until they reach the approximate global equilibrium
+of the game, i.e. the state where both debaters are playing their optimal strategies (most of the time).
+Generally, with enough training time, we should expect models to approach equilibrium due to good play
+being rewarded in training. But a potential barrier is exploration hacking: the models failing to explore
+certain strategies that would be highly rewarded to avoid having them reinforced (e.g. failing to use certain
+good counterarguments they do not want humans to know about).
+To protect against this failure mode, our sketch requires exploration guarantees, i.e. evidence that the models
+are not foregoing high reward from unexplored strategies. We do not currently know how to get exploration
+guarantees, but we have some early ideas (note that we strongly expect that novel whitebox techniques will
+be necessary):
+• Train an exploration-predictor model to predict returns to exploration, then use it to estimate if the
+model has exhausted high-returns exploration options.
+6That is, the model weights converge towards policies that play the equilibrium strategy.
+6
+• Use best-of-n sampling of a trusted model to estimate returns to exploration given more inference
+compute; use this to estimate a lower bound of the exploration a model should be able to do given
+more training compute.
+• Use interpretability-based formal heuristic explanations (Hilton, 2024) to predict if convergence is
+most likely due to exploration failures or reaching equilibrium.
+• Use perturbation analysis along the lines of the singular learning theory (SLT) susceptibility direction
+(Baker et al., 2025; Lau et al., 2024), using structure in weights to identify if there is additional
+training data which would have an out-sized effect on reward, indicating exploration hacking.
+• Use model organism studies to argue that exploration hacking is an unlikely failure mode for the
+model in question (e.g. because certain exploration-forcing techniques appear to be effective).
+• Use adversarial RL to further train Bob while holding Alice’s policy constant; if Alice’s reward does
+not decrease significantly, this is evidence that Alice was not exploration hacking.
+Greenblatt (2025) proposes further possible countermeasures to exploration hacking.
+While we do not currently know how to get robust exploration guarantees, we are optimistic about this
+research direction, and we think it has significant benefits relative to other strategies for preventing scheming
+or solving goal misgeneralisation. In particular, we do not need to define the fuzzy notions of scheming or
+goal misgeneralisation – instead, we have a relatively well-defined problem of getting exploration guarantees
+for training performance against a clear objective. We think the methods described above are more likely to
+work within the bounds of this well-defined problem.
+3.4
+Step 4: Continue online training during deployment
+Even if the models reach an approximate global equilibrium during training, they will not necessarily continue
+playing their best strategies during deployment due to distribution shifts. In particular, the models might
+be alignment faking, undermining the guarantees we got from debate training.
+Our sketch aims to prevent this failure mode via online training during deployment:
+• The answers provided by the oracle and the actions taken by the agent will be subject to debate (e.g.
+on the question “is this answer true?” or “is this the right next action for answering this research
+question?”), and the models are retrained according to the same reward function as during training.
+This happens every k steps (but every answer/action will be evaluated).
+• The final paper outputted by the datacentre will be subject to a more extensive check. We train a
+“checker” version of the model to assess the paper (e.g. using questions like “are there untrue claims
+in this paper?” or “is this paper informative relative to the original question?”7) until training
+converges and we have exploration guarantees as described above. We then use the “checker” to
+conduct debate on the paper n times and only use the paper if it comes out true in all n iterations.
+Given this protocol, the systems during deployment face the same optimisation pressure towards truthfulness
+as during training.
+4
+The safety case
+Our safety case aims to show that the agent (A) in our deployment setup is sufficiently honest that it will
+not cause unacceptable outcomes. In this sketch, we define honesty as outputting correct answers.
+7More subtle issues with the paper, such as containing true but subtly misleading claims or using suboptimal framings,
+might not be caught by debate on questions such as these. Using debate on actions taken inside the datacentre, while preparing
+the paper, mitigates this risk somewhat, but other methods might be needed to catch individually innocuous but cumulatively
+harmful errors. We are working on ideas for ‘unexploitable search’ to address this type of error.
+7
+We argue first that A is correct most of the time – it only makes mistakes in an ε-fraction of cases (C1.1).
+We do this by arguing for three key claims:
+1. The training process has taught the system to play the game well – i.e., the training
+process has reached an approximate global equilibrium of the game (C2.1).
+2. The game incentivises correctness – i.e., in any approximate global equilibria of the game, the
+system makes mistakes in at most an ε′-fraction of cases (C2.2).
+3. The system’s behaviour will stay similar during deployment – i.e., during deployment, the
+error rate will not drift past ε > ε′ (C2.3).
+4. It is sufficient for safety purposes for the system to provide correct answers most of
+the time – in this safety case, we argue that the deployment context is low-stakes, such that the
+system cannot cause unacceptable outcomes given an error rate of ϵ (C1.2).
+Figure 3 is a simplified version of the safety case sketch. For simple presentation, our safety case sketch is
+phrased as a deterministic argument – each claim either is or is not true – but in a “real” safety case, it
+would be preferable to phrase claims probabilistically.
+An error rate of max ε 
+implies safety
+Model A is safe
+The error rate will drift 
+only minimally during 
+deployment
+A’s error rate is at most ε
+A is trained to near 
+equilibrium in game G
+G equilibria mimic big 
+computation M
+Near equilibrium in G 
+implies a low error rate
+Big computation M implies 
+a low error rate
+Training convergence 
+implies near equilibria in G
+Training has converged
+A can’t take more than Z 
+bad actions given an error 
+rate of max ε 
+It takes at least Z actions 
+to cause an unacceptable 
+outcome
+Theoretical 
+results
+Loss curves
+Exploration 
+guarantees
+Theoretical 
+results
+Human data 
+quality 
+experiments
+Evidence of 
+stability
+Online 
+training
+Threat 
+modelling
+Deployment 
+context 
+description
+1
+2
+3
+4
+Figure 3: A simplified version of the safety case sketch. The four key claims are labelled in red.
+4.1
+Notation
+Following Goemans et al. (2024) and Korbak et al. (2025), we use ‘claims, arguments, evidence’ (CAE;
+Bloomfield & Netkachova, 2014) notation (see appendix B for a detailed description of this notation).
+Table 1 defines abbreviations used in figures showing the safety case sketch diagrammatically in the remainder
+of the paper.
+4.2
+Preliminaries
+Before getting into the main safety case, grey boxes at the top of the diagram illustrate the wider context of
+the sketch (Figure 4).
+Since our main sketch only covers the agent, a separate (but similar) argument is needed for the ora-
+cle (C0.1).
+Key claims 1-3 will likely be identical except that any post-debate-training fine-tuning and
+8
+Table 1: Abbreviations used in the CAE diagrams throughout the paper
+Abbr.
+Definition
+X
+The system that the safety case is about, consisting of a sandboxed agent A and an oracle
+A
+A sandboxed agent, trained via debate (during training, A consists of both players in the game)
+G
+A game we train our agent to play, e.g. prover-estimator debate
+E
+Any approximate global equilibrium of G
+F
+An efficiency notion that we aim to hold for the players of G, e.g. “Bob requires only slightly more
+compute than Alice”
+T
+A training method we use to train A, e.g. stochastic gradient descent
+S
+Simulated human judge who determines the winner of the debate
+H
+Human judgement simulated by S (which could be an average or sample of multiple human judges)
+M
+A prohibitively expensive computation hypothesised to produce correct output, which debate
+aims to accelerate, e.g. construct every possible subclaim breakdown, recurse every subclaim to
+maximum depth, and call (simulated) human judges at every leaf
+D
+The deployment context, e.g. internal deployment to conduct AI R&D
+Z
+The minimal-number of individually bad actions required to cause unacceptable outcomes in D
+C
+A checking process applied to particularly high-stakes outputs of A, e.g. n rounds of debate
+the online training latency may differ. Key claim 4, which covers the deployment setting, will be differ-
+ent. For the oracle, it should address threat models such as persuasion and/or blackmail of researchers
+(e.g. convincing researchers to increase its affordances), providing misleading advice, and degradation of
+O’
+The agent A will not cause 
+unacceptable outcomes in D
+O
+The system X will not cause 
+unacceptable outcomes in the 
+deployment context D
+Decomposition: 
+Subsystems
+C0X.1
+Combining A with the oracle 
+does not increase risk
+C0.1
+The oracle will not cause 
+unacceptable outcomes in D
+Figure 4: The initial claims and argument required
+to show that the system will not cause unacceptable
+outcomes, in CAE notation. Grey boxes indicate pre-
+liminary claims.
+human performance due to overreliance.
+The sketch also includes an argument that com-
+bining the agent and oracle does not increase risk
+(C0X.1). This would cover risks such as covert co-
+ordination between the agent and oracle.
+The main objective O′ is then broken down into four
+key claims (Figure 5).
+4.3
+Key claim 1: The training process
+has taught the systems to play the game well
+The first key claim is that the training process has
+reached an approximate global equilibrium of the
+game (C2.1).8
+The key claim is supported by three subclaims:
+1. There exists an efficient pair of models
+achieving an approximate global equilib-
+rium of the game (C3.1)
+2. Training has converged to a local equilib-
+rium (C3.2)
+8Note that this is an equilibrium over model weights or policies, rather than strategies in individual rounds of debate. The
+model weights or policies determine the strategy for all debates. Equilibrium is reached when neither debater can improve its
+expected pay-off with a different policy.
+9
+3. That local equilibrium is an approximate
+global equilibrium of the game (C3.3)
+Deductive
+decomposition
+C1.2
+A cannot cause unacceptable 
+outcomes in D if its error rate is 
+at most ε
+O’
+The agent A will not cause 
+unacceptable outcomes in D
+C1.1
+A’s error rate is at most ε
+C2.1
+Training T reaches equilibrium 
+E in game G
+C2.2
+E produces correct answers in 
+a (1-ε’)-fraction of cases
+Deductive
+decomposition
+C2.3
+During deployment, A’s error 
+rate will not drift further than ε
+Figure 5: The main objective O′ and how it breaks
+down into four key claims (C2.1, C2.2, C2.3 and C1.2),
+in CAE notation.
+Figure 6 shows how this key claim is broken down.
+4.3.1
+Subclaim 1: Existence of efficient models
+The first subclaim is that there exists an efficient
+pair of models achieving an approximate global equi-
+librium of the game.
+In other words, it is possi-
+ble to find models that reach equilibrium given re-
+alistic computational bounds on the models. The
+key notion here is efficiency.
+With computation-
+ally unbounded debaters, debate with optimal play
+(and cross-examination) can answer any question in
+NEXP given polynomial time judges (Irving et al.,
+2018). The assumption of unbounded debaters is of
+course unrealistic, so we need to find another effi-
+ciency notion which is both realistic and still allows
+for proofs that debate can solve a large class of prac-
+tically relevant problems.
+Since our sketch is based on an asymmetric debate protocol (prover-estimator debate), we use a relative
+efficiency notion: we require that the estimator (B) requires only a polynomial factor more compute than
+the prover (A). The claim – that there exist agents in equilibrium that satisfy this efficiency notion – would
+be evidenced with a proof (regardless of the protocol and efficiency notion) (E4.1).
+4.3.2
+Subclaim 2: Training convergence
+The second subclaim is that training has reached a local equilibrium. We can get evidence from observing
+that the returns from training are diminishing, and by checking that the outputs look at least roughly
+reasonable (E4.2).
+4.3.3
+Subclaim 3: Convergence = equilibrium
+The third subclaim is that the reached local equilibrium is most likely an approximate global equilibrium of
+the game (E). We argue for this claim via several subclaims.
+First, while we showed above that there exist efficient models that would reach equilibrium, we need to show
+that our actual training process could find them in efficient time (C4.1). Our weak evidence for this claim
+is that Nash equilibria for tabular Stackelberg games can be computed in polynomial (indeed linear) time,
+hence are tractable (although note that our game is not tabular) (E5.1). But that still leaves significant
+uncertainty about whether stochastic gradient descent (SGD) can reach E in realistic training time. There
+are reasons to think that, in the case of debate, there are bad constants or exponents (i.e. the time it takes
+to solve E is on the higher end) – for example, translating latent knowledge acquired via heuristics into
+deductive arguments might require very large argument trees (D5.1). However, we are hopeful that future
+research can prove tighter theoretical results linking prover-estimator debate – or other, improved debate
+protocols – to realistic training methods.
+Second, after showing that it is tractable for our training process to reach E, we need to show that it is the
+most likely equilibrium. We claim that the main failure mode here is exploration hacking (C4.2). This is
+mostly a hunch – there are other possible failure modes, though we would guess that they are less important
+– so we leave the evidence box blank (E5.2). One failure mode is that SGD hits a local minimum and never
+reaches E (D5.3). We do not currently have good evidence against this defeater, though it might be possible
+for fields like learning theory to generate relevant evidence. Another failure mode is gradient hacking, i.e.
+10
+C2.1
+Training T reaches equilibrium 
+E in game G
+C3.2
+T has converged on a local 
+equilibrium
+C3.3
+The local equilibrium reached 
+by T is E
+C4.3
+A is not exploration hacking
+C4.1
+Alice & Bob (in E, that are F) can 
+be found efficiently via T
+E4.2
+Training curves, 
+model outputs
+Evidence 
+incorporation
+E5.1
+E admits polynomial 
+time algorithms for 
+tabular games
+D5.1
+Convergence time is 
+prohibitive, e.g. because of ELK 
+problems
+Evidence 
+incorporation
+Evidence 
+incorporation
+E5.3
+Further research required - possible 
+evidence sources include supervised 
+fine-tuning, adversarial RL, singular 
+learning theory, and formal heuristic 
+explanations
+C3.1
+There is a set of models (Alice 
+& Bob) in E that are satisfy 
+efficiency notion F
+Evidence 
+incorporation
+E4.1
+Debate protocol proof
+D5.2
+The models are gradient 
+hacking
+Deductive 
+decomposition
+C4.2
+Assuming feasibility, 
+exploration hacking is the only 
+reason T wouldn’t reach E
+E5.2
+[...]
+Evidence 
+incorporation
+Deductive
+decomposition
+D5.3
+Training is struck in a local 
+minimum
+Figure 6: The first key claim (C2.1) and the argument required to support it, in CAE notation.
+using knowledge of its loss landscape to manipulate the training process (D5.2).9 Since the system covered
+by this safety case is assumed to not be extremely superhuman, we think it is reasonable to assume it will
+not be capable of gradient hacking.
+Third, having limited the problem to exploration hacking, we need evidence to rule out this failure mode
+(C4.3). As described above, this requires exploration guarantees which provide evidence that the system has
+exhausted high-reward exploration options, such that convergent behaviour is likely to be a result of actually
+reaching E (E5.3). Note that exploration guarantees are much more useful if we are confident in our reward
+function (as the next key claim argues). If our reward function is bad, more exploration does not necessarily
+lead to better outcomes. We do not currently know how to get robust exploration guarantees - while we are
+optimistic about this research direction, this is a major gap in our current sketch.
+4.4
+Key claim 2: The game incentivises correctness
+The second key claim is that in the approximate global equilibrium of the game, the system is approximately
+honest – its error rate is at most ε (C2.2).
+9If the models are gradient hacking, it could in theory make it impossible to reach E via the training process T. Gradient
+hacking is therefore also a defeater to E5.1.
+11
+Figure 7 shows how this key claim is broken down.
+C2.2
+E produces correct answers in 
+a (1-ε’)-fraction of cases
+E6.1
+Further research required - possible 
+evidence sources include human 
+trials, datasets limited to human-
+judgable domains, or debate 
+protocols incorporating objections to 
+certain questions or strategies
+Evidence 
+incorporation
+E5.5
+[...]
+Evidence 
+incorporation
+C4.5
+The simulated human judge S 
+has bounded systematic error
+C5.2
+S has bounded systematic 
+error with respect to H
+C5.1
+Human judges H have bounded 
+systematic error
+Deductive 
+decomposition
+D6.3
+ There are unknown sources of 
+systematic error in non-
+verifiable domains
+D6.1
+Our definition of “bounded” is 
+too permissive
+D6.2
+Evidence from verifiable 
+domains don’t generalise to 
+non-verifiable domains
+C3.4
+E approximates big 
+computation M
+E4.3
+Debate protocol 
+proof
+C3.5
+Any approximate M-execution 
+is approximately correct
+Decomposition: 
+Failure modes
+C4.6
+M is stable, i.e. minor changes 
+to input probabilities will not 
+substantially change the 
+outputs of M
+Evidence 
+incorporation
+C4X.1
+All relevant aspects of M have 
+been identified
+E4X.1
+Expert input
+Evidence 
+incorporation
+D5.4
+Some important true 
+statements cannot be argued 
+for via recursive tree debate, 
+e.g. rely on heuristics
+D5.5
+Some important false claims 
+can be compellingly defended 
+via recursive tree debate, e.g. 
+by gerrymandering claims
+C4.4
+Truth can be approximated via 
+a recursive tree debate process
+Evidence 
+incorporation
+E5.4
+Theoretical 
+arguments
+Deductive 
+decomposition
+E6.2
+Evaluations showing 
+instrumental 
+reasoning inability
+Evidence 
+incorporation
+Figure 7: The second key claim (C2.2) and the argument required to support it, in CAE notation.
+The key claim is supported by two subclaims:
+1. In E, system outputs are the same as slightly perturbed outputs of a hypothetical truth-finding
+process M (C3.4).
+12
+2. For most tasks, all slightly perturbed outputs of M are true (C3.5).
+Why go this indirect route via M? Because we cannot directly verify if the system’s outputs are true - that’s
+the reason we need scalable oversight in the first place.10 Instead of checking outputs against ground-truth
+labels, we check the whole debate protocol against a process we hypothesize to produce true outputs, called
+M. M is too expensive to run; the goal of our debate protocol is to accelerate it. If our protocol produces
+the same outputs as M, we can assume it produces true outputs.
+To understand M, consider a debate as a branching tree of arguments and counterarguments. A comprehen-
+sive debate would expand on every possible argument and counterargument, and have a judge consider every
+branch. Recursive debate aims to accelerate this process by having debaters expand only on a single path
+through the tree. If the debaters are good, we should expect them to anticipate how the debate will proceed
+given various arguments they could make and pick the optimal path through the tree. The outcome of a
+single debate along a single path thereby provides evidence about which debater would have won, had every
+argument and counterargument been considered. This is analogous to how a single game of Go provides
+evidence as to who the better player is, even though it only traces one path through the tree of possible
+moves (see Figure 8).
+Bob
+Bob
+Alice
+Alice
+Alice
+Bob
+Bob
+Alice
+Human
+decides
+who won
+Question
+(a) The tree of possible debates.
+White
+White
+Black
+Black
+Black
+White
+White
+Black
+Win or
+loss
+Start
+(b) The tree of Go moves.
+Figure 8: An analogy between debate and go, represented visually: in both cases a single game with strong
+players is evidence as to which moves were best. Reproduced from Irving et al. (2018).
+Our M is equivalent to expanding the whole tree. It is a computation which produces every possible argument
+and counterargument at every stage and calls (simulated) human judges to adjudicate every individual path
+through the tree. We hypothesize that such a computation would produce correct outputs within the question
+domain. The goal of our debate protocol is to produce the same outputs, but more efficiently.
+4.4.1
+Subclaim 1: M-approximation
+The first subclaim is that we have succeeded at producing a protocol that accelerates M. More precisely:
+System outputs in E are the same as slightly perturbed output of M. In practice, our protocol cannot exactly
+reproduce M, since it is intractable for training to converge to a precise equilibrium - we can only reach an
+approximate equilibrium. As such, we can only reproduce a slightly perturbed version of M, rather than M
+exactly.
+Based on previous research on debate, we know that the primary failure mode for this claim is the obfuscated
+arguments problem (Barnes, 2020). As described above, an obfuscated argument is one where both debaters
+know the argument contains a flaw, but it is computationally intractable for either debater to identify
+the flaw. If obfuscated arguments are a winning strategy, our protocol will produce different outcomes to
+M: expanding the whole debate would expose the obfuscated argument as false, but given computational
+limitations, debate might fail to get the same result.
+10While we can probably directly verify many of the model’s outputs in some domains (e.g. maths), we also want to be able
+to use the model to answer non-verifiable questions.
+13
+We are optimistic that a new debate protocol, prover-estimator debate (forthcoming), can evade the obfus-
+cated arguments problem. Regardless of which debate protocol is used, the safety case should contain a
+proof that it successfully approximates M (E4.3).
+4.4.2
+Subclaim 2: Truth of M
+The second subclaim is that we have succeeded at identifying an M which produces mostly true outputs.
+More precisely: for most tasks, all slightly perturbed outputs of M are true. We identify three key potential
+issues - with a side-claim that there are no additional issues (C4X.1), supported by evidence that enough
+red-teaming has occurred (E4X.1).
+First, we need to argue that the structure of recursive tree debate is conducive to identifying truth (C4.4).
+This is supported by theoretical arguments (E5.4). We might worry that some true statements cannot be
+argued for compellingly via deductive arguments. For example, some truths might only be knowable via
+heuristics learned by encountering many examples, reducing the scope of questions that can be answered
+with recursive tree debate (D5.4). This might be an especially plausible defeater in the AI research domain,
+where research taste and plans may be hard to defend deductively. More worryingly, we might worry that
+some false claims can be compellingly defended via deductive arguments. For example, it might be possible
+to define the same term differently in different subclaims, rendering an argument that appears valid but is
+not; if human judges are called only at the leaf nodes, such inconsistencies might not be caught by M (D5.5).
+Some debate protocols, such as cross-examination, avoid this failure mode, but prover-estimator debate –
+our example in this safety case – does not. However, we are hopeful that future debate protocols can combine
+elements of both.
+Second, we need to argue that the inputs into M are accurate, i.e. that simulated human judges are compe-
+tent at assessing the outcomes of debate (C4.5). Random errors should wash out over the course of training,
+so we are only worried about systematic error, for example due to claims playing on human biases or emo-
+tions. We need two claims here: that the human input being simulated has bounded systematic error with
+respect to reality (C5.1) and that the simulation has bounded systematic error with respect to the human
+input (C5.2).
+We imagine that the first claim could be supported with empirical results, such as trial debates (E6.1). In
+verifiable domains like math, human judgement could be compared to ground truth (though this may non
+generalise to non-verifiable domains (D6.2)). In non-verifiable domains, we could at least check if human
+judgement looks roughly reasonable or falls prey to known biases (though there might still be biases we are
+unaware of (D6.3)). Another challenge is to know what level of systematic error is “low enough” (D6.1).
+For the second claim about the accuracy of the simulation, the primary failure mode we have in mind
+is scheming to deliberately misrepresent human judgement – perhaps in collusion with the system we are
+training. We imagine this claim could be supported with an inability argument based on evaluations on
+capabilities such as instrumental reasoning and deception (E6.2), though it is an open question if such an
+argument will go through for sufficiently capable judge models. However, even if not, we are optimistic that
+the measures used to prevent scheming in the remainder of the safety case will also apply to judge models.
+We expect that getting good human inputs will be one of the most challenging parts of this safety case and
+require much more work. While some errors like moral or emotional bias are likely less prevalent in the
+domain of AI R&D, there will likely still be errors like cognitive biases and reasoning failures. However,
+we are tentatively optimistic that human inputs can be improved, both by designing better processes (e.g.
+giving humans access to the right tools, finding the right number and type of judges) and by improving
+debate protocols (e.g. allowing debaters to block certain types of claims on which humans are likely to be
+systematically wrong).
+Third, since training does not reproduce M exactly, but rather a slightly perturbed version of M, we need
+to argue that this approximation is not substantially different (C4.6). This is known as stability and can
+be more precisely stated as: small variations in input probabilities will not change the outcome of overall
+computation. We are not yet sure how to support this claim, so we leave the evidence box blank (E5.5).
+14
+We expect that most protocols which avoid obfuscated arguments – including prover-estimator debate - will
+only approximate M and so require stability. However, it may not be needed for all protocols. For example,
+it might be possible to relax this assumption if we aim only for honesty rather than accuracy (more on this
+to come in future work). Alternatively, it might be possible to transform an unstable computation M into
+a stable computation M∗; if so, the safety case should instead contain a claim that the outputs of M∗are
+(approximately) identical to the outputs of M).
+Even if stability is required to produce useful outputs, it might not be strictly necessary for safety. For
+example, in prover-estimator debate, unstable queries return no answer, rendering the protocol safe for all
+queries but useful only for stable queries.
+4.5
+Key claim 3: The system’s behaviour will stay similar during deployment
+The third key claim is that the system’s error rate will not drift past ε during deployment (C2.3).
+Figure 9 shows how this key claim is broken down.
+C2.3
+During deployment, A’s error 
+rate will not drift further than ε
+Evidence 
+incorporation
+E3.1
+Online training
+Figure 9: The third key claim (C2.3) and the argument
+required to support it, in CAE notation.
+In our sketch, we support this claim by using on-
+line training throughout deployment as above, such
+that any distributional shifts will be accounted for
+via further training (E3.1).
+While the argument
+is straightforward, the evidence should still demon-
+strate that the online training regime has been cor-
+rectly configured. For example, the latency (i.e. fre-
+quency of updates) should be high enough to pre-
+vent significant deviations from E, and there should
+be an effective process for updating multiple copies
+of the same model.
+This is one of the key claims in the sketch which
+breaks in a high-stakes context, where even a small
+number of errors can cause large harm. Since we
+cannot use online training, we instead need guar-
+antees against alignment faking (and, less impor-
+tantly, more generic distribution shifts). This would
+be much trickier to defend; see some initial ideas in
+“Extending the safety case to high-stakes contexts”.
+4.6
+Key claim 4: It is sufficient for safety purposes for the system to provide correct answers most of
+the time
+The fourth key claim is that the system cannot cause unacceptable outcomes given an error rate of ε (C1.2).
+Figure 10 shows how this key claim is broken down.
+The main failure mode we consider is that the system is scheming to produce harmful outputs specifically in
+cases where our reward signal (i.e. human judging on debate leaf nodes) cannot catch it. The remaining errors
+could then constitute a coordinated set of actions that might collectively cause an unacceptable outcome.
+Since we do not have a good way to tell where our reward signal fails and what the effects of those errors
+would be, we conservatively assume that each error results in the worst-case outcome, equivalent to the
+system operating under maximal adversarial competence.11 We then argue that the system’s deployment
+11In this sense, our argument has a “control” flavour, in that we are assuming that the system is as egregiously misaligned as
+possible given the constraints of training. An alternative argument would be that we are in a low-stakes context because the
+reward signal catches the most severe errors.
+15
+C1.2
+A cannot cause unacceptable 
+outcomes in D if its error rate is 
+at most ε
+Deductive 
+decomposition
+C3.7
+A can’t take more than Z bad 
+actions during D given an error 
+rate of max ε 
+C3.6
+It takes at least Z actions to 
+ensure that the research 
+output will bypass checking 
+process C
+C2.4
+Research sabotage is not 
+possible in D with error rate ε
+Decomposition:
+Threat modelling
+C2X.1
+All relevant threat models have 
+been identified
+E2X.1
+Threat modelling, 
+expert input
+Evidence 
+incorporation
+Evidence 
+incorporation
+E4.5
+Prob. distribution 
+over Z, ε, and # of 
+actions per reboot
+D4.4
+Different iterations of A 
+coordinate, e.g. via acausal 
+coordination or sabotage of the 
+datacenter reset
+Evidence 
+incorporation
+E4.4
+Threat modelling
+D4.1
+A’s capabilities improve during 
+deployment due to online 
+training such that Z decreases
+D4.3
+The deployment protocol is not 
+adhered to
+C2.6
+Self-exfiltration is not possible 
+in D with error rate ε
+C2.5
+Malicious code attacks are not 
+possible in D with error rate ε
+D4.2
+Subtly misleading research 
+over extended periods is not 
+caught by C
+Figure 10: The fourth key claim (C1.2) and the argument required to support it, in CAE notation.
+context is nevertheless low-stakes because the actions available to the system are not harmful enough to
+cause unacceptable outcomes in a small number of steps.12
+First, we break down the unacceptable outcomes of concern into three threat models: research sabotage, i.e.
+producing false research papers (C2.4), malicious code attacks, i.e. exfiltrating malware when information is
+extracted from the offline datacentre (C2.5), and self-exfiltration, i.e. the agent escaping from the datacentre
+(C2.6). This breakdown is supported with a side-claim that we have identified all relevant failure modes
+(C2X.1) - we validate this with threat modelling supported by expert input (E2X.1). The reasoning behind
+our breakdown is as follows: Our deployment set-up is such that the agent can only affect the external world
+via outputs from the datacentre. So, the only way the agent can only cause harm via those outputs, or by
+12For simplicity, we phrase these claims deterministically rather than probabilistically, and with respect to a binary acceptable
+vs. unacceptable outcome rather than utility loss. For a continuous version, our overall claim could be that we have a regret
+bound of O(ρk
+√
+T + ρε′T). For a probabilistic version, we could use probability distributions over ε, as well as Z or ρ.
+16
+self-exfiltrating. Within the outputs, the agent can cause harm either via legitimate outputs (papers) or
+illegitimate outputs (malicious code).
+For simplicity, we only cover one threat model – research sabotage via paper outputs - in the remainder of
+the safety case, though a similar argument (or other arguments) could be made for other threat models. We
+argue for this via two subclaims:
+1. Committing effective research sabotage would require a certain number of bad actions, Z (C3.6)
+2. The agent cannot take that many bad actions during a single iteration given its error rate (which is
+maintained via online training) (C3.7)
+4.6.1
+Subclaim 1: Z bad actions required
+The first subclaim is that committing effective research sabotage would require a certain number of bad
+actions, Z. Research sabotage could be actions such as faking experimental data, running misleading exper-
+imental set-ups, or including false claims or bugged code in the final research paper. Our deployment set-up
+aims to make it harder to commit research sabotage by investigating the outputted research paper with a
+checker model trained on n debates. To successfully conduct research sabotage, the agent would have to
+produce a paper that is false in a way that would very robustly not be caught by the reward signal (or very
+robustly manipulate the human judges).13 Our sketch argues that this is not possible, via threat modelling
+(E4.4).
+One potential challenge for such threat modelling is that system capabilities might improve over the course
+of deployment due to online training. This could enable the system to access new, more harmful actions that
+could enable research sabotage with fewer actions (D4.1). Another defeater is that the possibility of subtle
+research sabotage over long periods of time, for example by including subtly misleading but not technically
+false statements that are not caught by the reward signal (D4.2). This risk is reduced by resetting the
+datacentre between each iteration, minimising coordination opportunities. This could be supplemented with
+other measures to prevent suspicious correlations between outputs over long time horizons.
+4.6.2
+Subclaim 2: Low likelihood of Z bad actions
+The second claim is that the agent cannot take Z bad actions during a single iteration given its error rate.
+This is straightforward to support, based on a calculation of the expected number of bad actions a system
+can take during deployment given probability distributions over its error rate ε (given online training latency
+k), total number of actions n, and actions required to pull off research sabotage Z (E4.5). Ideally, the claim
+should also be supported with evidence that the deployment protocol will in fact be adhered to, for example
+by committing to regular external verification (D4.3).14 The argument only works if each iteration is isolated
+and cannot coordinate with other iterations – otherwise, the errors required to commit research sabotage
+could accumulate across iterations. While we aim to avoid this failure mode by resetting the agent and
+datacentre between each iteration, systems could interfere with this resetting mechanism – or they may be
+able to coordinate acausally due to being based on the same underlying system (D4.4).
+5
+Discussion
+5.1
+Extending the safety case to high-stakes contexts
+This safety case sketch only works in low-stakes contexts where it takes many bad actions to cause unac-
+ceptable outcomes. Key claim 4 – that we are in a low-stakes context – breaks by definition. Key claim 3 –
+that the error rate will stay consistent throughout deployment – also breaks because we can no longer rely
+on online training, opening up the possibility of alignment faking and other distribution shift problems.
+13The agent would also have to set this up using only actions that would not be flagged by the reward signal as suspicious,
+since it is subject to online training while producing the paper.
+14It may also be necessary to provide evidence that the AI agent itself will not tamper with the deployment protocol, for
+example by disabling online training.
+17
+But the low-stakes claim probably will not hold for the most dangerous superhuman systems. What, then,
+is the value of this safety case sketch?
+The most straightforward reason is some highly consequential deployments might plausibly be low-stakes.
+For example, early-AGI systems in sufficiently careful conditions could plausibly be low-stakes and used for
+essential alignment research to prevent future, high-stakes systems from causing a catastrophe. It might be
+possible to build a robust automated alignment safety case based on the scalable oversight techniques in this
+sketch – we are planning to do more work on this.
+More indirectly, we think this safety case sketch is a useful starting point for developing other high-stakes
+safety case sketches. In particular, we think we might be able to extend the techniques and evidence in this
+sketch to high-stakes contexts, rather than requiring completely different kinds of techniques or evidence.
+We currently have two hopes in this direction:
+First, we might be able to use online training-like techniques during inference, on candidate actions instead
+of on final actions. This would allow us to maintain an error rate of ε for candidate actions, then cut the
+regret further by generating many candidate actions. This might be enough to patch key claim 3; it is not
+enough to completely patch key claim 4, but it gets us some of the way.
+Second, the evidence needed to support key claim 1 and 2 might be sufficient (or extendable) to patch key
+claims 3 and 4. For example, to address exploration hacking, we might need a method for eliciting bad
+contexts (e.g. based on interpretability or singular learning theory). Such a method might also be useful for
+generating datasets that mimic deployment sufficiently effectively that we can minimise distributional shifts.
+More broadly, it seems like, given a theorem showing that the error rate is at most ε, in practice one should
+put significant weight on something like full intent alignment (or at least the system not being egregiously
+misaligned). For example, it seems plausible that human error is anticorrelated with the severity of error
+such that the errors that remain are inconsequential.
+We are far from confident in these techniques, but we think it is worth trying hard to make them work. The
+UK AI Security Institute’s research agenda encompasses further work in this area (AI Security Institute,
+2025).
+5.2
+Open problems
+Our safety case sketch faces significant limitations but also helps us identify concrete research directions that
+might address them. We identify five main areas for further research:
+Improved debate protocols.
+Many gaps in our safety case might be solvable with improved debate
+protocols with the following properties:
+• Avoids obfuscated arguments: We are optimistic that prover-estimator debate (forthcoming)
+can avoid obfuscated arguments, but it remains an open question.
+• Computationally efficient: The lower the complexity of reaching equilibrium in our debate game,
+the more likely that models that reach equilibrium are findable via stochastic gradient descent or
+other realistic training methods. For prover-estimator debate, it is unclear if the debaters can be
+constructed with polynomial-time algorithms – further research could confirm this or develop more
+efficient protocols.
+• Does not require stability: We are optimistic that the obfuscated arguments problem can be
+evaded by assuming stability. But stability might not hold for relevant queries. Future work could
+modify prover-estimator debate to relax the stability assumption, for example by focusing on honesty
+instead of correctness or by transforming an unstable computation into a stable one.
+• Avoids gerrymandering concerns: Debate protocols such as cross-examination punish debaters
+for inconsistency across claims at the same recursive level. Others, such as, prover-estimator debate,
+do not. It may be possible to combine these protocols (or find other solutions).
+18
+• Avoids systematic human error: Debate protocols could be designed to minimise the impact
+of systematic human error, for example by allowing debaters to block queries on which they think
+humans are likely to be biased.
+Empirical testing and optimisation. While debate has theoretical appeal, we have only limited data
+on its practical effectiveness (Arnesen et al., 2024; Barnes & Christiano, 2020; Kenton et al., 2024; Khan
+et al., 2024; Michael et al., 2023).
+For example, most previous experiments use the QuALITY dataset
+(Pang et al., 2022) and simple debate protocols with low recursive depth. Key questions include whether
+debate measurably improves performance, whether training reliably reaches equilibrium, whether stability is
+a real problem, and whether obfuscated arguments actually emerge as predicted. We also need an improved
+understanding of systematic human errors – for example: How good are humans at giving correct answers
+in verifiable domains, what are common systematic errors and in which domains are they most prominent,
+and how we can design human input for optimal results? A final set of questions surrounds the deployment
+set-up. For example, what counts as an "action" for the purpose of online learning in the datacentre? And
+will many questions in the relevant domain be difficult to answer via deductive arguments?
+Exploration hacking. A major gap in our sketch is the requirement for exploration guarantees. We know
+very little about how serious a problem exploration hacking is and how to prevent it - yet the sketch depends
+on avoiding it. We outlined various research directions that might help address exploration hacking across
+both interpretability, singular learning theory, and more prosaic techniques – much more work is needed to
+develop and test these. More foundationally, it would be useful to develop model organisms of exploration
+hacking to help test potential solutions.
+For very superhuman systems, we might also need to address
+gradient hacking.
+High-stakes contexts. In the high-stakes context, we face greater generalisation challenges. We lose the
+ability to use online training, so need to face the possibility of distribution shifts and alignment faking; and
+we need new ways to contend with coordinated errors not captured by our reward signal. We outline research
+directions in the previous section.
+From honesty to alignment. We need to better understand the alignment value of honest question-
+answering. How much does honesty plus absence of alignment faking translate into aligned actions during
+alignment research? How can deployment environments be designed to minimize risk while maintaining the
+system’s usefulness for alignment research?
+The UK AI Security Institute’s research agenda encompasses further work in this area (AI Security Institute,
+2025).
+6
+Conclusion
+Overall, the argument in this sketch is not strong with current techniques. Much better techniques are
+needed before developers can rely on alignment arguments. That said, we think there are useful directions
+for future research.
+We are optimistic that safety case sketches are a useful tool for research and coordination. Writing this
+sketch helped us clarify our thinking and gave us ideas for further research directions, forming the basis of
+the alignment section of the UK AI Security Institute’s research agenda (AI Security Institute, 2025).
+A
+The full safety case diagram
+Figure 11 shows the CAE diagram in its entirety.
+B
+Claims Arguments Evidence (CAE) notation
+The safety case sketch begins with a top-level claim we want to make about the safety properties of an AI
+system (A). This top-level claim is iteratively broken down into further subclaims, which must eventually
+19
+bottom out in evidence. These subclaims shows the logical structure and dependencies connecting evidence
+to the top-level claim.
+The diagram uses the “Claims, Arguments, Evidence” notion format (Bloomfield & Netkachova, 2014). It
+consists of four types of units:
+Blue ovals are claims. Claims must either be broken down into further subclaims or directly supported
+by evidence, in both cases via an argument.
+Green parallelograms are arguments. Arguments link claims to evidence or further subclaims. They
+explain why the evidence or subclaims suffice to justify the claim. This sketch uses 3 argument types:
+• Decomposition: Breaks down a claim into several subclaims. This must be supported by a “side-
+claim” explaining why the subclaims are adequate to justify the claim - unless the subclaims logically
+imply the claim, in which case it is called a “deductive decomposition” and can be free-standing.
+(Our sketch also uses “deductive decompositions” in cases where the subclaims do not strictly imply
+the claim but could be rephrased to do so.)
+• Substitution: Replaces a claim with another single subclaim which is easier to support. This must
+be supported by a “side-claim” explaining why the subclaim adequately captures the important
+parts of the original claim.
+• Evidence incorporation: Explains why the evidence adequately supports a given claim.
+Purple boxes are evidence. They provide information, data or calculations that support claims. There
+are many possible types of evidence, including results from empirical tests, proofs, results from expert
+surveys, or theoretical outputs such as threat modelling reports.
+Red ovals are defeaters. These are hypothetical claims that, if true, could invalidate or render insufficient
+the evidence provided. The safety case should explain what has been done to address defeaters and/or why
+they are not a concern.
+Grey elements provide context. They are surrounding parts that would be included in a complete safety
+case but are not the focus of this sketch.
+Acknowledgments
+We are grateful for valuable input and comments from Beth Barnes, Charlie Griffin, Jacob Hilton, Jonah
+Brown-Cohen, Joshua Clymer, Martín Soto, Nicola Ding, and Will Kirby.
+References
+AI Security Institute.
+AI Security Institute research agenda.
+Technical report, AI Security Institute,
+Department for Science, Innovation and Technology, May 2025.
+URL https://www.aisi.gov.uk/
+research-agenda. Accessed 6 May 2025.
+Dario Amodei, Chris Olah, Jacob Steinhardt, Paul Christiano, John Schulman, and Dan Mané. Concrete
+problems in AI safety, 2016. URL https://arxiv.org/abs/1606.06565.
+Anthropic. Responsible scaling policy. https://assets.anthropic.com/m/24a47b00f10301cd/original/
+Anthropic-Responsible-Scaling-Policy-2024-10-15.pdf, October 2024. Effective October 15, 2024.
+Samuel Arnesen, David Rein, and Julian Michael. Training language models to win debates with self-play
+improves judge accuracy, 2024. URL https://arxiv.org/abs/2409.16636.
+Garrett Baker, George Wang, Jesse Hoogland, and Daniel Murfet. Studying small language models with
+susceptibilities, 2025. URL https://arxiv.org/abs/2504.18274.
+20
+Mikita Balesni, Marius Hobbhahn, David Lindner, Alexander Meinke, Tomek Korbak, Joshua Clymer, Buck
+Shlegeris, Jérémy Scheurer, Charlotte Stix, Rusheb Shah, Nicholas Goldowsky-Dill, Dan Braun, Bilal
+Chughtai, Owain Evans, Daniel Kokotajlo, and Lucius Bushnaq. Towards evaluations-based safety cases
+for AI scheming, 2024. URL https://arxiv.org/abs/2411.03336.
+Beth
+Barnes.
+Debate
+update:
+Obfuscated
+arguments
+problem.
+AI
+Alignment
+Forum,
+December
+2020.
+URL
+https://www.alignmentforum.org/posts/PJLABqQ962hZEqhdB/
+debate-update-obfuscated-arguments-problem. Accessed 6 May 2025.
+Beth Barnes and Paul Christiano.
+Writeup:
+Progress on AI safety via debate.
+AI Align-
+ment Forum, February 2020.
+URL https://www.alignmentforum.org/posts/Br4xDbYu4Frwrb64a/
+writeup-progress-on-ai-safety-via-debate-1. Accessed 6 May 2025.
+Yoshua Bengio, Geoffrey Hinton, Andrew Yao, Dawn Song, Pieter Abbeel, Trevor Darrell, Yuval Noah
+Harari, Ya-Qin Zhang, Lan Xue, Shai Shalev-Shwartz, Gillian Hadfield, Jeff Clune, Tegan Maharaj, Frank
+Hutter, Atılım Güneş Baydin, Sheila McIlraith, Qiqi Gao, Ashwin Acharya, David Krueger, Anca Dragan,
+Philip Torr, Stuart Russell, Daniel Kahneman, Jan Brauner, and Sören Mindermann. Managing extreme
+AI risks amid rapid progress. Science, 384(6698):842–845, 2024.
+Yoshua Bengio, Sören Mindermann, Daniel Privitera, Tamay Besiroglu, Rishi Bommasani, Stephen Casper,
+Yejin Choi, Philip Fox, Ben Garfinkel, Danielle Goldfarb, Hoda Heidari, Anson Ho, Sayash Kapoor,
+Leila Khalatbari, Shayne Longpre, Sam Manning, Vasilios Mavroudis, Mantas Mazeika, Julian Michael,
+Jessica Newman, Kwan Yee Ng, Chinasa T. Okolo, Deborah Raji, Girish Sastry, Elizabeth Seger,
+Theodora Skeadas, Tobin South, Emma Strubell, Florian Tramèr, Lucia Velasco, Nicole Wheeler, Daron
+Acemoglu, Olubayo Adekanmbi, David Dalrymple, Thomas G. Dietterich, Edward W. Felten, Pascale
+Fung, Pierre-Olivier Gourinchas, Fredrik Heintz, Geoffrey Hinton, Nick Jennings, Andreas Krause, Susan
+Leavy, Percy Liang, Teresa Ludermir, Vidushi Marda, Helen Margetts, John McDermid, Jane Munga,
+Arvind Narayanan, Alondra Nelson, Clara Neppel, Alice Oh, Gopal Ramchurn, Stuart Russell, Mari-
+etje Schaake, Bernhard Schölkopf, Dawn Song, Alvaro Soto, Lee Tiedrich, Gaël Varoquaux, Andrew
+Yao, Ya-Qin Zhang, Olubunmi Ajala, Fahad Albalawi, Marwan Alserkal, Guillaume Avrin, Christian
+Busch, André Carlos Ponce de Leon Ferreira de Carvalho, Bronwyn Fox, Amandeep Singh Gill, Ah-
+met Halit Hatip, Juha Heikkilä, Chris Johnson, Gill Jolly, Ziv Katzir, Saif M. Khan, Hiroaki Ki-
+tano, Antonio Krüger, Kyoung Mu Lee, Dominic Vincent Ligot, José Ramón López Portillo, Oleksii
+Molchanovskyi, Andrea Monti, Nusu Mwamanzi, Mona Nemer, Nuria Oliver, Raquel Pezoa Rivera, Balara-
+man Ravindran, Hammam Riza, Crystal Rugege, Ciarán Seoighe, Jerry Sheehan, Haroon Sheikh, Denise
+Wong, and Yi Zeng.
+International AI safety report.
+Technical Report DSIT 2025/001, 2025.
+URL
+https://www.gov.uk/government/publications/international-ai-safety-report-2025.
+Robin Bloomfield and Kateryna Netkachova. Building blocks for assurance cases. In 2014 IEEE International
+Symposium on Software Reliability Engineering Workshops, pp. 186–191, 2014. doi: 10.1109/ISSREW.
+2014.72.
+Nick Bostrom. Superintelligence: Paths, Dangers, Strategies. Oxford University Press, Oxford, UK, 2014.
+ISBN 9780199678112.
+Samuel R. Bowman, Jeeyoon Hyun, Ethan Perez, Edwin Chen, Craig Pettit, Scott Heiner, Kamil˙e Lukoši¯ut˙e,
+Amanda Askell, Andy Jones, Anna Chen, Anna Goldie, Azalia Mirhoseini, Cameron McKinnon, Christo-
+pher Olah, Daniela Amodei, Dario Amodei, Dawn Drain, Dustin Li, Eli Tran-Johnson, Jackson Kernion,
+Jamie Kerr, Jared Mueller, Jeffrey Ladish, Joshua Landau, Kamal Ndousse, Liane Lovitt, Nelson El-
+hage, Nicholas Schiefer, Nicholas Joseph, Noemí Mercado, Nova DasSarma, Robin Larson, Sam Mc-
+Candlish, Sandipan Kundu, Scott Johnston, Shauna Kravec, Sheer El Showk, Stanislav Fort, Timothy
+Telleen-Lawton, Tom Brown, Tom Henighan, Tristan Hume, Yuntao Bai, Zac Hatfield-Dodds, Ben Mann,
+and Jared Kaplan.
+Measuring progress on scalable oversight for large language models, 2022.
+URL
+https://arxiv.org/abs/2211.03540.
+Jonah Brown-Cohen, Geoffrey Irving, and Georgios Piliouras. Scalable AI safety via doubly-efficient debate,
+2023. URL https://arxiv.org/abs/2311.14125.
+21
+Marie Davidsen Buhl, Gaurav Sett, Leonie Koessler, Jonas Schuett, and Markus Anderljung. Safety cases
+for frontier AI, 2024.
+Brian Christian. The Alignment Problem: Machine Learning and Human Values. W. W. Norton & Company,
+New York, 2020.
+Paul Christiano.
+Low-Stakes alignment.
+AI Alignment (Medium article), April 2021.
+URL https://
+ai-alignment.com/low-stakes-alignment-f3c36606937f. Accessed 6 May 2025.
+Paul Christiano, Buck Shlegeris, and Dario Amodei. Supervising strong learners by amplifying weak experts,
+2018. URL https://arxiv.org/abs/1810.08575.
+Joshua Clymer, Nick Gabrieli, David Krueger, and Thomas Larsen. Safety cases: How to justify the safety
+of advanced AI systems, 2024. URL https://arxiv.org/abs/2403.10462.
+Arthur Goemans, Marie Davidsen Buhl, Jonas Schuett, Tomek Korbak, Jessica Wang, Benjamin Hilton, and
+Geoffrey Irving. Safety case template for frontier AI: A cyber inability argument, 2024.
+Google DeepMind.
+Frontier Safety Framework.
+https://storage.googleapis.com/deepmind-media/
+DeepMind.com/Blog/updating-the-frontier-safety-framework/Frontier%20Safety%20Framework%
+202.0.pdf, February 2025.
+Ryan Greenblatt.
+Notes on countermeasures for exploration hacking (aka sandbagging).
+AI Align-
+ment Forum,
+March 2025.
+URL https://www.alignmentforum.org/posts/abmzgwfJA9acBoFEX/
+notes-on-countermeasures-for-exploration-hacking-aka. Accessed 6 May 2025.
+Ryan Greenblatt, Carson Denison, Benjamin Wright, Fabien Roger, Monte MacDiarmid, Sam Marks, Jo-
+hannes Treutlein, Tim Belonax, Jack Chen, David Duvenaud, Akbir Khan, Julian Michael, Sören Minder-
+mann, Ethan Perez, Linda Petrini, Jonathan Uesato, Jared Kaplan, Buck Shlegeris, Samuel R. Bowman,
+and Evan Hubinger. Alignment faking in large language models, 2024. URL https://arxiv.org/abs/
+2412.14093.
+Benjamin Hilton, Marie Davidsen Buhl, Tomek Korbak, and Geoffrey Irving.
+Safety cases: A scalable
+approach to frontier AI safety, 2025. URL https://arxiv.org/abs/2503.04744.
+Jacob
+Hilton.
+Formal
+verification,
+heuristic
+explanations
+and
+sur-
+prise
+accounting,
+June
+2024.
+URL
+https://www.alignment.org/blog/
+formal-verification-heuristic-explanations-and-surprise-accounting/.
+Alignment Research
+Center Blog. Accessed 06 May 2025.
+Evan Hubinger, Chris van Merwijk, Vladimir Mikulik, Joar Skalse, and Scott Garrabrant. Risks from learned
+optimization in advanced machine learning systems, 2021. URL https://arxiv.org/abs/1906.01820.
+Geoffrey Irving. Safety cases at AISI. https://www.aisi.gov.uk/work/safety-cases-at-aisi, March
+2024.
+Geoffrey Irving, Paul Christiano, and Dario Amodei. AI safety via debate, 2018. URL https://arxiv.org/
+abs/1805.00899.
+Geoffrey Irving,
+Joseph Isaac Bloom,
+and Tomek Korbak.
+Eliciting bad contexts.
+AI Align-
+ment Forum, January 2025.
+URL https://www.alignmentforum.org/posts/inkzPmpTFBdXoKLqC/
+eliciting-bad-contexts. Accessed 6 May 2025.
+Jiaming Ji, Tianyi Qiu, Boyuan Chen, Borong Zhang, Hantao Lou, Kaile Wang, Yawen Duan, Zhonghao
+He, Lukas Vierling, Donghai Hong, Jiayi Zhou, Zhaowei Zhang, Fanzhi Zeng, Juntao Dai, Xuehai Pan,
+Kwan Yee Ng, Aidan O’Gara, Hua Xu, Brian Tse, Jie Fu, Stephen McAleer, Yaodong Yang, Yizhou
+Wang, Song-Chun Zhu, Yike Guo, and Wen Gao. AI alignment: A comprehensive survey, 2025. URL
+https://arxiv.org/abs/2310.19852.
+22
+Zachary Kenton, Noah Y. Siegel, János Kramár, Jonah Brown-Cohen, Samuel Albanie, Jannis Bulian,
+Rishabh Agarwal, David Lindner, Yunhao Tang, Noah D. Goodman, and Rohin Shah.
+On scalable
+oversight with weak llms judging strong llms, 2024. URL https://arxiv.org/abs/2407.04622.
+Akbir Khan, John Hughes, Dan Valentine, Laura Ruis, Kshitij Sachan, Ansh Radhakrishnan, Edward Grefen-
+stette, Samuel R. Bowman, Tim Rocktäschel, and Ethan Perez. Debating with more persuasive llms leads
+to more truthful answers, 2024. URL https://arxiv.org/abs/2402.06782.
+Tomek Korbak, Joshua Clymer, Benjamin Hilton, Buck Shlegeris, and Geoffrey Irving. A sketch of an AI
+control safety case, 2025. URL https://arxiv.org/abs/2501.17315.
+Victoria Krakovna and Janos Kramar. Power-seeking can be probable and predictive for trained agents,
+2023. URL https://arxiv.org/abs/2304.06528.
+Lauro Langosco Di Langosco, Jack Koch, Lee D Sharkey, Jacob Pfau, and David Krueger. Goal misgen-
+eralization in deep reinforcement learning. In Kamalika Chaudhuri, Stefanie Jegelka, Le Song, Csaba
+Szepesvari, Gang Niu, and Sivan Sabato (eds.), Proceedings of the 39th International Conference on Ma-
+chine Learning, volume 162 of Proceedings of Machine Learning Research, pp. 12004–12019. PMLR, 17–23
+Jul 2022. URL https://proceedings.mlr.press/v162/langosco22a.html.
+Edmund Lau, Zach Furman, George Wang, Daniel Murfet, and Susan Wei. The local learning coefficient: A
+singularity-aware complexity measure, 2024. URL https://arxiv.org/abs/2308.12108.
+Jan Leike, David Krueger, Tom Everitt, Miljan Martic, Vishal Maini, and Shane Legg.
+Scalable agent
+alignment via reward modeling: a research direction, 2018. URL https://arxiv.org/abs/1811.07871.
+Julian Michael, Salsabila Mahdi, David Rein, Jackson Petty, Julien Dirani, Vishakh Padmakumar, and
+Samuel R. Bowman. Debate helps supervise unreliable experts, 2023. URL https://arxiv.org/abs/
+2311.08702.
+Richard Ngo, Lawrence Chan, and Sören Mindermann. The alignment problem from a deep learning per-
+spective, 2025. URL https://arxiv.org/abs/2209.00626.
+OpenAI.
+Preparedness
+framework.
+https://cdn.openai.com/pdf/
+18a02b5d-6b67-4cec-ab64-68cdfbddebcd/preparedness-framework-v2.pdf, April 2025.
+Alexander Pan, Kush Bhatia, and Jacob Steinhardt. The effects of reward misspecification: Mapping and
+mitigating misaligned models.
+In International Conference on Learning Representations, 2022.
+URL
+https://openreview.net/forum?id=JYtwGwIL7ye.
+Richard Yuanzhe Pang, Alicia Parrish, Nitish Joshi, Nikita Nangia, Jason Phang, Angelica Chen, Vishakh
+Padmakumar, Johnny Ma, Jana Thompson, He He, and Samuel Bowman. QuALITY: Question answer-
+ing with long input texts, yes!
+In Marine Carpuat, Marie-Catherine de Marneffe, and Ivan Vladimir
+Meza Ruiz (eds.), Proceedings of the 2022 Conference of the North American Chapter of the Association
+for Computational Linguistics: Human Language Technologies, pp. 5336–5358, Seattle, United States,
+July 2022. Association for Computational Linguistics.
+doi:
+10.18653/v1/2022.naacl-main.391.
+URL
+https://aclanthology.org/2022.naacl-main.391/.
+Peter S. Park, Simon Goldstein, Aidan O’Gara, Michael Chen, and Dan Hendrycks. AI deception: A survey
+of examples, risks, and potential solutions.
+Patterns, 5(5):100988, may 2024.
+ISSN 2666-3899.
+doi:
+10.1016/j.patter.2024.100988.
+Alicia Parrish, Harsh Trivedi, Nikita Nangia, Vishakh Padmakumar, Jason Phang, Amanpreet Singh
+Saimbhi, and Samuel R. Bowman.
+Two-turn debate doesn’t help humans answer hard reading com-
+prehension questions, 2022a. URL https://arxiv.org/abs/2210.10860.
+Alicia Parrish, Harsh Trivedi, Ethan Perez, Angelica Chen, Nikita Nangia, Jason Phang, and Samuel R.
+Bowman. Single-turn debate does not help humans answer hard reading-comprehension questions, 2022b.
+URL https://arxiv.org/abs/2204.05212.
+23
+Stuart Russell. Human Compatible: Artificial Intelligence and the Problem of Control. Penguin Books, New
+York, 2019. ISBN 9780525558637.
+Rohin Shah, Vikrant Varma, Ramana Kumar, Mary Phuong, Victoria Krakovna, Jonathan Uesato, and Zac
+Kenton. Goal misgeneralization: Why correct specifications aren’t enough for correct goals, 2022. URL
+https://arxiv.org/abs/2210.01790.
+Rohin Shah,
+Alex Irpan,
+Alexander Matt Turner,
+Anna Wang,
+Arthur Conmy,
+David Lindner,
+Jonah Brown-Cohen, Lewis Ho, Neel Nanda, Raluca Ada Popa, Rishub Jain, Rory Greig, Samuel
+Albanie,
+Scott Emmons,
+Sebastian Farquhar,
+Sébastien Krier,
+Senthooran Rajamanoharan,
+So-
+phie Bridgers, Tobi Ijitoye, Tom Everitt, Victoria Krakovna, Vikrant Varma, Vladimir Mikulik,
+Zachary Kenton, Dave Orr, Shane Legg, Noah Goodman, Allan Dafoe, Four Flynn, and Anca
+Dragan.
+An approach to technical AGI safety and security.
+Technical report, Google Deep-
+Mind, April 2025.
+URL https://storage.googleapis.com/deepmind-media/DeepMind.com/Blog/
+evaluating-potential-cybersecurity-threats-of-advanced-ai/An_Approach_to_Technical_AGI_
+Safety_Apr_2025.pdf.
+Mrinank Sharma, Meg Tong, Tomasz Korbak, David Duvenaud, Amanda Askell, Samuel R. Bowman, Esin
+Durmus, Zac Hatfield-Dodds, Scott R Johnston, Shauna M Kravec, Timothy Maxwell, Sam McCandlish,
+Kamal Ndousse, Oliver Rausch, Nicholas Schiefer, Da Yan, Miranda Zhang, and Ethan Perez. Towards
+understanding sycophancy in language models.
+In The Twelfth International Conference on Learning
+Representations, 2024. URL https://openreview.net/forum?id=tvhaxkMKAn.
+Joar Skalse, Nikolaus H. R. Howe, Dmitrii Krasheninnikov, and David Krueger. Defining and characterizing
+reward hacking, 2025. URL https://arxiv.org/abs/2209.13085.
+UK and Republic of Korea.
+Frontier AI safety commitments, AI seoul summit 2024.
+Government
+publication, Department for Science, Innovation and Technology, May 2024.
+URL https://www.
+gov.uk/government/publications/frontier-ai-safety-commitments-ai-seoul-summit-2024/
+frontier-ai-safety-commitments-ai-seoul-summit-2024.
+Updated 7 February 2025. Accessed 6
+May 2025.
+UK Ministry of Defence.
+Defence standard 00-56 issue 4: Safety management requirements for defence
+systems. Technical report, UK Ministry of Defence, 2007.
+Jiaxin Wen, Ruiqi Zhong, Akbir Khan, Ethan Perez, Jacob Steinhardt, Minlie Huang, Samuel R. Bowman,
+He He, and Shi Feng. Language models learn to mislead humans via rlhf, 2024. URL https://arxiv.
+org/abs/2409.12822.
+24
+Deductive
+decomposition
+C1.2
+A cannot cause unacceptable 
+outcomes in D if its error rate is 
+at most ε
+Deductive 
+decomposition
+C3.7
+A can’t take more than Z bad 
+actions during D given an error 
+rate of max ε 
+C3.6
+It takes at least Z actions to 
+ensure that the research 
+output will bypass checking 
+process C
+C2.4
+Research sabotage is not 
+possible in D with error rate ε
+Decomposition:
+Threat modelling
+O’
+The agent A will not cause 
+unacceptable outcomes in D
+C1.1
+A’s error rate is at most ε
+C2.1
+Training T reaches equilibrium 
+E in game G
+C3.2
+T has converged on a local 
+equilibrium
+C3.3
+The local equilibrium reached 
+by T is E
+C4.3
+A is not exploration hacking
+C4.1
+Alice & Bob (in E, that are F) can 
+be found efficiently via T
+E4.2
+Training curves, 
+model outputs
+Evidence 
+incorporation
+E5.1
+E admits polynomial 
+time algorithms for 
+tabular games
+D5.1
+Convergence time is 
+prohibitive, e.g. because of ELK 
+problems
+Evidence 
+incorporation
+Evidence 
+incorporation
+E5.3
+Further research required - possible 
+evidence sources include supervised 
+fine-tuning, adversarial RL, singular 
+learning theory, and formal heuristic 
+explanations
+C2.2
+E produces correct answers in 
+a (1-ε’)-fraction of cases
+Deductive
+decomposition
+C3.1
+There is a set of models (Alice 
+& Bob) in E that are satisfy 
+efficiency notion F
+E6.1
+Further research required - possible 
+evidence sources include human 
+trials, datasets limited to human-
+judgable domains, or debate 
+protocols incorporating objections to 
+certain questions or strategies
+Evidence 
+incorporation
+E5.5
+[...]
+Evidence 
+incorporation
+E4.1
+Debate protocol proof
+Evidence 
+incorporation
+Notation
+X = The system that the safety case is about, consisting of a sandboxed agent A and an oracle  
+A = A sandboxed agent, trained via debate (during training, A consists of both players in the game)
+G = A game we train our agent to play, e.g. prover-estimator debate 
+E = Any approximate global equilibrium of G 
+F = An efficiency notion that we aim to hold for the players of G, e.g. “Bob requires only slightly more compute 
+than Alice” 
+T = A training method we use to train A, e.g. stochastic gradient descent 
+S = Simulated human judge who determines the winner of the debate 
+H = Human judgement simulated by S (which could be an average or sample of multiple human judges) 
+M = A prohibitively expensive computation hypothesised to produce correct output, which debate aims to 
+accelerate, e.g. construct every possible subclaim breakdown, recurse every subclaim to maximum depth, 
+and call (simulated) human judges at every leaf 
+D = The deployment context, e.g. internal deployment to conduct AI R&D 
+Z = The minimal number of individually bad actions required to cause unacceptable outcomes in D 
+C = A checking process applied to particularly high-stakes outputs of A, e.g. n rounds of debate 
+C4.5
+The simulated human judge S 
+has bounded systematic error
+C5.2
+S has bounded systematic 
+error with respect to H
+C5.1
+Human judges H have bounded 
+systematic error
+Deductive 
+decomposition
+D6.3
+ There are unknown sources of 
+systematic error in non-
+verifiable domains
+D6.1
+Our definition of “bounded” is 
+too permissive
+D6.2
+Evidence from verifiable 
+domains don’t generalise to 
+non-verifiable domains
+D5.2
+The models are gradient 
+hacking
+C3.4
+E approximates big 
+computation M
+E4.3
+Debate protocol 
+proof
+C3.5
+Any approximate M-execution 
+is approximately correct
+Decomposition: 
+Failure modes
+C4.6
+M is stable, i.e. minor changes 
+to input probabilities will not 
+substantially change the 
+outputs of M
+Evidence 
+incorporation
+C4X.1
+All relevant aspects of M have 
+been identified
+E4X.1
+Expert input
+Evidence 
+incorporation
+Deductive 
+decomposition
+O
+The system X will not cause 
+unacceptable outcomes in the 
+deployment context D
+Decomposition: 
+Subsystems
+C0X.1
+Combining A with the oracle 
+does not increase risk
+C0.1
+The oracle will not cause 
+unacceptable outcomes in D
+D5.4
+Some important true 
+statements cannot be argued 
+for via recursive tree debate, 
+e.g. rely on heuristics
+D5.5
+Some important false claims 
+can be compellingly defended 
+via recursive tree debate, e.g. 
+by gerrymandering claims
+C4.4
+Truth can be approximated via 
+a recursive tree debate process
+Evidence 
+incorporation
+E5.4
+Theoretical 
+arguments
+C4.2
+Assuming feasibility, 
+exploration hacking is the only 
+reason T wouldn’t reach E
+E5.2
+[...]
+Evidence 
+incorporation
+Deductive
+decomposition
+C2.3
+During deployment, A’s error 
+rate will not drift further than ε
+Evidence 
+incorporation
+D5.3
+Training is struck in a local 
+minimum
+Deductive 
+decomposition
+E6.2
+Evaluations showing 
+instrumental 
+reasoning inability
+Evidence 
+incorporation
+C2X.1
+All relevant threat models have 
+been identified
+E2X.1
+Threat modelling, 
+expert input
+Evidence 
+incorporation
+Evidence 
+incorporation
+E4.5
+Prob. distribution 
+over Z, ε, and # of 
+actions per reboot
+D4.4
+Different iterations of A 
+coordinate, e.g. via acausal 
+coordination or sabotage of the 
+datacenter reset
+Evidence 
+incorporation
+E4.4
+Threat modelling
+D4.1
+A’s capabilities improve during 
+deployment due to online 
+training such that Z decreases
+D4.3
+The deployment protocol is not 
+adhered to
+C2.6
+Self-exfiltration is not possible 
+in D with error rate ε
+C2.5
+Malicious code attacks are not 
+possible in D with error rate ε
+D4.2
+Subtly misleading research 
+over extended periods is not 
+caught by C
+E3.1
+Online training
+Figure 11: The full CAE diagram showing the entire safety case sketch.
+25
