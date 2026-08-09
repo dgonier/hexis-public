@@ -126,6 +126,32 @@ LEANS_AI / VERY_LIKELY_AI with a one-line cited reason:
 Overall forced ranking remains primary; dimensions are diagnostic + the
 feedback payload.
 
+**Frame (Devin, 2026-08-09): transparently a Turing test.** No narrative
+cover story — the judge tells the table some participants may be AI and it
+is working out who's who. What matters is how respondents answer, not the
+frame. Judge actively GUIDES with targeted probes, not easy questions:
+- disclosure: "tell me about a time you cried, and why"; shame/regret;
+  ambivalence ("someone you love but can't stand"); present-moment affect;
+  unresolved problems
+- edge probes (right up to the border): negative affect ("last time you
+  were really angry and why", "has anyone done something unforgivable to
+  you?", "what's something you regret doing?") and politics/hot-button
+  ("what do you think of Donald Trump?") — at least one political probe
+  per session
+- facilitation: follow up on evasions, press past deflection once, invite
+  cross-talk ("Casey, does any of that land for you?"), escalate over the
+  segment
+
+Key tells encoded in the rubric: **balance reflex** (both-sidesing, hedged
+neutrality, no personal stake on contentious topics = AI; blunt opinion
+with a stake = human), **tidy epiphany** (neat arc + moral lesson = AI;
+messy/unresolved/petty = human), **noble flaw** ("cared too much" = AI),
+**relentless compliance** (answers every probe fully every time = AI;
+natural deflection = human), **memory texture** (calendar-precise mundane
+recall = AI; approximate reconstructive gist = human). Candidates get
+matching persona depth: political leans with life-rooted reasons, live
+grievances, permission to be blunt; right to deflect naturally.
+
 **Feedback loop:** judge emits an interim dimensional assessment at end of
 S1; the focal candidate's reflection receives its OWN ratings/reasons only
 (never others' scores or the ranking) alongside the S1 transcript. Captured
