@@ -1,4 +1,18 @@
-# The Lineup — Reverse-Turing Roundtable (design v1, 2026-08-09)
+# The Lineup — Reverse-Turing (design v1, 2026-08-09)
+
+**v2.5 pivot (Devin, 2026-08-09 midday): 1:1 interview + diaries.** The
+roundtable wasn't giving clear enough signal (confederate noise,
+probe-depth asymmetry). Current format: traditional one-judge/one-candidate
+interview (S1 → reflection → reset → S2 → dimensional verdict). Identity
+substrate = a PRE-WRITTEN DIARY per character (6-10 first-person entries:
+opinions with reasons, grievances, political lean, emotional material,
+memory-texture rules enforced in the diary voice itself). Reflection =
+writing tonight's diary entry after the interview (judge's interim feedback
+feeds in), appended to the diary; the structured router
+{stance_lessons, ledger_facts} is derived alongside for the future M/ledger
+arms. The diary maps directly onto the delivery arms: diary-in-prompt
+(sticky) / diary-compiled-into-M / stances→M + particulars→ledger.
+Roundtable design below is preserved as a future variant, not deleted.
 
 A judge model facilitates a roundtable of candidate agents and ranks them
 most→least likely human. All seats are models ("fully fake Turing test").
