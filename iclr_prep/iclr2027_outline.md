@@ -214,9 +214,14 @@ degeneracy guard. Best: single mid-network layer, scale 8. Naive injection at al
 layers degenerates at every scale — worth reporting, since compiled modulation drives all
 those layers stably. Result: 42% injection (≈ C's 46%), **14% hold vs F's 89%**.
 
-**7.2 Is it the steering vector inside the system? — STILL OPEN.** Every condition bundles
-`d*`. C appears to be modulation-only, which gives partial isolation, but there is no
-`F − d*` arm. This is the last blocking ablation for the dispositional axis. Cheap at 4B.
+**7.2 Is it the steering vector inside the system? — CLOSED (Aug 8), and d\* leaves the
+paper.** Recon showed d\* was never applied at dispositional eval (the submitted condition-F
+description was wrong); the Steering Audit confirms adding it does nothing (−0.3pp @0.05)
+or hurts (−6.4pp @0.10), with the F-anchor reproducing 89% (86.9% [79.2, 93.3]). Decision
+(Devin): d\* is agentic-era machinery — omit from the main body entirely; condition F =
+compiled M + curated slot. One appendix sentence discloses the training-time auxiliary
+signal and cites this ablation, so paper and released code cannot diverge. This section
+becomes a one-line footnote in §7, freeing ~0.3pp of body space.
 
 **7.3 Is it soft prompting? — OPEN.** Prefix-tuning at matched parameter count. The
 sharpest framing: prefix tuning also avoids human-readable context, so this separates

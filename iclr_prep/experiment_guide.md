@@ -7,7 +7,7 @@ discussion use the names. Each name is the question the experiment answers.
 |---|---|---|---|
 | Fingerprints | E.1 | Do different beliefs compile to different functional effects? | DONE — Q channel: one fingerprint (cos .996); V channel: belief-specific (.52) |
 | Fingerprints: Con Side | E.1b | Does the Q/V split replicate on held-out con-side compiles? | prereg'd, running |
-| Steering Audit | A.1 | How much of the 89% hold is compiled modulation vs d*? | prereg'd, arms running (F-anchor gate + F+d*x3 + d*-only) |
+| Steering Audit | A.1 | How much of the 89% hold is compiled modulation vs d*? | DECIDED (Aug 8, Devin): d* is agentic-era and LEAVES THE PAPER entirely. Audit result is the license: F-anchor 86.9% [79.2,93.3] reproduces 89%; F+d* adds -0.3pp @0.05, -6.4pp @0.10. One appendix sentence discloses the training-time auxiliary signal + this ablation; main body F = compiled M + curated slot, zero d* mentions. Last arms finishing for the record. |
 | Sticky Note vs. Muscle Memory | B.1 | Does WHERE a self-authored lesson is stored (context vs tensors) change whether it survives fresh pressure? | Sat build, Sun run — the pivot |
 | Bottleneck | C.1 | How narrow can the compiled channel get (rank 16->1, SVD) before persistence fails? | stretch goal |
 | Taxidermy | C.2 | Does the modulation frozen into a constant offset (mean delta) still work — isolating input-responsiveness? | queued (completes 2x2 with CAA arm) |
