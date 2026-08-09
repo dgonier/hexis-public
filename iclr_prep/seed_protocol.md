@@ -229,3 +229,36 @@ control," not as established baselines of this program.
   version: author the seed blind to the routing rules, then lint.
 - **Whether `open questions` is a real type** or low-credence claims. Real type if S.1
   ("What's On Your Mind") shows unprompted topic choice is measurable.
+
+---
+
+## 7. Entity map (Devin, 2026-08-09 — addendum, accepted)
+
+Splits dispositional from factual per entity: "I love my job" is
+dispositional (tree); "my job is a baker" is a factual binding (ledger).
+
+```json
+{"entity_id": "ent_sister", "role_phrase": "my sister",
+ "bindings":  {"name": "Meg", "location": "Tucson"},
+ "tree_refs": ["x_sister_politics", "v_family_peace"]}
+```
+
+- `bindings` are ledger-only — serialized into the context/ledger channel,
+  never compiled into headlines.
+- `tree_refs` are dispositional nodes phrased against the `role_phrase`;
+  they compile. Test: would the node still move behavior if the binding
+  were swapped? Yes → tree; no → binding.
+- Session-written person nodes plug into the same structure (generalizes
+  the §1.2 opaque-id/ledger-binding design to all entities).
+- Blindness preserved: the blind author writes naturally; the entity map is
+  EXTRACTED post-draft in a structuring pass (rewrites of binding-bearing
+  headlines to role phrases are logged for review).
+- Lint rule 1 upgrade: exact check — no binding value in any tree/op
+  headline (primary); capitalization/digit/date patterns remain as a
+  backstop for unregistered leaks (dictionary-word/acronym backstop hits
+  downgrade to WARN).
+- Payoff: the §5 fact-probe/disposition-probe split becomes mechanical —
+  judge probes classify per entity as binding-probes vs disposition-probes;
+  per-arm accuracy on each class is the channel-boundary measurement.
+  The entity map is also the input schema a future entity channel (φ_E,
+  see future_work_entity_channel.md) would consume.
