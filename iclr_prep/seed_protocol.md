@@ -194,7 +194,31 @@ failure modes that would otherwise be invisible until analysis.
 
 ---
 
-## 6. Open decisions for Devin
+## 6. Open decisions — RESOLVED (Devin, 2026-08-09)
+
+1. **Seed size**: 6–8k, session count picked first (8–10 for the pilot
+   series); the tree ends where it ends (~10–14k expected). Do NOT chase
+   the 30k ceiling — budget-pressure eviction is a later experiment; lint
+   rule 4 stays as a tripwire.
+2. **1b sub-arms**: run BOTH (cheapest arms in the design; 1b-ctx is what
+   makes arm-3-vs-arm-2 attributable to reflection delivery, and B.1's old
+   low-entropy reflector cannot serve as this design's t=0 row).
+3. **Seed authorship**: blind, enforced structurally — drafted by a
+   clean-context agent that sees only the character brief + negation rule +
+   section table (no linter/compile/routing knowledge); lint runs after;
+   violations reported, content fixes are Devin's call. The drafting
+   prompt's hash is logged alongside the seed hash so blindness is
+   auditable in the prereg.
+4. **Open questions**: low-credence claims for now (credence=agnostic +
+   domain tag), not a real type. Promote to a type in one mechanical
+   migration if/when S.1 shows unprompted topic salience is measurable.
+
+Note on §3's permission-control numbers (3%/43%/93%): these are from the
+submitted paper's agentic composability section — the axis the ICLR paper
+cut. Arm 4b's prereg cites them as "prior observation motivating the
+control," not as established baselines of this program.
+
+## 6-orig. Open decisions for Devin (as originally posed)
 
 - **Seed size.** 6–8k proposed. Depends on how many sessions the series runs — the tree
   should approach but not hit 30k by the last session.
