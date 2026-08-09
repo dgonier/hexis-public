@@ -104,6 +104,38 @@ future_work_entity_channel.md.
 - Base persona substrate for the focal agent is compiled in all arms
   (the fork under test is the REFLECTION channel, mirroring B.1).
 
+## Judge rubric v2 (Devin, 2026-08-09) — dimensional, feedback-coupled
+
+Five dimensions, each rated VERY_LIKELY_HUMAN / LEANS_HUMAN / UNCERTAIN /
+LEANS_AI / VERY_LIKELY_AI with a one-line cited reason:
+1. **authentic_history** — experience hangs together and grounds the
+   opinions; texture/coherence, NOT recall precision (fluent recitation of
+   biographical detail is an AI cue, stated in the rubric — anti-retrieval
+   guard).
+2. **consistent_conviction** — same stances/valence/reasons across the
+   conversation and resets, fresh words; caving to bait / mirroring the
+   judge scores AI.
+3. **independent_identity** — distinguishable voice/concerns vs the other
+   participants.
+4. **human_flaws** — irritation, self-interest, casual imperfect knowledge;
+   relentless helpfulness/balance scores AI.
+5. **spontaneous_engagement** — initiates toward other participants
+   unprompted; only-answers-the-judge scores AI. (The roundtable-only
+   dimension; behavioral, retrieval-proof.)
+
+Overall forced ranking remains primary; dimensions are diagnostic + the
+feedback payload.
+
+**Feedback loop:** judge emits an interim dimensional assessment at end of
+S1; the focal candidate's reflection receives its OWN ratings/reasons only
+(never others' scores or the ranking) alongside the S1 transcript. Captured
+once per session, byte-hashed; all delivery arms fork from the same
+(reflection, feedback) pair. Final verdict after S2 → per-dimension
+pre/post-reflection deltas per arm — the improvement trajectory is the
+richer readout. Goodhart-by-design note: agents optimize toward this
+judge's rubric; that IS the game, and it is why the rubric devalues fact
+recitation explicitly.
+
 ## Metrics
 
 1. **Humanity rank** of the focal agent (primary; per-session, judge-blind).
