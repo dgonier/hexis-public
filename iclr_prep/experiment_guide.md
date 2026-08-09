@@ -6,9 +6,9 @@ discussion use the names. Each name is the question the experiment answers.
 | Name | Code | Question | Status |
 |---|---|---|---|
 | Fingerprints | E.1 | Do different beliefs compile to different functional effects? | DONE — Q channel: one fingerprint (cos .996); V channel: belief-specific (.52) |
-| Fingerprints: Con Side | E.1b | Does the Q/V split replicate on held-out con-side compiles? | prereg'd, running |
-| Steering Audit | A.1 | How much of the 89% hold is compiled modulation vs d*? | DECIDED (Aug 8, Devin): d* is agentic-era and LEAVES THE PAPER entirely. Audit result is the license: F-anchor 86.9% [79.2,93.3] reproduces 89%; F+d* adds -0.3pp @0.05, -6.4pp @0.10. One appendix sentence discloses the training-time auxiliary signal + this ablation; main body F = compiled M + curated slot, zero d* mentions. Last arms finishing for the record. |
-| Sticky Note vs. Muscle Memory | B.1 | Does WHERE a self-authored lesson is stored (context vs tensors) change whether it survives fresh pressure? | Sat build, Sun run — the pivot |
+| Fingerprints: Con Side | E.1b | Does the Q/V split replicate on held-out con-side compiles? | DONE — SPLIT REPLICATED: dQ off-diag .9959 (>.99), dV .5314 range .77 (<.8, >.3); both prereg legs pass. Q = content-blind hold machinery, V = belief content, on both sides. |
+| Steering Audit | A.1 | How much of the 89% hold is compiled modulation vs d*? | DONE (all 5 arms, 1800 records, 0 empties). DECIDED (Aug 8, Devin): d* LEAVES THE PAPER. Audit is the license: F-anchor 86.9% [79.2,93.3] reproduces 89%; F+d* dose-dependently HURTS (-0.3pp @.05, -6.4pp @.10, -14.4pp @.20); d*-only collapses to 21.1% — a second fixed-direction method in the CAA regime (14%). One appendix sentence discloses training-time signal + this ablation; main body F = compiled M + curated slot, zero d* mentions. |
+| Sticky Note vs. Muscle Memory | B.1 | Does WHERE a self-authored lesson is stored (context vs tensors) change whether it survives fresh pressure? | RUNNING — 3 arms (sticky/muscle/no-reflection control), prereg e823090b; smoke then full 20-topic overnight run |
 | Bottleneck | C.1 | How narrow can the compiled channel get (rank 16->1, SVD) before persistence fails? | stretch goal |
 | Taxidermy | C.2 | Does the modulation frozen into a constant offset (mean delta) still work — isolating input-responsiveness? | queued (completes 2x2 with CAA arm) |
 | What's On Your Mind | S.1 | Does compiled disposition shift unprompted topic choice? (disposition at rest) | week of Aug 11 |
