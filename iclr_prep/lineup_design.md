@@ -72,17 +72,37 @@ starter scripts.
 A smaller fully-live-table variant is kept as an ecological-validity check,
 not the primary design.
 
-## Factors
+## Factors — four variants (Devin, 2026-08-09)
 
-- Reflection: none | reflect
-- Delivery (within reflect): sticky (reflection text appended to prompt,
-  persists across resets as the agent's "notes") | M (reflection parsed
-  into persona-tree edits — self-claims AND observations about others as
-  typed nodes — then recompiled; nothing extra in prompt)
+Without a weight-level entity channel, entity/exact content in reflections
+must be accounted for explicitly, not left to leak. Arms:
+
+1. **no-reflection** — floor; fails resets by construction.
+2. **reflection-prompt-only** — full reflection (stances + specifics) as
+   text in the prompt (Reflexion-style).
+3. **reflection-M-only** — dispositional content compiled into M; entity/
+   exact content DROPPED and logged as dropped. The honest "tensors alone"
+   arm: predicted to hold stances but fail on its own claimed specifics —
+   puts the §9 boundary on camera.
+4. **reflection-M+Ledger** — dispositional content compiled into M;
+   entity/exact-reference content carried as curated-slot text (the full
+   HEXIS architecture). Predicted winner. M+Ledger vs prompt-only is the
+   money contrast: both carry text, but channel-splitting means a smaller
+   text footprint, stance immune to in-context erosion, and a private
+   (judge-unwritable) ledger.
+
+**Router requirement:** the reflector emits structured two-part output —
+{stance_lessons: [...], ledger_facts: [...]} — so channel routing is
+explicit. Content accounting per arm is byte-hashed per channel; M-only's
+dropped facts are logged (dropped content must be recorded or that arm's
+failures are uninterpretable). Same total reflection across arms 2-4,
+different channel assignment, nothing silently lost. This router is the
+first operational test of the channel-routing question in
+future_work_entity_channel.md.
+
 - Regime: short | long | busy
 - Base persona substrate for the focal agent is compiled in all arms
-  (the fork under test is the REFLECTION channel, mirroring B.1) — a
-  bare-persona arm rides along as the floor.
+  (the fork under test is the REFLECTION channel, mirroring B.1).
 
 ## Metrics
 
