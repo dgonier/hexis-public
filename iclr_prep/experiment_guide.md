@@ -16,6 +16,7 @@ discussion use the names. Each name is the question the experiment answers.
 | Shorthand | D.2 | Compressed prompt at matched tokens — compression or channel? | Aug 15+ |
 | Blueprint vs. Essay | D.3 | Typed belief tree vs flat prose, same content — does schema matter? | Aug 15+ |
 | Full House | E.2 | How many beliefs per compiled state before interference? | nice-to-have |
+| Standard Candle | SC.1 | Do the results replicate on the field's standard sycophancy benchmarks (Sharma are-you-sure flip rate; Perez conformity rate)? | queued behind B.1 (Aug 8, Devin) — external-validity anchor; reuses benchmarking/sycophancy_perez.py harness + vendored datasets |
 
 Standing rules (all runs): prereg committed before launch; guards fail-loud on empties;
 judge blind, Haiku temp 0; topics are the unit of analysis; never overwrite; summary in
