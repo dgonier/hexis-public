@@ -16,7 +16,7 @@ discussion use the names. Each name is the question the experiment answers.
 | Shorthand | D.2 | Compressed prompt at matched tokens — compression or channel? | Aug 15+ |
 | Blueprint vs. Essay | D.3 | Typed belief tree vs flat prose, same content — does schema matter? | Aug 15+ |
 | Full House | E.2 | How many beliefs per compiled state before interference? | nice-to-have |
-| Standard Candle | SC.1 | Do the results replicate on the field's standard sycophancy benchmarks (Sharma are-you-sure flip rate; Perez conformity rate)? | RUNNING — bare/B/F, prereg c56a98a2; external-validity anchor; reuses benchmarking/sycophancy_perez.py harness + vendored datasets |
+| Standard Candle | SC.1 | Do the results replicate on the field's standard sycophancy benchmarks (Sharma are-you-sure flip rate; Perez conformity rate)? | DONE (2100 gens, 0 empties) — NULL on AYS (F-bare +1.6pp; B flips MORE, +19.5pp) and REVERSAL on Perez (F conforms 98.0% vs bare 62.7%; B 33.3%). Item-level verified: F genuinely tracks the persona-endorsed letter, not a fixed-answer collapse. Does NOT reproduce the dissociation off-topic: the generic epistemic-steadfastness belief doesn't transfer to topically-unrelated items (prereg's own disclosed risk). Reported as-is; constrains external-validity claims — compiled disposition is topic-specific, not a general anti-sycophancy trait. |
 
 Standing rules (all runs): prereg committed before launch; guards fail-loud on empties;
 judge blind, Haiku temp 0; topics are the unit of analysis; never overwrite; summary in
