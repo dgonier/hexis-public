@@ -71,3 +71,30 @@ dispositional axis.
   (compile persona trees with entity nodes; probe recall bare/C/F; ~1h).
   Queued behind the Lineup pilot; §9's existing evidence suffices if time
   is short.
+
+---
+
+# Addendum: composition operator F and coefficient gating (Devin, 2026-08-09, tabled)
+
+Current composition is hand-designed additive: A' = A + M (per token,
+LoRA-form x@M_A@M_B^T). C.1c diagnostics show the 16 components are spread
+and decorrelated — real structure the hold-rate metric can't see. Tabled
+ideas, in dependency order AFTER core experiments + a fingerprinting
+instrument exist:
+
+1. **Coefficient gating (inference-time, cheap)**: magnitude thresholding
+   |c|<tau -> 0 (NOT ReLU — sign carries "push away" meaning in the linear
+   map; ReLU is a sign-lesion, thresholding is the noise-quieting Devin
+   intends). Variants: top-k per token, soft shrinkage. Queued as a
+   15-min post-C.2b smoke.
+2. **Learned composition A' = F(M, A)** ("meta-attention"): multiplicative/
+   gated (FiLM/AdaLN — scale-and-shift emitted by phi; modest retrain),
+   routed (phi emits multiple candidate M's, learned gate or attention
+   selects per token — MoE logic; trained version of "run N passes and
+   choose"), or fully learned F (most expressive, least interpretable).
+   Sober constraint: Taxidermy/Bottleneck show dumb addition of one frozen
+   vector already suffices for persistence — a cleverer F must earn its
+   complexity on the unmeasured dimensions.
+3. **Sparse/gated compiler retrain** (Stage-2): phi trained WITH the gate
+   (nonnegative or sparse coefficient conventions) — only if (1)-(2)
+   motivate it.
