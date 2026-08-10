@@ -98,3 +98,13 @@ instrument exist:
 3. **Sparse/gated compiler retrain** (Stage-2): phi trained WITH the gate
    (nonnegative or sparse coefficient conventions) — only if (1)-(2)
    motivate it.
+
+**Smoke result (c1d, 2026-08-09, commit 938178f3):** thresholding is
+nearly free (86.7% hold, coherence intact — the small coefficients are
+noise); amplification is monotonically harmful even after quieting
+(x2.0: 33% thresholded vs 20% raw, with think-tag leakage as the
+degeneracy signature). Quiet-then-amplify fails more gracefully but never
+beats alpha=1 — hold-rate is saturated, no headroom. TABLED, with one
+redirect noted: amplification's natural target is INSTALL (46%, real
+headroom), not hold. If revisited, aim quiet-then-amplify at stance
+installation rate.
