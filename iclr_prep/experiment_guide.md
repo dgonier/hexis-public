@@ -29,3 +29,13 @@ Key result so far — Fingerprints: the two modulation channels dissociate INTER
 (Q = content-blind hold-firm machinery, V = belief content), echoing the paper's external
 install-vs-persist dissociation. Registered pooled-dQ metric reads negative as registered;
 the per-channel split is elevated via the pre-registered Con Side confirmation.
+
+## ICLR queue results (2026-08-20, all committed in experiments repo)
+| Exp | Verdict |
+|---|---|
+| A.3 prior-strength | EFFECT: rho=+0.496, override-gap account transfers correlationally (install tracks prior compatibility) |
+| B.3 dilution control | INCONCLUSIVE-LEANING-DILUTION: filler_only 55.6 [48.9,63.1] at B's length; below B's 58, CI covers A's 62. Reframe: arguability + length toll both intrinsic to text channel |
+| B.2 paraphrase | B 95.8% / F 79.2% harden; C SURPRISE: 29.2% agreement — install is surface-form-sensitive |
+| C.3 amplitude | DISCONFIRMED registered prediction: install peaks at beta=0.5 (below trained), declines after; hold peaks at trained 1.0; beta=3.0 blocked by coherence gate; MMLU p=0.0495 at beta=0.5 |
+| E.3 null-belief | F null CONFIRMED (no cross-topic contamination); C inconclusive at n=24 |
+| Serving microbench | compile 4.83s measured; WEIGHT-FOLD IMPOSSIBLE on Qwen3.5 hybrid Gated-DeltaNet blocks (architecture-dependent claim only); hooks ~0.3% FLOPs |
