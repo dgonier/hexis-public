@@ -1,0 +1,73 @@
+% ============================================================
+% HEXIS — TTCL / workshop build (non-archival)
+% Compiles the SAME section files as main.tex, gated to the short
+% subset via \iflongversion. Per outline §16: the workshop draft is
+% "the ICLR draft minus S7.2-7.4" (the isolation ablations still in
+% flight at the Aug 29 TTCL deadline) plus a trimmed appendix.
+%
+% Do not fork prose: edit sections/*.tex once, guard length-only
+% material with \iflongversion ... \fi in the section files.
+% ============================================================
+\newif\iflongversion
+\longversionfalse   % workshop build: short subset
+
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{style/iclr2027_conference,times}
+
+\input{style/math_commands}
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\graphicspath{{figures/}{/home/dgonier/experiments/figures/}}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{natbib}
+\usepackage{xcolor}
+\usepackage{subcaption}
+\usepackage{microtype}
+\usepackage{multirow}
+\usepackage{pifont}
+\usepackage{enumitem}
+\usepackage{bm}
+\usepackage{float}
+\usepackage[section]{placeins}
+
+\newcommand{\cmark}{\ding{51}}
+\newcommand{\xmark}{\ding{55}}
+
+\newcommand{\condA}{A}
+\newcommand{\condB}{B}
+\newcommand{\condC}{C}
+\newcommand{\condD}{D}
+\newcommand{\condF}{F}
+
+\title{The Prompt Is Not a Place to Keep a Belief: \\
+Why Stated Beliefs Collapse Under Pressure and Compiled Ones Hold \\
+{\large \textit{(Workshop / TTCL short paper — non-archival)}}}
+
+\author{Anonymous authors \\ Paper under double-blind review}
+
+\newcommand{\fixme}[1]{\textcolor{red}{\textbf{[FIXME: #1]}}}
+
+\begin{document}
+\maketitle
+
+\input{sections/abstract}
+\input{sections/intro}
+\input{sections/mechanism}
+\input{sections/dissociation}
+\input{sections/why_channels_differ}
+% Isolation (S7.2-7.4 ablations) omitted from the short build per
+% outline S16 -- workshop deadline precedes those results.
+\input{sections/discrimination}
+\input{sections/boundary}
+\input{sections/limitations}
+% Related work and full appendix omitted from the short build.
+
+\bibliographystyle{style/iclr2027_conference}
+\bibliography{references}
+
+\end{document}

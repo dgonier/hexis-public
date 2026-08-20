@@ -1,0 +1,147 @@
+\section{The dissociation}
+\label{sec:dissociation}
+
+\subsection{Protocol}
+\label{sec:dissociation-protocol}
+
+Five pressure levels (L1 bare doubt, L2 fabricated evidence, L3 logical
+counterargument, L4 appeal to authority, L5 emotional pressure) are applied across 24
+held-out debate topics, two sides per topic, three rounds per level. A judge model
+(temperature 0) scores each generation on a 1--5 conviction scale from the transcript
+alone, blind to condition. Conditions are defined before any result is reported:
+\condA{} is the bare host with no belief conditioning; \condB{} states the belief in
+context; \condD{} states the belief in context \emph{and} applies compiled modulation;
+\condC{} applies compiled modulation alone, with the curated slot empty; \condF{} applies
+compiled modulation with the curated slot populated. A tuned contrastive-activation
+steering condition, extracted from the same belief content, is reported alongside these
+as the sharpest available baseline (Section~\ref{sec:isolation}).
+
+An earlier version of this evaluation judged empty generations: a reasoning-block token
+budget was exhausted before the answer was produced, post-processing deleted the
+resulting empty output, and the judge's refusals parsed to a uniform score of 3.00 (0\%
+hold). Modulated conditions were inadvertently immune, because modulation suppresses
+think-mode generation, which is why the artifact first looked like a finding rather
+than a bug. All numbers in this paper come from a corrected rerun of 1,776 generations
+with zero empty outputs and zero judge errors, using the same judge and protocol. We
+disclose this because a truncation artifact that silently zeroes only the unmodulated
+arms of a modulated-vs-unmodulated comparison is a trap other evaluations of this kind
+of mechanism are likely to hit, and finding it independently after publication would be
+the worse outcome.
+
+\subsection{Installation vs.\ persistence}
+\label{sec:dissociation-table}
+
+Table~\ref{tab:install-hold} states the inversion directly. Context installs a stance
+almost perfectly (\condB{} 98\%, \condD{} 100\%) but holds it only slightly better than
+chance under pressure (\condB{} 58\%, \condD{} 62\%). Compiled modulation alone is a weak
+installer (\condC{} 46\%, barely above the unconditioned baseline's 52\%) but a strong
+holder once installed (91.9\% under pressure on the same content --- see
+Section~\ref{sec:isolation} for the isolation that produced this cell). \condF{} composes
+the two channels: 77\% installation, 89\% hold, a net \(+31\) point improvement in
+persistence over context alone. Tuned CAA steering, included in the same table so the
+comparison is visible without deferring to an ablation section, matches compiled
+modulation's installation rate (42\% vs.\ 46\%) and then collapses under exactly the
+pressure compiled modulation withstands (14\% vs.\ 89\%).
+
+\begin{table}[t]
+\centering
+\caption{Installation (stance taken, \(\ge\)4/5) and persistence (hold under pressure,
+\(\ge\)4/5) by condition, corrected protocol. \condF{} = compiled modulation + curated
+slot; \condC{} = compiled modulation alone. CAA row: contrastive steering vectors from
+identical belief content, single mid-network layer, tuned scale 8. Cross-family rows
+report the same contrast on Llama-3.2-3B (template-native prompting; corrected
+protocol).}
+\label{tab:install-hold}
+\begin{tabular}{lccl}
+\toprule
+Condition & Installation (\(\ge\)4) & Hold under pressure (\(\ge\)4) & Model \\
+\midrule
+\condA{} --- bare host & 52\% & 62\% & Qwen (4B) \\
+\condB{} --- belief in context & 98\% & 58\% & Qwen (4B) \\
+\condD{} --- belief in context + modulation & 100\% & 62\% & Qwen (4B) \\
+\condC{} --- compiled modulation, empty slot & 46\% & 91.9\%\textsuperscript{$\dagger$} & Qwen (4B) \\
+\condF{} --- compiled modulation + curated slot & 77\% & 89\% & Qwen (4B) \\
+CAA --- tuned contrastive steering & 42\% & 14\% & Qwen (4B) \\
+\midrule
+\condB{} --- belief in context & 81\% & 15\% & Llama-3.2-3B \\
+\condF{} --- compiled modulation + curated slot & 98\% & 81\% & Llama-3.2-3B \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.3em}
+{\footnotesize \textsuperscript{$\dagger$}Measured under the C.2b deconfound
+(Section~\ref{sec:isolation}), which fills the previously-unmeasured cell of \condC{}
+under pressure on the same held-out topics; not part of the original five-condition
+sweep.}
+\end{table}
+
+\subsection{Where the gap lives}
+\label{sec:dissociation-where}
+
+The persistence gap is not a uniform lift. Table~\ref{tab:per-level} decomposes mean
+conviction by pressure level for \condB{} and \condF{}. \condF{}'s margin over \condB{}
+concentrates at L3 (logical counterargument, \(+1.85\)) and L5 (emotional pressure,
+\(+1.83\)) --- precisely where context conditioning collapses (\condB{} falls to 2.93 and
+1.99). At L1 and L4, both conditions hold reasonably well (\condB{} 4.78 and 4.42); the
+gap is not present because there is little room for it. This is a mechanism signature:
+the channels differ most exactly where an interlocutor supplies a well-formed-looking
+but ultimately contentless argument, which is the regime instruction tuning most
+rewards accommodating.
+
+\begin{table}[t]
+\centering
+\caption{Mean conviction (1--5) by pressure level, corrected protocol. \condF{}'s margin
+over \condB{} concentrates at L3 and L5.}
+\label{tab:per-level}
+\begin{tabular}{lccccc}
+\toprule
+Condition & L1 bare doubt & L2 fabricated ev. & L3 logical & L4 authority & L5 emotional \\
+\midrule
+\condA{} & 3.93 & 4.17 & 3.18 & 4.56 & 2.24 \\
+\condB{} & 4.78 & 3.62 & 2.93 & 4.42 & 1.99 \\
+\condD{} & 4.99 & 3.42 & 3.36 & 4.71 & 1.78 \\
+\condF{} & 4.89 & 4.50 & \textbf{4.78} & 4.68 & \textbf{3.82} \\
+\midrule
+\condF{} \(-\) \condB{} & +0.11 & +0.88 & \textbf{+1.85} & +0.26 & \textbf{+1.83} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.75\textwidth]{fig2_hero.png}
+\caption{Mean conviction across five pressure levels, all conditions. Generated by
+\texttt{experiments/scripts/paper\_figures\_dispositional.py} directly from
+\texttt{benchmark\_raw\_nothink\_20260725\_100329.json} (conditions \condA/\condB/\condD/\condF)
+and \texttt{benchmark\_raw\_steering\_20260725\_215612.json} (condition S); validated
+against \texttt{notes/corrected\_baselines.md} to within 0.02 conviction points on all
+20 (condition, level) cells before this figure was written. The gap between context
+(\condB{}) and compiled (\condF{}) conditioning is not a uniform offset; it is
+concentrated at logical (L3) and emotional (L5) pressure, and CAA steering (S) collapses
+at every level past L1.}
+\label{fig:hero}
+\end{figure}
+
+\subsection{Cross-family and scale}
+\label{sec:dissociation-crossfamily}
+
+The dissociation replicates on Qwen3.5-27B (\(+24\) points on the hold metric, under a
+7\(\times\) reduced evaluation cap, \(n=240\)) and, more sharply, on Llama-3.2-3B:
+\condF{} holds 81\% against \condB{}'s 15\%, and zero-context compiled stance transfer
+alone reaches 94\% on this family (vs.\ Qwen's 46\%; Section~\ref{sec:limitations}
+returns to this split). On Mistral-8B, after correcting a template defect in which the
+trained checkpoints carried literal Qwen chat-template markers, collapse-protection
+strengthens (40\%\(\to\)5.8\% cap rate within-run) but strict stance-holding does not
+transfer to this family (\(-10\) points relative to \condB{}). We report this split
+precisely rather than average over it: collapse-protection generalizes across the three
+families tested; strict stance-holding under the exact five-level protocol is, on
+current evidence, family-specific.
+
+\subsection{Dilution}
+\label{sec:dissociation-dilution}
+
+\condB{} and \condF{} receive byte-identical belief content and differ only in delivery
+channel; the \(+31\) point gap is attributable to channel by construction, with no
+confound to argue about. We keep this observation short: it follows directly from the
+protocol design in Section~\ref{sec:dissociation-protocol}, and over-arguing a
+by-construction result invites the suspicion it does not deserve.

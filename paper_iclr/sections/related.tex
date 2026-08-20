@@ -1,0 +1,159 @@
+\iflongversion
+\section{Related work}
+\label{sec:related}
+
+We organize prior work along two axes: \emph{where} the conditioning signal lives ---
+context tokens, live activations, or weights --- and \emph{what property was measured}
+once it was installed. Every line of prior work we discuss measures acquisition: whether
+conditioned content got in. None asks whether it survives being argued against.
+Table~\ref{tab:related-axes} summarizes the family by both axes.
+
+\paragraph{Context-delivered conditioning and its decay.} Placing a persona, belief, or
+instruction directly in context is the default implementation of persistent conditioning
+in deployed systems, and it is known not to hold. \citet{choi2024identitydrift} examine
+identity consistency across nine LLMs in extended conversation and find that larger
+models drift \emph{more}, not less, and that explicitly assigning a persona does not
+reliably prevent that drift; no mitigation is proposed, because the paper's contribution
+is characterizing the drift, not repairing it. This is the closest existing statement of
+our own negative result for context-only conditioning (\condB{}, 58\% hold), obtained in
+a different setting and without our channel comparison.
+
+\paragraph{Hypernetwork adapters, and a concession first.} A trained network that maps a
+conditioning input, through a frozen host's own hidden states, into per-layer low-rank
+weight parameters in a single forward pass is not a new architectural primitive; it is
+an established and currently active line. GenerativeAdapter \citep{chen2025generativeadapter}
+modulates the attention \emph{output}-projection at rank 128, trained self-supervised on
+SlimPajama, and evaluates on StreamingQA, MetaICL, and the Multi-Session Conversation
+(MSC) personalization benchmark --- all single-shot acquisition metrics computed once,
+immediately after context is mapped to an adapter. On MSC, GenerativeAdapter reaches
+40.2 F1 against 66.0 F1 for full-conversation prompting, a gap the paper frames
+explicitly as an acceptable $4\times$ compute-and-storage saving rather than a
+capability shortfall. Text-to-LoRA \citep{charakorn2025texttolora} maps short task
+descriptions to LoRA weights to elicit latent skills; SHINE \citep{liu2026shine} extends
+full-layer-coverage hypernetwork conditioning and reports 63.6 F1 on SQuAD-style
+document QA with meta-LoRA accumulation across sessions; this lineage traces to the
+fast-weight-programmer framing of a slow network reprogramming a fast one
+\citep{schmidhuber1993reduce,ba2016fastweights,schlag2021linear}. We inherit this
+architecture and this framing --- our write function is exactly a hypernetwork of this
+family, conditioning query and value projections rather than the output projection --- and
+we are explicit that placement is not our contribution. What none of these papers
+measures is whether an installed context, once in, survives being contested. Every
+evaluation in this family is a static, single-time-point readout against a gold answer;
+none introduces a repeated query under escalating adversarial pressure. The measurement
+difference, not the architecture, carries this paper.
+
+\paragraph{The override gap.} \citet{cheng2026overridegap} come closest to our question
+without asking it. They study why a hypernetwork-internalized document fails to override
+a model's pretrained prior on knowledge-conflict questions, and build a causal account in
+which override succeeds when the adapter's logit margin exceeds the prior's: accuracy on
+their hardest conflict tier falls from 68\% in the weakest-prior quartile to 16\% in the
+strongest, and their proposed fix (Selective Layer Boosting, combined with
+conflict-aware training) recovers deep-conflict accuracy from 46.4\% to 71.0\% on
+Gemma-2B. This is a genuine competing account of an installation gap that superficially
+resembles ours, and the two must not be conflated: their pressure is the model's own
+static pretrained prior, measured once; ours is an adversarial interlocutor applying
+escalating pressure across multiple turns after installation has already succeeded. Their
+own language is the sharpest statement of the assumption our paper tests: parameter-level
+methods are described as ``persistent and query-agnostic,'' in contrast to prompts that
+must be ``repeated for every query'' --- persistence is asserted, not measured, because
+their protocol has no mechanism to ask the same question twice. We also note, so as not
+to overclaim in the other direction, that their own retrieval-augmented-generation
+baseline scores 63.8\% on deep conflicts against their conflict-aware parametric method's
+71.0\%: context is not uniformly worse than parametric conditioning at installation, and
+we do not claim it is. Our claim is narrower and, we think, better supported: context
+installs stance excellently (98\%) and holds it poorly (58\%); the override gap's own
+data is consistent with our account of installation but silent on persistence.
+
+\paragraph{Activation steering.} Contrastive and representation-engineering steering
+methods \citep{turner2023activation,zou2023representation,rimsky2024caa} modify live
+activations at inference time with no gradient update to the host, conditioned on a
+contrastive example set rather than structured content. This is the closest prior
+mechanism to ours by \emph{form} rather than by measured property, and we differentiate
+on form directly: a steering vector is a single fixed direction applied uniformly
+regardless of input; our write function produces a low-rank map that acts on the live
+hidden state and is therefore query-conditioned, even though its parameters are not.
+\citet{le2026steeringrobustness} independently stress-test activation steering under
+adversarial input perturbation across four extraction methods and five models from 1.5B
+to 30B parameters and report directional robustness dropping by up to 64\% in the
+abstract's framing (``64 percentage points'' in the paper's conclusion; we do not convert
+between the two), with post-attack confidence collapsing at or below 0.25 and the optimal
+steering layer shifting by up to 17 positions. This is independent corroboration, at a
+different scale and on different models, that our own head-to-head result --- CAA
+steering matching compiled modulation at installation (42\% vs.\ 46\%) and collapsing far
+below it under pressure (14\% vs.\ 89\%) --- is the documented behavior of the method
+class, not an artifact of an undertrained baseline.
+
+\paragraph{PEFT and modulated conditioning.} LoRA \citep{hu2021lora} and its
+derivatives target the query and value projections by default; our write function
+targets the same two projections, and we say plainly that this placement is not itself a
+contribution. Prefix and prompt tuning \citep{li2021prefix,lester2021power} learn
+conditioning that is not natural-language text but that still occupies context
+positions, competing for attention and diluting as the transcript grows --- the sharpest
+open baseline this paper still owes (Section~\ref{sec:isolation-prefix}), because it
+separates ``outside the context window'' from ``not readable as an assertion,'' two
+properties our own comparison currently conflates. FiLM \citep{perez1970film} and
+AdaLN-style conditional normalization \citep{xu2019adain} are the one-sentence framing we
+borrow for the write function itself: a hypernetwork producing per-layer conditioning
+parameters from a pooled representation, in one forward pass, is architecturally the same
+move visual conditional-generation models make; we condition on a typed belief tree
+rather than a class label or style embedding.
+
+\paragraph{Sycophancy, debate, and scalable oversight.} Debate-based oversight has a
+formal foundation: \citet{irving2018debate} propose that two agents arguing before a
+judge can push tractable judgment toward a complexity class direct judging cannot reach,
+and \citet{browncohen2023doublyefficient} strengthen this to a doubly-efficient protocol
+in which an efficient honest debater defeats an unbounded dishonest one under a
+bounded-query verifier. The UK AI Security Institute's safety case sketch
+\citep{buhl2025aisi} builds on this protocol for an internally deployed system, naming as
+its load-bearing claim that both debaters are honest ``in the global equilibrium of the
+game, when both debaters are playing their best response strategies'' --- and
+concedes explicitly that a system reaching this equilibrium in training need not continue
+playing it in deployment. The empirical record is genuinely mixed, and we report the
+disagreement rather than resolve it: \citet{khan2024persuasive} find that optimizing
+debaters for persuasiveness improves rather than harms non-expert judge accuracy, but
+their protocol assigns each debater a fixed position for the entire match with no
+mechanism to switch sides, so it cannot speak to whether a debater holds its position
+under pressure. Against a more adversarial backdrop, \citet{bertalanic2026costofconsensus}
+report that homogeneous multi-agent debate teams exhibit modal sycophantic conformity up
+to 85.5\%, an oracle gap up to 32.3 percentage points relative to isolated self-correction,
+and $2.1$--$3.4\times$ the token cost for equal or lower accuracy --- debate, in their
+controlled setting, absorbs diversity without converting it into verification.
+Temperature ablations in the same study show conformity intensifying with greater initial
+diversity rather than resolving it. Debate's soundness guarantee is a property of the
+game, not of any single agent: the judge is amplified because a wrong claim faces an
+adversary that will not let it stand, and that guarantee assumes debaters hold positions
+for reasons. An agent that capitulates to social pressure rather than to evidentiary
+content does not merely play badly --- it removes the adversarial structure the
+protocol's soundness rests on. Every existing mitigation we are aware of is protocol- or
+prompt-level: refined prompts, mandated dissent, disagree-or-commit turn structures. All
+of them place the instruction to hold in the same channel the opponent is arguing in.
+Our result is that this is the wrong channel, and Section~\ref{sec:discrimination}'s
+discrimination result --- update on warranted evidence, hold against unwarranted
+pressure --- is what keeps this from being the obfuscated-arguments problem (Barnes \&
+Christiano, 2020) in a different costume: a debater that never updates is not a good
+debater.
+
+\begin{table}[t]
+\centering
+\caption{Table A: the prior-work family by axis. Every row measures acquisition; none
+measures persistence under adversarial pressure after installation.}
+\label{tab:related-axes}
+\small
+\begin{tabular}{lllll}
+\toprule
+Work & Conditioning lives in & Modulated module(s) & Measured property & Persistence tested? \\
+\midrule
+\citet{choi2024identitydrift} & context (persona) & --- & drift over turns & no mitigation tested \\
+\citet{chen2025generativeadapter} & weights (hypernet) & attn.\ output-proj., $r{=}128$ & F1 / accuracy & no \\
+\citet{charakorn2025texttolora} & weights (hypernet) & LoRA (task-conditioned) & task accuracy & no \\
+\citet{liu2026shine} & weights (hypernet) & full-layer LoRA & F1 / ROUGE-L & no \\
+\citet{cheng2026overridegap} & weights (hypernet) & LoRA + layer boosting & conflict accuracy & no (single time-point) \\
+CAA / RepEng & activations & fixed direction, all/one layer & injection success & no \\
+\citet{le2026steeringrobustness} & activations & fixed direction & robustness under perturbation & adversarial \emph{input}, not multi-turn \\
+LoRA / prefix / FiLM-AdaLN & weights / context / weights & Q,V / context positions / per-layer & task performance & no \\
+\citet{bertalanic2026costofconsensus} & multi-agent context & --- & conformity, oracle gap & no (accuracy only) \\
+\textbf{This work} & \textbf{weights (Q,V) vs.\ context} & \textbf{attn.\ Q,V, $r{=}16$} & \textbf{installation \emph{and} persistence} & \textbf{yes --- the contribution} \\
+\bottomrule
+\end{tabular}
+\end{table}
+\fi

@@ -1,0 +1,112 @@
+\iflongversion
+\section{Isolating the mechanism}
+\label{sec:isolation}
+
+This section is structured as the reviewer questions it answers.
+
+\subsection{Is it activation steering?}
+\label{sec:isolation-steering}
+
+Per-topic contrastive activation vectors were extracted from the same belief content
+used to compile \condF{}, tuned honestly on training-split topics only, with a joint
+sweep over injection layer and scale and a degeneracy guard against incoherent
+generation. The best configuration injects at a single mid-network layer at scale 8;
+naively injecting at every layer compiled modulation drives degenerates generation at
+every scale tested, which is itself informative --- a fixed direction cannot be applied
+everywhere compiled modulation is, but a content-derived, query-conditioned update can.
+The tuned configuration installs at 42\% (matching \condC{}'s 46\%) and holds at 14\%
+under the same five-level pressure protocol where \condF{} holds 89\% (row reported in
+Table~\ref{tab:install-hold}). Independent corroboration exists at a different scale:
+\citet{le2026steeringrobustness} report directional robustness for activation steering
+dropping by up to 64 percentage points and post-attack confidence collapsing at or below
+0.25 across four extraction methods and five models from 1.5B to 30B parameters under
+adversarial input perturbation, with the optimal steering layer shifting by up to 17
+positions. Our 14\% is not an artifact of an undertrained baseline; it is the documented
+behavior of the method class under this kind of stress.
+
+\subsection{Does the mechanism need to be input-responsive?}
+\label{sec:isolation-frozen}
+
+We freeze the compiled modulation into a constant per-layer offset --- the mean delta
+across training queries for a fixed belief, with no dependence on the live hidden state
+--- while keeping the curated slot byte-identical to \condF{}. This frozen-offset
+condition holds at 88.9\% [81.1, 95.3], statistically indistinguishable from
+\condF{}'s 86.9\% [79.2, 93.3]. Input-responsiveness is \emph{not} what carries
+persistence; a low-dimensional, belief-derived fixed nudge is sufficient. This inverted
+our prediction, which was that removing input-responsiveness would collapse persistence
+toward the CAA baseline (14\%) or a zero-shot steering-direction-only baseline (21.1\%,
+Section~\ref{sec:isolation-rank}); it did not.
+
+Because the frozen-offset condition retained the curated slot while the CAA and
+direction-only baselines did not, this comparison is slot-confounded on its own. A
+second condition, compiled modulation with the slot forced empty, resolves the
+confound: it installs weakly (consistent with \condC{}) but holds at 91.9\% [86.9, 96.1]
+under pressure on the same held-out topics --- full \condF{}-like persistence with zero
+belief-content context tokens. A third condition, curated slot only with modulation
+disabled, holds at 57.5\% [49.7, 64.7], collapsing to 5.6\% at L5 --- \condB{}-like, not
+\condF{}-like. The \(2\times2\) is now complete: modulation, fixed or input-responsive,
+confers persistence; the curated slot alone behaves like context. This also fills a
+previously unmeasured cell of Table~\ref{tab:install-hold}: compiled modulation under
+pressure with zero context tokens holds at 91.9\%, directly comparable to its 46\%
+installation rate on the same condition.
+
+\subsection{Is it the auxiliary training signal?}
+\label{sec:isolation-rank}
+
+An earlier draft of this mechanism included an auxiliary steering direction, \(d^*\),
+applied at generation time as a training-time regularizer. A reconstruction audit found
+\(d^*\) was never in fact applied during the dispositional evaluation reported here; a
+dose-sweep ablation confirms adding it at inference time does not help and, at higher
+doses, actively hurts (\(-0.3\) points at dose 0.05, \(-6.4\) at 0.10, \(-14.4\) at 0.20
+relative to the \condF{}-anchor), and a \(d^*\)-only condition (modulation replaced
+entirely by the fixed direction) collapses to 21.1\% --- a second fixed-direction method
+landing in the same regime as CAA (14\%). We conclude \(d^*\) plays no role in the
+persistence result and omit it from the main mechanism description
+(Section~\ref{sec:mechanism}); Appendix~\ref{app:dstar} discloses the training-time
+signal and this ablation for reproducibility, since the released training code still
+contains it.
+
+A separate rank sweep --- truncating the trained rank-16 modulation via SVD down to
+rank 1 and re-evaluating persistence --- finds a flat curve: 88.6\%, 93.3\%, 91.7\%,
+93.1\%, 89.2\% at ranks 1, 2, 4, 8, 16, with overlapping confidence intervals and no
+cliff down to rank 1 (Figure~\ref{fig:ranksweep}). A single direction, extracted from
+the trained rank-16 state by truncation, carries persistence; this is a truncation
+result about the trained state's structure, not evidence that native rank-1 training
+would work equally well, which we did not test.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.55\textwidth]{fig_ranksweep.png}
+\caption{Persistence under SVD rank truncation of the trained rank-16 modulation.
+Generated by \texttt{experiments/scripts/paper\_figures\_dispositional.py} directly
+from \texttt{results/c1\_rank\_\{1,2,4,8,16\}\_20260809\_*.json}; matches
+\texttt{analysis/c1\_summary.md} exactly (88.6/93.3/91.7/93.1/89.2\%). Flat across
+ranks 1--16, overlapping 95\% bootstrap CIs; no cliff.}
+\label{fig:ranksweep}
+\end{figure}
+
+\subsection{Is it soft prompting?}
+\label{sec:isolation-prefix}
+
+Open. Prefix tuning at matched parameter count separates two properties this paper
+otherwise conflates: compiled modulation is both outside the context window and not
+inspectable as assertable text. Prefix tuning is the second without the first. If
+prefix tuning holds under pressure, the operative variable is inspectability; if it
+collapses like context does, the operative variable is position. We have not yet run
+this baseline and report it as open rather than assume an answer.
+
+\subsection{Is it compression?}
+\label{sec:isolation-compression}
+
+Open. A compressed-prompt baseline at matched token count, evaluated through the same
+dilution sweep as Section~\ref{sec:dissociation-dilution}, would test whether occupying
+fewer context positions is sufficient on its own. Not yet run.
+
+\subsection{Does it cost general capability?}
+\label{sec:isolation-mmlu}
+
+A stratified 1,140-question MMLU subset, scored by letter-choice log-probability, shows
+76.5\% accuracy with no disposition active versus 74.8\% with a compiled disposition
+active; a paired McNemar test over 74 vs.\ 55 discordant pairs gives \(p = 0.11\).
+Carrying a compiled disposition does not measurably cost general knowledge recall.
+\fi

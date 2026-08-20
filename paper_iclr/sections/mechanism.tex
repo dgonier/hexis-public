@@ -1,0 +1,82 @@
+\section{Mechanism}
+\label{sec:mechanism}
+
+The compiled channel is a hypernetwork that amortizes into one forward pass what LoRA
+obtains by gradient descent: a trained write function maps a structured belief
+representation, through the frozen host's own hidden states, to per-layer conditioning
+parameters, in the manner of AdaLN- and FiLM-style conditional normalization
+\citep{perez1970film,xu2019adain} and of the hypernetwork-adapter lineage established by
+GenerativeAdapter \citep{chen2025generativeadapter} and Text-to-LoRA
+\citep{charakorn2025texttolora}.
+
+\subsection{The belief tree}
+\label{sec:mechanism-belieftree}
+
+Conditioning content is stored as a \emph{belief tree}: typed hierarchical nodes
+\(\{\text{statement}, \text{type} \in \{\text{claim}, \text{argument}, \text{evidence},
+\text{experience}, \text{strategy}\}, \text{credence}, \text{edges}
+\{\text{supports}, \text{contradicts}\}\}\). Trees are authored by hand for evaluation
+topics and produced by the reflection loop for the update-path experiments
+(Section~\ref{sec:discrimination}). An early design used numeric credence values on
+every node; we found no measurable benefit over a coarse categorical scheme and report
+this as a negative result rather than carry the added complexity forward.
+
+\subsection{The modulation}
+\label{sec:mechanism-modulation}
+
+The write function conditions query and value projections at a stride-3 subset of
+layers (11 of 32), rank 16. For a target layer with base query weight \(W_Q\), the
+modulated projection is
+\[
+  W_Q' = W_Q + \Delta_Q(\phi), \qquad \Delta_Q(\phi) = U_Q(\phi)\,V_Q(\phi)^\top,
+\]
+with \(U_Q(\phi) \in \mathbb{R}^{d \times 16}\), \(V_Q(\phi) \in \mathbb{R}^{d \times
+16}\) produced by the write function from the pooled belief-tree state \(\phi\); the
+value projection \(W_V'\) is constructed identically. The compilation is
+query-\emph{agnostic} --- \(\Delta_Q\), \(\Delta_V\) do not depend on the current
+prompt --- but its effect is query-\emph{dependent}, because the low-rank update acts
+on the live hidden state produced by whatever the model is currently attending to.
+
+\subsection{The write function}
+\label{sec:mechanism-write}
+
+Node representations are pooled with conviction-weighting, passed through a bottleneck,
+and decoded into the per-layer rank-16 factors above. We correct a timing claim from an
+earlier draft of this work: the previously reported $\sim$20 second compile latency
+belongs to an unrelated agentic retrieval prototype, not to this write function, which
+compiles in well under one second; end-to-end reflection $\to$ edit $\to$ recompile
+measures 2.5--3.0 seconds.
+
+\textbf{We define ``compile'' at first use, and it is lossy.} A trained write function
+translates the belief tree into per-layer low-rank tensors, fixed until the store
+changes, yet query-dependent in effect because the update acts on the live hidden state.
+We reject ``precomputed,'' which suggests caching a value that could in principle be
+looked up; this is a learned, lossy translation, and the loss is what
+Section~\ref{sec:boundary} characterizes. We also flag, to preempt confusion with an
+unrelated sense of the word, that ``compile'' here has no relation to \texttt{torch.compile}
+or graph compilation.
+
+\subsection{The curated slot}
+\label{sec:mechanism-slot}
+
+A small number of curated statements --- a deterministic walk from the belief tree's
+activated parent nodes --- are placed directly in context alongside the compiled
+modulation. This slot carries what the bottleneck cannot: specific, low-frequency
+content such as named entities, exact figures, or constrained action strings
+(Section~\ref{sec:boundary}). Condition \condF{} throughout this paper denotes compiled
+modulation plus this curated slot; \condC{} denotes compiled modulation with the slot
+empty (zero belief-content context tokens).
+
+\begin{figure}[t]
+\centering
+\fbox{\parbox{0.9\textwidth}{\centering \fixme{Figure 1: compile pass (belief tree
+$\to$ pooled state $\to$ write function $\to$ per-layer $\Delta_Q,\Delta_V$) and
+generation pass (modulated forward pass with the curated slot in context), side by
+side, readable without the caption. Insert
+\texttt{/home/dgonier/experiments/figures/} asset once
+\texttt{paper\_figures\_dispositional.py} emits it.}}}
+\caption{The compile pass and the generation pass. Compilation happens once per belief
+change (2.5--3.0s end-to-end); generation applies the resulting per-layer tensors on
+every subsequent forward pass at no additional context cost.}
+\label{fig:mechanism}
+\end{figure}

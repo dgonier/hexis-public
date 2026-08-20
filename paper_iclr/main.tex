@@ -1,0 +1,81 @@
+% ============================================================
+% HEXIS — ICLR 2027 submission (Track B, dispositional axis)
+% "The Prompt Is Not a Place to Keep a Belief"
+%
+% Style kit: ICLR 2027 official (media.iclr.cc), fetched 2026-08-19.
+% If the 2027 kit is later revised/republished, swap style/*.sty
+% and style/*.bst for the updated versions and recompile — no
+% section-file changes should be required.
+% ============================================================
+\documentclass{article}
+
+% Full-length build: all sections, including the S7.2-7.4 isolation
+% ablations and the related-work section, are gated \iflongversion true.
+\newif\iflongversion
+\longversiontrue
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{style/iclr2027_conference,times}
+
+\input{style/math_commands}
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\graphicspath{{figures/}{/home/dgonier/experiments/figures/}}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{natbib}
+\usepackage{xcolor}
+\usepackage{subcaption}
+\usepackage{microtype}
+\usepackage{multirow}
+\usepackage{pifont}
+\usepackage{enumitem}
+\usepackage{bm}
+\usepackage{float}
+\usepackage[section]{placeins}
+
+\newcommand{\cmark}{\ding{51}}
+\newcommand{\xmark}{\ding{55}}
+
+% Condition-letter macros — confine letters to tables per outline
+% terminology pass (stated / compiled in prose, letters in tables only).
+\newcommand{\condA}{A}
+\newcommand{\condB}{B}
+\newcommand{\condC}{C}
+\newcommand{\condD}{D}
+\newcommand{\condF}{F}
+
+\title{The Prompt Is Not a Place to Keep a Belief: \\
+Why Stated Beliefs Collapse Under Pressure and Compiled Ones Hold}
+
+% ICLR: double-blind — no author info at submission.
+% Uncomment \iclrfinalcopy in style/iclr2027_conference.sty usage below
+% for camera-ready only; do not add author names here before then.
+\author{Anonymous authors \\ Paper under double-blind review}
+
+\newcommand{\fixme}[1]{\textcolor{red}{\textbf{[FIXME: #1]}}}
+
+\begin{document}
+\maketitle
+
+\input{sections/abstract}
+\input{sections/intro}
+\input{sections/mechanism}
+\input{sections/dissociation}
+\input{sections/why_channels_differ}
+\input{sections/isolation}
+\input{sections/discrimination}
+\input{sections/boundary}
+\input{sections/related}
+\input{sections/limitations}
+
+\bibliographystyle{style/iclr2027_conference}
+\bibliography{references}
+
+\appendix
+\input{sections/appendix}
+
+\end{document}

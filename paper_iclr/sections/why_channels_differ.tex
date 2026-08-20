@@ -1,0 +1,25 @@
+\section{Why the channels differ}
+\label{sec:why-channels-differ}
+
+Three measurements are consistent with, though they do not prove, a read-vs-not-read
+account of the dissociation. A linear probe trained to decode the active belief from
+hidden states succeeds when compiled modulation is active and degrades to 22\% accuracy
+when it is zeroed, indicating the belief's functional signature is concentrated in the
+modulated pathway rather than diffused. Attention-pattern divergence between modulated
+and unmodulated forward passes on the same prompt is small (Jensen--Shannon divergence
+0.049), consistent with modulation acting on the value/query content of attention rather
+than substantially redirecting where the model attends. And modulation measurably
+suppresses think-mode generation, the pathway through which the model would otherwise
+narrate --- and thereby expose to an interlocutor's rebuttal --- its own reasoning about
+whether to concede.
+
+We state the claim at the strength the evidence supports: the two channels are
+\emph{dissociable}, and the compiled channel affects processing without appearing in the
+reasoning trace the model produces. This is consistent with, not proof of, an account in
+which context-delivered content is read and is therefore available to be argued against,
+while compiled content is not. We flag directly that the same probe result above is used
+in Appendix~\ref{app:probe} to make a different point: decodability from hidden states,
+even at reduced accuracy, is enough to fail a strict implicit-memory criterion. Both
+readings use the same number and do not contradict each other --- the belief is
+decodable by a probe with access to internals, and it is nonetheless never surfaced in
+the text the model reasons over or the interlocutor sees.

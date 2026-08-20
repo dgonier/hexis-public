@@ -1,0 +1,66 @@
+\section{Appendix}
+
+\subsection{Training curriculum}
+\fixme{Fill from experiment\_guide.md / training run logs.}
+
+\subsection{Belief-tree schema specification}
+\fixme{Full node schema, edge types, worked example.}
+
+\subsection{Condition definitions with token budgets}
+\fixme{\condA/\condB/\condC/\condD/\condF{} token budgets, curated-slot size, CAA
+extraction detail.}
+
+\subsection{Per-level cross-family tables}
+\fixme{Full Qwen/Llama/Mistral per-level tables (Section~\ref{sec:dissociation-crossfamily}
+summarizes; this appendix carries the raw per-level numbers).}
+
+\subsection{Numeric-credence negative result}
+\fixme{Detail on the categorical-vs-numeric credence ablation referenced in
+Section~\ref{sec:mechanism-belieftree}.}
+
+\subsection{Attractor diagnosis}
+\label{app:attractor}
+Diversity metrics under sustained modulation: 0.006 (always-on) vs.\ 0.079
+(prefill-skip) vs.\ 0.108 (turn-gate), against a 0.099 no-modulation ceiling. Onset at
+turns 2--3. Adjacent-round similarity across 100 benchmark sessions: 0.094 --- close to
+ceiling, confirming the five-level pressure benchmark (Section~\ref{sec:dissociation})
+is not contaminated by this effect within its round budget. See
+Section~\ref{sec:limitations} for the open multi-turn deployment question this leaves.
+
+\subsection{Probe decodability}
+\label{app:probe}
+The linear-probe result reported in Section~\ref{sec:why-channels-differ} (decodable
+when modulation is active, 22\% when zeroed) is repeated here to make explicit that it
+fails a strict implicit-memory criterion: a sufficiently well-positioned probe with
+access to internal activations can recover the conditioned belief above chance even
+though it never appears in the model's own reasoning trace or surfaces to the
+interlocutor. This is not in tension with Section~\ref{sec:why-channels-differ}'s
+claim --- decodable-by-probe and read-by-the-model-as-an-assertion are different
+properties, and we report both readings of the same number rather than picking the one
+that is more flattering to either argument.
+
+\subsection{Judge prompts}
+\fixme{Full judge prompt text, conviction rubric 1--5, blinding procedure.}
+
+\subsection{The auxiliary training signal ($d^*$)}
+\label{app:dstar}
+An early version of the write function's training objective included an auxiliary
+steering-direction loss, $d^*$, intended as a regularizer. A reconstruction audit
+established that $d^*$ was not in fact applied at generation time in the dispositional
+evaluation reported in the main body. The ablation reported in
+Section~\ref{sec:isolation-rank} (dose sweep and $d^*$-only condition) confirms it is
+not load-bearing for the persistence result: applying it at inference time does not help
+and, at higher doses, hurts, and a condition built entirely from $d^*$ collapses to the
+same regime as CAA steering. We disclose it here because the released training code
+still contains the auxiliary loss term, and the paper and the code must not diverge on
+what does and does not matter.
+
+\subsection{Reproducibility}
+\fixme{Seeds, hardware, judge model version and temperature, exact run identifiers
+(\texttt{benchmark\_raw\_nothink\_20260725\_100329.json} etc.), links to
+\texttt{experiments/analysis/*.md} summaries per result.}
+
+\subsection{Dead ends}
+\fixme{Numeric-credence nodes (see above); naive all-layer CAA injection (degenerates at
+every scale, Section~\ref{sec:isolation-steering}); six-axis design-space taxonomy cut
+from the main body during the outline revision.}

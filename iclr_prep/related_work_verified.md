@@ -42,3 +42,34 @@ Choi, Bertalanic, debate line) is the rebuttal-writing reference — keep in icl
    sentence, never convert.
 ## STILL UNVERIFIED (pull-and-check or cut): Assistant Axis (Lu 2026), Baltaji 2024,
 CONSENSAGENT, Huang martingale, the 0.88 opposing-persona convergence figure.
+
+## CORRECTION TO THE CORRECTIONS (2026-08-19, paper-build pass — append-only, do not
+edit the block above)
+Re-verified CORRECTIONS item 1 above directly against the primary source PDF
+(`iclr_prep/references/generativeadapter_2411.05877.pdf`, Table 1, p.9, via page-level
+extraction — the `.txt` extraction of this paper in the same directory is INCOMPLETE and
+silently drops the entire §4.3 Personalization section including Table 1, which is why a
+naive grep against the `.txt` file finds nothing and looks like it confirms the "no such
+comparison exists" claim).
+
+**Item 1 above is itself wrong.** The MSC 40.2-vs-66.0 F1 comparison is real:
+GenerativeAdapter Table 1 reports GenerativeAdapter at 40.2 F1 and "Full-conversation
+Prompting" at 66.0 F1 on the MSC personalization benchmark, with the 25.8-point gap
+explicitly framed by the authors as an acceptable 4x compute/storage saving rather than a
+capability shortfall (verbatim: "full conversation prompting incurs significant
+computation and storage costs, i.e., 4x those of GenerativeAdapter"). This is exactly the
+number `conversation.md`, `future_work_entity_channel.md`, and
+`references/notes/generativeadapter_2411.05877.md` already use — those files were right;
+this file's own correction was wrong. Do not strip 40.2/66.0 from the paper on the
+strength of the item-1 note above. Item 2 (output-projection at rank 128, not Q/V) and
+item 3 (Le&Le "64%" abstract vs. "64 percentage points" conclusion, do not convert) were
+independently re-verified against the primary PDFs during the same pass and both stand as
+originally written.
+
+Root cause: this is the second time a ".txt extraction says X" check has produced a wrong
+"verified" conclusion in this file (the first is the very phenomenon item 1 warns about,
+applied to itself). Treat `.txt` extractions in `iclr_prep/references/` as unreliable for
+absence claims — a term or table not found in the `.txt` is evidence the extraction
+dropped it, not evidence the paper doesn't contain it. Confirm absence against the PDF
+directly (page-level text extraction, not the pre-extracted `.txt`) before writing a
+correction note that says "no such comparison exists."
