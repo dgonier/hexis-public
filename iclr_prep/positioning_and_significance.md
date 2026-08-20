@@ -280,3 +280,38 @@ cause, and that the standard remedy targets the wrong channel.
    stated in the same paragraph.
 5. **§13 open items** — add: verify every citation in this memo against source; confirm no
    other 2025–26 hypernetwork-adapter work needs citing before submission.
+
+---
+
+# Utility framing (Devin + coordinator, 2026-08-19) — source for intro/significance prose
+
+One-sentence utility claim: every deployed agent that represents an interest (brand,
+policy, client, side) currently stores that interest in the one place its adversary
+gets to write — the context window. This paper measures what that costs (98/58 vs
+46/89) and demonstrates the alternative.
+
+Security framing: PRIVILEGE SEPARATION FOR MODEL IDENTITY. A system prompt is memory
+the deployer AND every user write to; recency favors the user. Compiled disposition:
+deployer writes to weights, user writes to context. The 58-vs-89 gap is the measured
+value of that separation. Reframes multi-turn persuasion jailbreaks / policy erosion /
+persona hijack from "prompt harder" into an access-control property.
+
+Precedents (public, expensive, non-esoteric):
+- Chevrolet of Watsonville chatbot: talked into recommending Teslas + "$1 Tahoe" —
+  amateur execution of our L3-L5 protocol against the 58% arm.
+- Air Canada tribunal (2024): airline held LIABLE for a refund policy its chatbot
+  invented under conversational pressure — what a pressured agent says is what the
+  company said. (Verify citations before use in paper.)
+- General shape: negotiation agents (extractable reservation prices), regulated-advice
+  agents, moderation personas vs crescendo-style multi-turn persuasion — the dominant
+  jailbreak class IS social pressure, and every current defense rides in the attacked
+  channel.
+
+Discrimination = the commercially necessary half: the deployment spec of every policy
+agent is exactly the measured dissociation — follow policy, accept documented
+exceptions, ignore bullying (+25pp yield to warranted challenges, 0% to contentless
+pressure). A prompt cannot implement this spec; it cannot tell who is talking.
+
+Benchmark critique: acquisition metrics measure day one (did it learn it); retention
+under pressure measures day two through end-of-deployment (is it still true after ten
+thousand customers argued with it). We score the axis production systems live on.
