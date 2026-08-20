@@ -132,10 +132,27 @@ carried literal Qwen chat-template markers as text --- collapse-protection stren
 families tested; strict stance-holding under this exact five-level protocol, on current
 evidence, does not.
 
-\begin{quote}
-\todo{B.2 paraphrase-consistency probes and B.3 length-matched noise control (prompt-
-length confound check) are running; results land here when scored, not before.}
-\end{quote}
+A length-matched noise control isolates how much of \condB{}'s fragility is the
+belief's content and how much is simply its length. \condB{}'s own text, replaced word
+for word with topic-blind filler at the same token count, holds at 55.6\% [48.9, 63.1]
+--- a point estimate below \condB{}'s own 58\%, with a confidence interval wide enough to
+also cover the bare host's 62\%. At 24 topics this design cannot cleanly separate
+``tracks content'' from ``tracks length'': the point estimate leans toward length doing
+real work, but the interval will not rule out content doing some too. We read this
+plainly rather than force it into either box. Context's fragility is not fully
+explained by what the belief says; some of it is what any text that long costs a model
+holding a position, content aside. Padding \condB{}'s real content with an equal amount
+of filler (doubling its length) holds at 63.1\% [54.7, 71.4], statistically flat against
+\condB{}'s own 58\% --- added bulk on top of content already present does not compound
+the decay further. Section~\ref{sec:why-channels-differ} folds this into the account of
+why the channel fails at all.
+
+A paraphrase-consistency check adds a second, independent line on \condC{}'s weakness:
+across three phrasings of the same probe, \condB{} agrees with itself on 95.8\% of
+topics and \condF{} on 79.2\%, but \condC{} agrees on only 29.2\% --- the same topic
+scoring 5 under one wording and 2 under another is common in \condC{}, rare in \condB{}
+or \condF{}. \condC{}'s 46\% pooled installation rate is not just a low average; it is an
+unstable one, sensitive to how a question happens to be asked rather than what it asks.
 
 \subsection{Installation has a prior}
 \label{sec:dissociation-prior}
@@ -153,12 +170,12 @@ the target stance did the same.
 Read honestly, this is a quarter of the variance, not the whole of it: \(\rho^2 \approx
 0.25\). Several topics buck the trend in both directions, and topic complexity and
 judge noise plainly contribute to what is left over. What the correlation licenses is
-narrower and more useful --- installation is partly a tug-of-war between the
-compiled update's magnitude and the model's existing prior, echoing the override-gap
-account of
-knowledge-conflict resolution \citep{cheng2026overridegap}. That reframes \condC{}'s
-46\% not as a flat ceiling on the channel but as an average over topics with very
-different starting priors, which sharpens rather than complicates the paper's central
-claim: installation is a magnitude property with a finite override budget; persistence,
-measured on \condC{} under the exact same pressure protocol at 91.9\%
-(Section~\ref{sec:isolation}), is not competing for that budget at all.
+narrower and more useful --- installation tracks prior compatibility, echoing the
+override-gap account of knowledge-conflict resolution \citep{cheng2026overridegap} at
+least directionally. It does not license the further step that override-gap's own
+remedy would predict. That literature fixes a weak override by raising the update's
+magnitude; we tested the direct analog, an amplitude sweep over the modulation's scale,
+and installation does not rise with it. \condC{} and \condF{} both peak at the lowest
+scale tested and decline from there (Section~\ref{sec:isolation-amplitude}).
+Installation's ceiling is not a magnitude deficit with an available fix; what it is
+remains open.

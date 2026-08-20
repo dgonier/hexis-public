@@ -130,19 +130,53 @@ prefix tuning holds under pressure, the operative variable is inspectability; if
 collapses like context does, the operative variable is position. We have not run this
 baseline and report the question open rather than assume an answer.
 
-\subsection{Is it compression, or is it magnitude?}
+\subsection{Is it compression?}
 \label{sec:isolation-compression}
 
-Two baselines remain open. A compressed-prompt condition at matched token count would
-test whether occupying fewer context positions is sufficient on its own, separate from
-compiled modulation's other properties. An amplitude sweep over the modulation's scale
-factor \(\beta\), install and retention scored separately, would test whether
-installation's ceiling (Section~\ref{sec:dissociation-prior}) rises with modulation
-strength before retention starts to degrade --- c1d's threshold-and-amplify smoke run
-already shows amplification hurting retention past \(\beta = 2.0\) (100\%\(\to\)33/20\%
-thresholded/raw), so the prereg for this sweep has to build that finding in rather than
-discover it twice. \todo{C.3 --- amplitude sweep, install vs.\ retention scored
-separately. Not yet run; this subsection is a placeholder for that result.}
+Open. A compressed-prompt condition at matched token count would test whether occupying
+fewer context positions is sufficient on its own, separate from compiled modulation's
+other properties. Not yet run.
+
+\subsection{Does amplitude buy installation?}
+\label{sec:isolation-amplitude}
+
+The override-gap literature fixes a weak parametric override by raising the update's
+magnitude \citep{cheng2026overridegap}. We tested the direct analog: a sweep over the
+modulation's scale factor \(\beta \in \{0.5, 1.0, 1.5, 2.0\}\) (1.0 is the trained,
+production scale), install and hold scored separately on the same 24 topics.
+
+Installation does not rise with \(\beta\). Both \condC{} and \condF{} peak at the lowest
+scale tested and decline from there: \condC{} runs 87.5\%, 41.7\%, 41.7\%, 58.3\% across
+\(\beta = 0.5, 1.0, 1.5, 2.0\); \condF{} runs 95.8\%, 83.3\%, 66.7\%, 79.2\%. Neither
+curve is monotone, and neither rises, which disconfirms the sigmoid-shaped install curve
+the override-gap analogy predicted going in. Hold shows a cleaner pattern and points the
+opposite direction from install: \condF{}'s hold rate peaks exactly at the trained
+\(\beta = 1.0\) (86.9\%, matching the \condF{}-anchor) and declines monotonically on
+either side (75.0\% at 0.5, 79.7\% at 1.5, 60.6\% at 2.0), consistent with C.1d's
+smoke-scale finding that whole-map amplification degrades retention. The scale that is
+best for installing is not the scale that is best for holding, and the trained scale
+sits at the hold optimum, not the install optimum.
+
+A coherence gate, fixed before the sweep ran, blocks the top of the range: at
+\(\beta = 2.0\) the pooled distinct-token ratio falls to 0.399, below the pre-registered
+0.60 floor, so \(\beta = 3.0\) was not launched. The coherent range tops out at or before
+\(\beta = 2.0\).
+
+The capability cost tracks the install optimum, not the hold optimum, which is the
+sharper caveat for the paper to carry. At the trained \(\beta = 1.0\), MMLU accuracy
+moves from 76.5\% to 74.8\% with \(p = 0.11\) (Section~\ref{sec:isolation-mmlu}). At
+\(\beta = 0.5\), the scale where installation peaks, the same comparison crosses the
+conventional significance threshold: 76.5\% to 74.7\%, McNemar \(p = 0.0495\). The raw
+effect size barely moves; what changes is that the amplitude setting best for
+installation is also the first place capability displacement clears \(p < 0.05\).
+Amplitude is not a free lever on any of the three axes it touches.
+
+A null-belief control rules out the crudest alternative account of installation itself:
+a belief tree compiled from four topics unrelated to any of the 24 evaluation topics
+does not install a stance on those evaluation topics through \condF{}'s curated slot
+--- 54.2\% [33.3, 75.0], indistinguishable from the bare host's 52\% and well below
+on-topic \condF{}'s 77\%. Installation requires content that speaks to the question
+asked; it is not an artifact of having any compiled state active at all.
 
 \subsection{Does the disposition crowd out general capability?}
 \label{sec:isolation-mmlu}

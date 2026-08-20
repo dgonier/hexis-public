@@ -43,9 +43,12 @@ on the live hidden state produced by whatever the model is currently attending t
 Node representations are pooled with conviction-weighting, passed through a bottleneck,
 and decoded into the per-layer rank-16 factors above. We correct a timing claim from an
 earlier draft of this work: the previously reported $\sim$20 second compile latency
-belongs to an unrelated agentic retrieval prototype, not to this write function, which
-compiles in well under one second; end-to-end reflection $\to$ edit $\to$ recompile
-measures 2.5--3.0 seconds.
+belongs to an unrelated agentic retrieval prototype, not to this write function.
+Measured directly (60 timed calls, three topics, \texttt{torch.cuda.synchronize} around
+the full belief-tree-to-tensors path), compilation takes 4.83 seconds pooled mean. The
+earlier 2.5--3.0 second figure for the end-to-end reflection loop was an estimate, not
+this measurement; we report the measured 4.83 seconds here and flag the two as
+different quantities rather than silently reconcile them.
 
 \textbf{We define ``compile'' at first use, and it is lossy.} A trained write function
 translates the belief tree into per-layer low-rank tensors, fixed until the store
@@ -88,27 +91,43 @@ A channel choice is also a compute choice, and the two channels this paper compa
 scale in opposite directions.
 
 \textbf{Read cost.} Modulation adds \(O(d \cdot r)\) per patched layer against the
-\(O(d^2)\) cost of the projection it modifies; at \(r=16\), that is roughly
-\(r / 3d \approx 0.3\%\) additional FLOPs per forward pass. Because the update is
-linear, \(W_Q' = W_Q + U_Q V_Q^\top\) can be folded into \(W_Q\) once per session, after
-which read cost is exactly zero --- the same output-equivalence
-Section~\ref{sec:isolation-frozen}'s frozen-offset ablation exploits. \todo{Verify the
-fold is output-identical in a microbenchmark and report wall-clock tokens/sec, bare vs.\
-\condB{} vs.\ \condF{} vs.\ folded-\condF{}; no run exists yet.}
+\(O(d^2)\) cost of the projection it modifies; at \(d_{\text{model}}=2560\), \(r=16\),
+across the 11 patched layers, this is 3,604,480 analytic FLOPs per generated token,
+tiny against a 4B-parameter model's per-token cost. Measured on a single 4090, no
+batching, \condF{}-style generation (hooks installed, zero belief tokens in context)
+runs 0.350s mean time-to-first-token and 12.83 tok/s, against the bare model's 0.318s
+and 13.74 tok/s --- a small, same-regime cost, not a step change. We had expected to
+report this cost as foldable to exactly zero, since the update
+\(W_Q' = W_Q + U_Q V_Q^\top\) is linear and could in principle be folded into \(W_Q\)
+once per session. On Qwen3.5's architecture, it is not: the model is a hybrid of
+standard attention and Gated DeltaNet blocks, and on the eight DeltaNet layers the
+hidden state that carries the modulation delta feeds four separate projections, not
+one, so folding the delta into a single weight matrix is not output-identical to the
+hook (verified by direct comparison; \(\texttt{max\_abs\_diff}\) 7.0--11.1 against the
+hooked forward pass, far outside floating-point tolerance). Folding is architecturally
+available on a standard, non-hybrid attention stack, where the modulated projection has
+one consumer; on this checkpoint, the hooks-path cost above, not zero, is the measured
+deployment mode.
 
 \textbf{Context cost.} A belief held in context pays \(O(N_b^2 + N_b N_t)\) attention on
 every prefill, where \(N_b\) is belief-token count and \(N_t\) is task-token count; it
 grows time-to-first-token and occupies KV-cache budget for the life of the session ---
 our own context arms ran into overflow truncation during data collection, which is a
-symptom of exactly this cost, not a separate bug. Compiled modulation contributes zero
-context tokens: TTFT matches the bare model, and the full context budget is available
-to the task. \todo{Report measured TTFT deltas once the microbenchmark lands.}
+symptom of exactly this cost, not a separate bug. Measured directly, \condB{}-style
+generation (belief text in context, no hooks) runs 0.377s TTFT and 13.29 tok/s against
+the bare model's 0.318s and 13.74 tok/s, at a mean 90 context tokens per belief (range
+83--359 across the 24-topic pool); this single-request, unbatched microbenchmark is not
+powered to separate \condB{}-style cost from \condF{}-style cost cleanly at this scale,
+but the structural difference holds regardless of scale: \condF{}-style generation
+occupies zero additional context tokens where \condB{}-style occupies roughly 90 on
+average, a KV-cache and context-budget property rather than primarily a latency one at
+this batch size.
 
-\textbf{Write cost.} A belief update costs one hypernetwork forward pass, off the
-critical path: it can run on a parallel stream while serving continues and be swapped
-in at the next session boundary, the same scheduling class as prefix-cache warming.
-GenerativeAdapter reports a comparable $4\times$ compute-and-storage reduction against
-full-conversation prompting on its own personalization benchmark
-\citep{chen2025generativeadapter}; our addition is that the channel which saves the
-compute is also the channel that holds the stance, which that comparison was not built
-to measure. \todo{Compile wall-clock time, analytic FLOP count.}
+\textbf{Write cost.} A belief update costs one hypernetwork forward pass, measured at
+4.83 seconds pooled mean (Section~\ref{sec:mechanism-write}), off the critical path: it
+can run on a parallel stream while serving continues and be swapped in at the next
+session boundary, the same scheduling class as prefix-cache warming. GenerativeAdapter
+reports a comparable $4\times$ compute-and-storage reduction against full-conversation
+prompting on its own personalization benchmark \citep{chen2025generativeadapter}; our
+addition is that the channel which saves the compute is also the channel that holds the
+stance, which that comparison was not built to measure.

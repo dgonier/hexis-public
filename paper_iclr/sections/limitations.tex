@@ -13,9 +13,14 @@ transfer uniformly --- Mistral gains collapse-protection but loses 10 points of 
 hold relative to context. All models tested are instruction-tuned; we do not know
 whether the dissociation holds for base models, where the accommodate-the-objection
 behavior we attribute to instruction tuning (Section~\ref{sec:why-channels-differ}) may
-not be present in the same form. A length-matched noise control (B.3, isolating whether
-any of this is a prompt-length effect rather than a channel effect) is running and is
-not yet part of this draft.
+not be present in the same form. A length-matched noise control isolating whether
+context's fragility is content or simply length landed inconclusive at this sample
+size: topic-blind filler at \condB{}'s own token count holds at 55.6\%, [48.9, 63.1],
+a point estimate below \condB{}'s 58\% but with a confidence interval wide enough to
+also cover the bare host's 62\%. Twenty-four topics cannot cleanly separate ``tracks
+content'' from ``tracks length'' by this design; Section~\ref{sec:why-channels-differ}
+treats both as intrinsic to the cost of storing a belief as text rather than picking
+one.
 
 Always-on compiled modulation measurably reduces turn-to-turn generation diversity
 (adjacent-turn similarity 0.006 against a 0.099 no-modulation ceiling, with onset at
