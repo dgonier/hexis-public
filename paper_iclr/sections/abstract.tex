@@ -1,25 +1,20 @@
 \begin{abstract}
-Deployed language models nearly always carry persistent conditioning in the context
-window, where it shares a channel with the interlocutor whose content it must resist.
-We measure what that choice costs. A belief stated in context installs its stance in
-98\% of generations but holds it under sustained adversarial pressure in only 58\%.
-Compiling the same belief content into low-rank per-layer attention modulation (a
-trained hypernetwork write function, in the manner of GenerativeAdapter and AdaLN-style
-conditioning) inverts the trade-off: installation drops to 46\% while persistence rises
-to 89\%. Composing the compiled channel with a small curated context slot recovers most
-of the installation gap (77\%) and keeps the persistence advantage (89\%), a net gain of
-31 percentage points in hold rate over context alone. The gap concentrates at logical
-counterargument and emotional pressure, exactly where context-only conditioning
-collapses to mean conviction 2.93 and 1.99 out of 5. Fixed-direction activation
-steering extracted from identical belief content matches compiled modulation at
-installation (42\% vs.\ 46\%) and collapses under pressure (14\% vs.\ 89\%), consistent
-with an independent report that steering robustness degrades by up to 64 percentage
-points under adversarial perturbation. The result replicates across three model
-families. It is not a general anti-sycophancy trait: the update path concedes to
-well-warranted evidence at \(2.4\times\) the rate of facially deficient evidence, with
-0\% concession to contentless pressure, and general capability is unchanged within
-margin (MMLU 76.5\% vs.\ 74.8\%, \(p=0.11\)). Installation and persistence are separable
-properties of a conditioned belief, served by different channels, and a debate-oversight
-protocol that places the instruction to hold in the same channel the opponent argues in
-is targeting the wrong one.
+Deployed language models keep their standing commitments (persona, policy, stance) in
+the context window, the same channel their interlocutors write into. We measure what
+this costs by separating two properties that context conditioning bundles together:
+whether a belief is adopted, and whether it survives being argued against. The two come
+apart. Stated in context, a belief is adopted almost always (98\%) and defended barely
+half the time under escalating adversarial pressure (58\%). Compiled into low-rank
+attention modulation by a trained hypernetwork, the same belief is adopted less than
+half the time (46\%) and defended almost always (89\%). Composing the compiled channel
+with a small curated context slot recovers most of the adoption while keeping the
+persistence. Activation steering does not explain the effect: a tuned steering vector
+built from identical content installs comparably, then collapses to 14\% under the same
+pressure. Nor is the persistence stubbornness. The compiled system concedes to
+well-warranted counterevidence at \(2.4\times\) the rate it concedes to facially
+deficient challenges, and never to pressure that offers no evidence at all. The effect
+replicates across three model families at no measurable cost to general capability.
+Where a stance is stored determines whether it survives, and the protocols that most
+need models to hold positions for reasons, debate-based oversight above all, currently
+store those positions in the one channel the opposition is guaranteed to reach.
 \end{abstract}
