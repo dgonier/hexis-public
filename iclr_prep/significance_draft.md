@@ -47,10 +47,25 @@ debate-based oversight has assumed its debaters possess and has had no way to in
 It is also, not incidentally, the disposition we ask of a good juror, a good scientist,
 and a good friend.
 
-## Style notes for Devin's prose generally (from book-draft review)
-1. One hedge per claim; drop stacked qualifiers.
-2. When the aside is the point, promote it out of dashes/parentheses to a sentence.
-3. Ration em dashes (his natural device, but reads machine-made to 2026 reviewers).
-4. Import the telegraphic landing sentence from his planning prose ("The gaps are the
-   instrument") into paper sections, one per section.
-5. Number-as-protagonist (the Tarangire move): reserve for the hero result.
+## Style notes for Devin's prose (CORRECTED 2026-08-19 — from his real samples)
+Real samples: "Philosophical Foundations... Multi-Agent Language Systems" (gdoc
+1FKkOblJ5qJE4b7uJRaEwo4E97p11N0-Z) and "Simulacrum or Singularity?" (gdoc
+1iL1Pc0ZE6_Ts8unlRKyQmLZkdMuaVzEupDkX87Hqry4). NOTE: /home/dgonier/writing/book/drafts
+are NOT his voice — do not use as style reference.
+
+Strengths to preserve: one conceptual reframe per piece as the engine (boolean->gradient,
+simulacrum lens, install/hold); blunt declaratives after formal buildup ("This is
+fundamentally flawed."); wide synthesis owned confidently; rationed wit ("the C-word").
+
+Adjustments:
+1. Examine one witness instead of stacking five — give the strongest study/example a
+   full paragraph and a scene; demote the rest to parentheses. (The Dennett elevator move.)
+2. Replace abstraction triples ("ethical, existential, and societal implications") with
+   one named concrete implication.
+3. Cut throat-clearing transitions ("In addition to reevaluating..., it is also
+   important to consider..."); the claim is always one sentence downstream — start there.
+4. Re-conclude once per section, not per paragraph; retire "nuanced" (now reads as tell).
+5. Cut survey capsules (Locke/Berkeley/Kant bios) to the one sentence the argument needs.
+6. Keep framework nouns as destinations; make vehicles concrete (kitchen nouns).
+7. Number-as-protagonist: give the hero number its own sentence (58% in the
+   dissociation section).
