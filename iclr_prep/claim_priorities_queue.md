@@ -45,3 +45,27 @@ GENUINELY REMAINING (new [LIT] items + original D-track + paper build):
 - E.3 null-belief control (cheap; scrambled-ledger adjacent but not identical)
 - A.2 figure/table rebuild + entire paper scaffold (Track B) + related-work prose
 - F.1-F.4 next-paper (F.2 benign length sweep is the cheapest stretch)
+
+## Addendum (Devin, 2026-08-19): computational implications — serving properties subsection
+
+The paper must state the compute story explicitly (TTFT, latency, asymptotics). Three
+parts, to be written into the mechanism or isolation section as "Serving properties":
+
+1. READ COST ~zero, exactly zero if folded: modulation adds O(d*r) per patched layer vs
+   O(d^2) projections (~r/3d ~= 0.3% FLOPs at r=16); linearity permits folding
+   W' = W + M_A M_B^T once per session -> zero per-token overhead (same equivalence C.2
+   exploited). Verify fold is output-identical in the microbenchmark.
+2. CONTEXT COST eliminated: belief-in-context pays O(N_b^2 + N_b*N_t) attention in EVERY
+   prefill, grows TTFT, occupies KV-cache and context budget every session (measured
+   live: ctx arms ran overflow-truncated on every move). Compiled: zero tokens, bare-model
+   TTFT, full budget to the task, O(1) per query.
+3. WRITE COST amortized and OFF THE CRITICAL PATH: one hypernetwork forward per belief
+   update, schedulable on a parallel stream/device while serving continues, swapped at a
+   session boundary — "washed into the compute," same scheduling class as prefix-cache
+   warming. Reflection recompiles overlap the conversation. Family precedent:
+   GenerativeAdapter's published 4x compute/memory reduction vs full-conversation
+   prompting — cite; our addition is that the channel that saves the compute is the one
+   that holds the stance.
+
+Microbenchmark dispatched to the experiment queue (compile wall time, TTFT/tok/s for
+bare vs B vs F vs folded-F, analytic FLOPs) -> analysis/serving_microbench.md.
