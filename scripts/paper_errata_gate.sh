@@ -143,3 +143,9 @@ else
     echo "[errata-gate] FAIL: one or more banned strings found above. Fix before this paper is submitted."
     exit 1
 fi
+# addition: banned framing words (Devin 8/19)
+for w in "load-bearing" "load bearing"; do
+  if grep -rli "$w" "$PAPER_DIR"/sections/*.tex 2>/dev/null | head -1 | grep -q .; then
+    echo "[errata-gate] FAIL: banned framing '$w' found"; exit 1
+  fi
+done

@@ -49,7 +49,7 @@ steering-direction loss, $d^*$, intended as a regularizer. A reconstruction audi
 established that $d^*$ was not in fact applied at generation time in the dispositional
 evaluation reported in the main body. The ablation reported in
 Section~\ref{sec:isolation-rank} (dose sweep and $d^*$-only condition) confirms it is
-not load-bearing for the persistence result: applying it at inference time does not help
+not part of the machinery that produces the persistence result: applying it at inference time does not help
 and, at higher doses, hurts, and a condition built entirely from $d^*$ collapses to the
 same regime as CAA steering. We disclose it here because the released training code
 still contains the auxiliary loss term, and the paper and the code must not diverge on
