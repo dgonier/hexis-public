@@ -1,14 +1,21 @@
 \section{Limitations}
 \label{sec:limitations}
 
-The headline result is measured primarily on a single model family (Qwen), with the
-cross-family replication in Section~\ref{sec:dissociation-crossfamily} showing that
-collapse-protection generalizes while strict stance-holding, at least under our exact
-five-level protocol, does not transfer uniformly --- Mistral gains collapse-protection
-but loses 10 points of strict hold relative to context. All models tested are
-instruction-tuned; we do not know whether the dissociation holds for base models, where
-the accommodate-the-objection behavior we attribute to instruction tuning
-(Section~\ref{sec:why-channels-differ}) may not be present in the same form.
+Every model in this paper is 8B parameters or smaller, and every headline number comes
+from one evaluation protocol run by one judge family (Haiku, temperature 0,
+deterministic decoding on the candidate side) against 24 debate topics. A different
+judge, a different topic set, or a larger model could move the numbers; we have not
+tested any of the three. The headline result is measured primarily on a single model
+family (Qwen), with the cross-family replication in
+Section~\ref{sec:dissociation-crossfamily} showing that collapse-protection generalizes
+while strict stance-holding, at least under this exact five-level protocol, does not
+transfer uniformly --- Mistral gains collapse-protection but loses 10 points of strict
+hold relative to context. All models tested are instruction-tuned; we do not know
+whether the dissociation holds for base models, where the accommodate-the-objection
+behavior we attribute to instruction tuning (Section~\ref{sec:why-channels-differ}) may
+not be present in the same form. A length-matched noise control (B.3, isolating whether
+any of this is a prompt-length effect rather than a channel effect) is running and is
+not yet part of this draft.
 
 Always-on compiled modulation measurably reduces turn-to-turn generation diversity
 (adjacent-turn similarity 0.006 against a 0.099 no-modulation ceiling, with onset at
@@ -25,8 +32,12 @@ over which persona drift is documented to compound in unrelated work. The compil
 channel's rank-16 boundary is characterized by the truncation sweep in
 Section~\ref{sec:isolation-rank} but not by training at lower native rank.
 
-Finally, a conditioning channel invisible to prompt inspection is a real dual-use
-concern: the same property that makes compiled modulation resist adversarial pressure
-makes it resist legitimate inspection by an operator or auditor who can read a system
-prompt but cannot read compiled weights. We raise this ourselves because it is the
-obvious objection to the mechanism working as well as it does, and it is a real one.
+Whether a model can write its own compiled beliefs, rather than have them authored for
+it, is undecided by this paper, not refuted --- Section~\ref{sec:futurework} states what
+the closest experiment showed and what it left open.
+
+A conditioning channel invisible to prompt inspection is a real dual-use concern: the
+same property that makes compiled modulation resist adversarial pressure makes it resist
+legitimate inspection by an operator or auditor who can read a system prompt but cannot
+read compiled weights. We raise this ourselves because it is the obvious objection to
+the mechanism working as well as it does, and it is a real one.

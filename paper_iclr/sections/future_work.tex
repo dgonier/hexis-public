@@ -1,0 +1,69 @@
+\iflongversion
+\section{Future work}
+\label{sec:futurework}
+
+\paragraph{A third channel, for entities.} The boundary in Section~\ref{sec:boundary}
+is not a flaw to patch inside the current channel; it is a case for a third one. Compiled
+modulation carries disposition and drops proper nouns, exact figures, and constrained
+strings; the curated slot carries exactly that content but pays a persistence cost
+because it is still text. A dog's name, a person's role, a fact about a place --- none of
+these are dispositions, and none of them belong in either existing channel by
+construction, not by oversight. The natural mechanism is not more rank in the current
+write function but a different target entirely: ROME/MEMIT-style rank-few edits to the
+MLP key-value memories that already carry factual association in a transformer, driven
+by a second hypernetwork trained on the typed entity nodes the belief graph's own schema
+already distinguishes from dispositional ones. An entity edited into weights inherits
+the same spoof-resistance compiled disposition does --- nothing in the interlocutor's
+turn can bind to it the way an unwitnessed claim in context can. Three channels, one per
+kind of content: disposition compiled into attention, facts edited into MLP memory, and
+the live conversation left in context where it belongs.
+
+\paragraph{Learned composition.} The write function currently composes disposition with
+the base model by plain addition, \(W' = W + U V^\top\), and Section~\ref{sec:isolation}
+shows this dumb addition already suffices for persistence --- a frozen offset holds as
+well as an input-responsive one. A learned composition operator, gating or scaling the
+update per token (FiLM- or AdaLN-style, or a routed mixture over several candidate
+directions) is easy to build and has to clear a real bar before it is worth building:
+Section~\ref{sec:isolation-rank}'s rank-flatness and Section~\ref{sec:isolation-frozen}'s
+frozen-offset result both say the simple version is not leaving much on the table for a
+cleverer one to recover. A coefficient-magnitude threshold, tested as a cheap first
+step, is close to free (86.7\% hold, coherence intact) --- the small components really
+are noise --- while naive amplification past scale 2.0 hurts hold monotonically even
+after thresholding, with think-tag leakage as the failure signature. If this direction
+is revisited, the sweep's own smoke result points it at installation, where there is
+real headroom (46\%), rather than at hold, which is already close to saturated.
+
+\paragraph{Self-authored content.} Whether a model can write the beliefs that get
+compiled into it, not just have them authored on its behalf, was tested once and the
+result is undecided, not refuted. A self-authored lesson stored as context (``sticky
+note'') held at 81.3\% against the same lesson compiled into tensors (``muscle
+memory'') at 87.3\% --- a 6.0-point gap, inside the 5--10 point band the pre-registration
+had already marked inconclusive before the run. The per-level curve pointed the
+predicted direction (sticky note declining 91.7\%\(\to\)75.0\% across pressure levels;
+muscle memory flat near 90\%), which is suggestive rather than settled. One instrument
+caveat matters for reading this result at all: the production reflector that generated
+these lessons emits bare JSON operations, six distinct strings across twenty topics, so
+this measured op-delivery, not the prose-lesson reflection the design intended, and a
+sharper version of the test is still open.
+
+\paragraph{The Lineup.} A registered 42-session study asked whether the memory
+substrate --- context, compiled modulation, or a text ledger --- changes how human an
+interview subject is judged to be under adversarial questioning. The mechanism it went
+looking for showed up cleanly and in a place the design had not anticipated: the
+compiled-modulation arm's answers echoed almost nothing of what the same character had
+said in the first half of the session (13.8 mean words of verbatim overlap, against
+31--54 for every other arm, including the ledger arms, which echoed worst of all), and
+six blind ranking judges independently converged on reconstructive-versus-verbatim as
+the property that told them a subject was probably not a transcript. The outcome the
+prereg was built to test went the other way --- dense, literal, context-grounded
+answers still won head-to-head comparative rankings over thinner, reconstructive ones.
+Mechanism confirmed, hypothesis about what that mechanism buys you, missed. A multi-agent
+follow-up sits downstream of this result and of the discussion's opening claim about
+where disposition should live: if compiled belief states resist the drift that ordinary
+context-sharing produces under peer pressure, that is a direct answer to the conformity
+failure \citet{bertalanic2026costofconsensus} document in homogeneous multi-agent
+debate --- modal sycophantic adoption up to 85.5\%, an oracle gap up to 32.3 points
+against isolated self-correction. The natural experiment repeats their controlled
+setup with compiled, rather than context-shared, agent positions and asks whether the
+gap narrows.
+\fi

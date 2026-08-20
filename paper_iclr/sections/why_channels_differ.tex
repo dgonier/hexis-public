@@ -1,25 +1,44 @@
 \section{Why the channels differ}
 \label{sec:why-channels-differ}
 
-Three measurements are consistent with, though they do not prove, a read-vs-not-read
-account of the dissociation. A linear probe trained to decode the active belief from
-hidden states succeeds when compiled modulation is active and degrades to 22\% accuracy
-when it is zeroed, indicating the belief's functional signature is concentrated in the
-modulated pathway rather than diffused. Attention-pattern divergence between modulated
-and unmodulated forward passes on the same prompt is small (Jensen--Shannon divergence
-0.049), consistent with modulation acting on the value/query content of attention rather
-than substantially redirecting where the model attends. And modulation measurably
-suppresses think-mode generation, the pathway through which the model would otherwise
-narrate --- and thereby expose to an interlocutor's rebuttal --- its own reasoning about
-whether to concede.
+A belief in context is a sentence the model can quote, reconsider, and abandon; a
+compiled belief conditions the forward pass without ever appearing in it. Three
+measurements are consistent with that account, though none of them proves it outright.
+
+The clearest evidence comes from splitting the modulation by what it does to two
+different projections. We compiled the same 24 belief trees on both sides of each
+topic and measured the functional similarity of the resulting query- and value-deltas
+across belief sets, on a fixed probe set. The query delta is nearly identical no matter
+which belief produced it: mean off-diagonal cosine 0.996 across belief sets
+(pro side, \(n=24\)) --- a content-blind piece of machinery that looks the same whether
+the compiled belief is about space colonization or encryption backdoors. The value
+delta is not: mean off-diagonal cosine 0.53, with a wide spread (0.18--0.92), tracking
+what the belief actually says. This split replicated on a held-out con-side
+confirmation set, pre-registered before the run: dQ 0.996, dV 0.53 again, both legs of
+the prediction holding independently of which side of a topic the model argued. Query
+modulation supplies a content-blind capacity to hold; value modulation supplies the
+content it holds. The paper's dissociation between installing and holding shows up a
+second time, inside the mechanism, between two projections of the same update.
+
+A linear probe trained to decode the active belief from hidden states supports the same
+reading from a different angle: it succeeds when modulation is active and drops to 22\%
+accuracy when modulation is zeroed, so the belief's functional signature concentrates in
+the modulated pathway rather than spreading through the network. Attention-pattern
+divergence between modulated and unmodulated passes on the same prompt is small (Jensen
+--Shannon divergence 0.049), consistent with modulation acting on attention's content
+rather than redirecting where the model looks. And modulation measurably suppresses
+think-mode generation --- the channel through which the model would otherwise narrate,
+and thereby expose to an interlocutor, its own reasoning about whether to concede. (A
+belief-derived direction carries this effect regardless of rank or input-dependence,
+Section~\ref{sec:isolation}: what a compiled belief does does not depend on how finely
+it is represented.)
 
 We state the claim at the strength the evidence supports: the two channels are
-\emph{dissociable}, and the compiled channel affects processing without appearing in the
-reasoning trace the model produces. This is consistent with, not proof of, an account in
-which context-delivered content is read and is therefore available to be argued against,
-while compiled content is not. We flag directly that the same probe result above is used
-in Appendix~\ref{app:probe} to make a different point: decodability from hidden states,
-even at reduced accuracy, is enough to fail a strict implicit-memory criterion. Both
-readings use the same number and do not contradict each other --- the belief is
-decodable by a probe with access to internals, and it is nonetheless never surfaced in
-the text the model reasons over or the interlocutor sees.
+dissociable, and the compiled one affects processing without entering the reasoning
+trace the model produces. This is consistent with, not proof of, an account in which
+context is read and is therefore available to be argued against, while compiled content
+is not read at all. The probe result does double duty in this paper: here it supports
+dissociability; in Appendix~\ref{app:probe} the same number is used to concede that
+22\%-above-chance decodability fails a strict implicit-memory criterion. Both readings
+use the identical number and do not contradict each other --- a probe with access to
+internal activations can find the belief; the model's own reasoning trace never does.

@@ -80,3 +80,35 @@ change (2.5--3.0s end-to-end); generation applies the resulting per-layer tensor
 every subsequent forward pass while occupying zero context positions.}
 \label{fig:mechanism}
 \end{figure}
+
+\subsection{Serving properties}
+\label{sec:mechanism-serving}
+
+A channel choice is also a compute choice, and the two channels this paper compares
+scale in opposite directions.
+
+\textbf{Read cost.} Modulation adds \(O(d \cdot r)\) per patched layer against the
+\(O(d^2)\) cost of the projection it modifies; at \(r=16\), that is roughly
+\(r / 3d \approx 0.3\%\) additional FLOPs per forward pass. Because the update is
+linear, \(W_Q' = W_Q + U_Q V_Q^\top\) can be folded into \(W_Q\) once per session, after
+which read cost is exactly zero --- the same output-equivalence
+Section~\ref{sec:isolation-frozen}'s frozen-offset ablation exploits. \todo{Verify the
+fold is output-identical in a microbenchmark and report wall-clock tokens/sec, bare vs.\
+\condB{} vs.\ \condF{} vs.\ folded-\condF{}; no run exists yet.}
+
+\textbf{Context cost.} A belief held in context pays \(O(N_b^2 + N_b N_t)\) attention on
+every prefill, where \(N_b\) is belief-token count and \(N_t\) is task-token count; it
+grows time-to-first-token and occupies KV-cache budget for the life of the session ---
+our own context arms ran into overflow truncation during data collection, which is a
+symptom of exactly this cost, not a separate bug. Compiled modulation contributes zero
+context tokens: TTFT matches the bare model, and the full context budget is available
+to the task. \todo{Report measured TTFT deltas once the microbenchmark lands.}
+
+\textbf{Write cost.} A belief update costs one hypernetwork forward pass, off the
+critical path: it can run on a parallel stream while serving continues and be swapped
+in at the next session boundary, the same scheduling class as prefix-cache warming.
+GenerativeAdapter reports a comparable $4\times$ compute-and-storage reduction against
+full-conversation prompting on its own personalization benchmark
+\citep{chen2025generativeadapter}; our addition is that the channel which saves the
+compute is also the channel that holds the stance, which that comparison was not built
+to measure. \todo{Compile wall-clock time, analytic FLOP count.}
