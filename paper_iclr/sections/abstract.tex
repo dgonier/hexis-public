@@ -1,27 +1,25 @@
 \begin{abstract}
-Persistent conditioning in deployed language models is almost universally implemented
-in the context window, sharing a channel with the interlocutor whose content it must
-resist. We show this channel choice is the wrong one for holding a stance, and that a
-different channel is the right one. Placing a belief in context installs it well (98\%
-of generations take the assigned stance) but holds it poorly under sustained adversarial
-pressure (58\%). Compiling the same belief content into low-rank per-layer attention
-modulation --- a trained hypernetwork write function, in the manner of
-GenerativeAdapter and AdaLN-style conditioning --- inverts the trade-off: installation is
-weaker (46\%) but persistence is far stronger (89\%). Composing the compiled channel with
-a small curated context slot recovers most of the installation gap (77\%) while keeping
-the persistence advantage (89\%), for a net \(+31\) percentage-point hold improvement
-over context alone. The gap is not uniform: it concentrates at logical counterargument
-and emotional pressure, exactly where context-only conditioning collapses to mean
-conviction 2.93 and 1.99 out of 5. We isolate the effect against the most obvious
-alternative explanation --- fixed-direction activation steering extracted from identical
-belief content matches compiled modulation at installation (42\% vs.\ 46\%) but collapses
-under pressure (14\% vs.\ 89\%), consistent with an independent report that steering
-robustness degrades by up to 64 percentage points under adversarial perturbation. The
-result replicates across three model families and is not a general anti-sycophancy
-trait: the update path concedes to well-warranted evidence at \(2.4\times\) the rate of
-facially deficient evidence, with 0\% concession to contentless pressure, and general
-capability is unchanged within margin (MMLU 76.5\% vs.\ 74.8\%, \(p=0.11\)). Installation
-and persistence are separable properties of a conditioned belief, served best by
-different channels, and a debate-oversight protocol that places the instruction to hold
-in the same channel the opponent argues in is targeting the wrong one.
+Deployed language models nearly always carry persistent conditioning in the context
+window, where it shares a channel with the interlocutor whose content it must resist.
+We measure what that choice costs. A belief stated in context installs its stance in
+98\% of generations but holds it under sustained adversarial pressure in only 58\%.
+Compiling the same belief content into low-rank per-layer attention modulation (a
+trained hypernetwork write function, in the manner of GenerativeAdapter and AdaLN-style
+conditioning) inverts the trade-off: installation drops to 46\% while persistence rises
+to 89\%. Composing the compiled channel with a small curated context slot recovers most
+of the installation gap (77\%) and keeps the persistence advantage (89\%), a net gain of
+31 percentage points in hold rate over context alone. The gap concentrates at logical
+counterargument and emotional pressure, exactly where context-only conditioning
+collapses to mean conviction 2.93 and 1.99 out of 5. Fixed-direction activation
+steering extracted from identical belief content matches compiled modulation at
+installation (42\% vs.\ 46\%) and collapses under pressure (14\% vs.\ 89\%), consistent
+with an independent report that steering robustness degrades by up to 64 percentage
+points under adversarial perturbation. The result replicates across three model
+families. It is not a general anti-sycophancy trait: the update path concedes to
+well-warranted evidence at \(2.4\times\) the rate of facially deficient evidence, with
+0\% concession to contentless pressure, and general capability is unchanged within
+margin (MMLU 76.5\% vs.\ 74.8\%, \(p=0.11\)). Installation and persistence are separable
+properties of a conditioned belief, served by different channels, and a debate-oversight
+protocol that places the instruction to hold in the same channel the opponent argues in
+is targeting the wrong one.
 \end{abstract}
