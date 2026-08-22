@@ -122,6 +122,15 @@ occupies zero additional context tokens where \condB{}-style occupies roughly 90
 average, a KV-cache and context-budget property rather than primarily a latency one at
 this batch size.
 
+\textbf{Cost and capacity scale differently across the channels.} The context
+channel's per-query cost grows with belief-token count, but its capacity is the host's
+context window: belief content can grow until the window runs out. The compiled
+channel inverts both: per-query cost is constant regardless of how much the belief
+store contains, but the representation is a fixed budget (rank 16 across 11 layers),
+and how many beliefs it carries before they interfere is characterized only up to the
+store sizes tested (Section~\ref{sec:boundary}). Zero marginal tokens is a per-query
+property, not a statement that the channel's capacity is unbounded.
+
 \textbf{Write cost.} A belief update costs one hypernetwork forward pass, measured at
 4.83 seconds pooled mean (Section~\ref{sec:mechanism-write}), off the critical path: it
 can run on a parallel stream while serving continues and be swapped in at the next
