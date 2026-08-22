@@ -59,12 +59,12 @@ would be the wrong word; the loss is what Section~\ref{sec:boundary} characteriz
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{fig_components.png}
-\caption{The three components in sequence. A typed belief tree (headline nodes
-compile; evidence leaves route to the curated slot) feeds the write function $\phi$
-(conviction-weighted pooling, a shared bottleneck, per-layer heads emitting rank-16
-factors), which produces the $U_Q, V_Q, U_V, V_V$ tensors patched into 11 of 32 layers.
-One patched layer, zoomed: the low-rank update acts on the live hidden state at both
-the query and value projections.}
+\caption{The three components in sequence. A typed belief tree (typed nodes: claim,
+argument, evidence, experience, strategy; headline nodes compile, evidence leaves route
+to the curated slot) feeds the write function $\phi$ (conviction-weighted pooling, a
+shared bottleneck, per-layer heads emitting rank-16 factors), which produces the $U_Q,
+V_Q, U_V, V_V$ tensors patched into 11 of 32 layers. One patched layer, zoomed: the
+low-rank update acts on the live hidden state at both the query and value projections.}
 \label{fig:components}
 \end{figure}
 
