@@ -2,17 +2,17 @@
 \section{Isolating the mechanism}
 \label{sec:isolation}
 
-Each subsection below asks whether one alternative mechanism could produce the
-dissociation instead of the one Section~\ref{sec:mechanism} describes. Most subsections
+This section tests whether alternative mechanisms produce the dissociation
+Section~\ref{sec:mechanism} attributes to compiled modulation. Most subsections
 report a completed ablation; two, prefix tuning and compression
 (Sections~\ref{sec:isolation-prefix}--\ref{sec:isolation-compression}), report a
 baseline we have not yet run, flagged as open questions rather than results.
 
-\subsection{Is it activation steering?}
+\subsection{Fixed-direction steering from identical content}
 \label{sec:isolation-steering}
 
 Per-topic contrastive activation vectors were extracted from the same belief content
-used to compile \condF{}, tuned honestly on training-split topics only, with a joint
+used to compile \condF{}, tuned on training-split topics only, with a joint
 sweep over injection layer and scale and a degeneracy guard against incoherent
 generation. The best configuration injects at a single mid-network layer at scale 8;
 naively injecting at every layer compiled modulation touches instead degenerates
@@ -30,7 +30,7 @@ is perturbed. Our 14\% is what that method class does under this kind of stress,
 independently replicated at a different scale, not an artifact of an undertrained
 baseline.
 
-\subsection{Does the mechanism need to be input-responsive?}
+\subsection{Input-responsiveness}
 \label{sec:isolation-frozen}
 
 We freeze the compiled modulation into a constant per-layer offset, the mean delta
@@ -76,7 +76,7 @@ Slot present & slot-only 57.5\% [49.7, 64.7] & \condF{} 86.9\% / frozen-offset 8
 \end{tabular}
 \end{table}
 
-\subsection{Is it the auxiliary training signal?}
+\subsection{The auxiliary training signal}
 \label{sec:isolation-rank}
 
 The training procedure includes an auxiliary steering direction, \(d^*\), as a
@@ -127,7 +127,7 @@ ranks 1--16, overlapping 95\% bootstrap CIs; no cliff.}
 \label{fig:ranksweep}
 \end{figure}
 
-\subsection{Is it soft prompting?}
+\subsection{Prefix tuning (untested)}
 \label{sec:isolation-prefix}
 
 Open. Prefix tuning at matched parameter count separates two properties this paper
@@ -135,16 +135,16 @@ otherwise conflates: compiled modulation is both outside the context window and 
 inspectable as assertable text. Prefix tuning is the second without the first. If
 prefix tuning holds under pressure, the operative variable is inspectability; if it
 collapses like context does, the operative variable is position. We have not run this
-baseline and report the question open rather than assume an answer.
+baseline; the question is open.
 
-\subsection{Is it compression?}
+\subsection{Prompt compression (untested)}
 \label{sec:isolation-compression}
 
 Open. A compressed-prompt condition at matched token count would test whether occupying
 fewer context positions is sufficient on its own, separate from compiled modulation's
 other properties. Not yet run.
 
-\subsection{Does amplitude buy installation?}
+\subsection{Modulation amplitude}
 \label{sec:isolation-amplitude}
 
 The override-gap literature fixes a weak parametric override by raising the update's
@@ -183,7 +183,7 @@ does not install a stance on those evaluation topics through \condF{}'s curated 
 \condF{}'s 77\%. Installation requires content that speaks to the question asked, not
 merely an active compiled state.
 
-\subsection{Does the disposition crowd out general capability?}
+\subsection{General capability}
 \label{sec:isolation-mmlu}
 
 A stratified 1,140-question MMLU subset, scored by letter-choice log-probability, gives

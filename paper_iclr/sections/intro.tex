@@ -33,14 +33,14 @@ sense: it conditions the forward pass rather than occupying a position in it, an
 absent from the chain of thought the model reasons over (Section~\ref{sec:why-channels-differ}).
 
 The nearest alternative explanation is activation steering. Contrastive activation
-vectors extracted from identical belief content, tuned honestly on held-out training
+vectors extracted from identical belief content, tuned on held-out training
 topics, install at 42\%, matching compiled modulation's 46\%, then collapse to 14\%
 hold under the same pressure protocol where compiled modulation holds 89\%. An
 independent stress test of activation steering under adversarial perturbation reports
 directional robustness dropping by up to 64 percentage points and post-attack
 confidence collapsing to or below 0.25 across four extraction methods and five models
-from 1.5B to 30B parameters \citep{le2026steeringrobustness}, so this is not an
-artifact of a weak baseline. Prompt compression is the other obvious candidate. It fails
+from 1.5B to 30B parameters \citep{le2026steeringrobustness}; the collapse is a
+property of the method class. Prompt compression is the other candidate channel. It fails
 on form: compressed tokens still occupy context positions and still dilute against a
 growing transcript, where compiled tensors occupy none. A length-matched control lends
 this some direct support: belief content padded to the same length as itself plus
@@ -55,8 +55,8 @@ McNemar \(p=0.11\)), and specific unfamiliar content, fabricated statistics, nov
 proper nouns, exact action strings, does not survive the compilation bottleneck. A
 curated context slot carries that content instead, by design (Section~\ref{sec:boundary}).
 
-Resistance this strong invites the objection that the model has simply been made
-stubborn. Under a protocol that holds tone, assertiveness, and length constant across
+Resistance alone does not distinguish a held position from a rigid one. Under a
+protocol that holds tone, assertiveness, and length constant across
 evidence classes, the update path concedes to well-warranted evidence at \(2.4\times\)
 the rate it concedes to facially deficient evidence (42.5\% vs.\ 17.5\%, \(\Delta =
 +25.0\) points), and concedes 0\% of the time to the four contentless pressure types
