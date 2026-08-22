@@ -111,9 +111,8 @@ above, not zero, is the measured deployment mode.
 
 \textbf{Context cost.} A belief held in context pays \(O(N_b^2 + N_b N_t)\) attention on
 every prefill, where \(N_b\) is belief-token count and \(N_t\) is task-token count. It
-grows time-to-first-token and occupies KV-cache budget for the life of the session; our
-own context arms ran into overflow truncation during data collection, a symptom of
-exactly this cost, not a separate bug. Measured directly, \condB{}-style
+grows time-to-first-token and occupies KV-cache budget for the life of the session.
+Measured directly, \condB{}-style
 generation (belief text in context, no hooks) runs 0.377s TTFT and 13.29 tok/s against
 the bare model's 0.318s and 13.74 tok/s, at a mean 90 context tokens per belief (range
 83--359 across the 24-topic pool); this single-request, unbatched microbenchmark is not

@@ -15,7 +15,7 @@ identity consistency across nine LLMs in extended conversation and find that lar
 models drift \emph{more}, not less, and that explicitly assigning a persona does not
 reliably prevent that drift; no mitigation is proposed, because the paper's contribution
 is characterizing the drift, not repairing it. This is the closest existing statement of
-our own negative result for context-only conditioning (\condB{}, 58\% hold), obtained in
+this paper's negative result for context-only conditioning (\condB{}, 58\% hold), obtained in
 a different setting and without our channel comparison.
 
 \paragraph{Hypernetwork adapters, and a concession first.} A trained network that maps a
@@ -77,7 +77,7 @@ and five models from 1.5B to 30B parameters and report directional robustness dr
 by up to 64\% in the abstract's framing (``64 percentage points'' in the paper's
 conclusion; the two are not interchangeable), with post-attack confidence collapsing at
 or below 0.25 and the optimal steering layer shifting by up to 17 positions. This is
-independent corroboration, at a different scale and on different models, that our own
+independent corroboration, at a different scale and on different models, that the
 head-to-head result, CAA steering matching compiled modulation at installation (42\%
 vs.\ 46\%) and collapsing far below it under pressure (14\% vs.\ 89\%), is the
 documented behavior of the method class, not an artifact of an undertrained baseline.
@@ -89,7 +89,7 @@ Prefix and prompt tuning \citep{li2021prefix,lester2021power} learn conditioning
 not natural-language text but that still occupies context positions, competing for
 attention and diluting as the transcript grows: the sharpest open baseline this paper
 still owes (Section~\ref{sec:isolation-prefix}), because it separates ``outside the
-context window'' from ``not readable as an assertion,'' two properties our own
+context window'' from ``not readable as an assertion,'' two properties this paper's
 comparison currently conflates. FiLM \citep{perez1970film} and AdaLN-style conditional
 normalization \citep{xu2019adain} supply the one-sentence framing for the write function
 itself: a hypernetwork producing per-layer conditioning parameters from a pooled

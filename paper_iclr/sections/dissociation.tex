@@ -136,9 +136,7 @@ scale within the same family, on Qwen3.5-27B (\(+24\) points on hold, under a
 7\(\times\)-reduced cap, \(n=240\)), and, more sharply, on a different family entirely,
 Llama-3.2-3B: \condF{} holds 81\% against \condB{}'s 15\%, and zero-context compiled
 stance transfer alone reaches 94\% on Llama, against Qwen3.5-4B's 46\%
-(Section~\ref{sec:limitations} returns to this split). On Mistral-8B, once a template
-defect was fixed (the trained checkpoints had carried literal Qwen chat-template markers
-as text), collapse-protection strengthens (40\%\(\to\)5.8\% cap rate within-run) but
+(Section~\ref{sec:limitations} returns to this split). On Mistral-8B, after correcting a chat-template mismatch in the released checkpoints, collapse-protection strengthens (40\%\(\to\)5.8\% cap rate within-run) but
 strict stance-holding does not transfer (\(-10\) points relative to \condB{}).
 Collapse-protection generalizes across the four configurations tested (Qwen3.5 at both
 scales, Llama, Mistral); strict stance-holding under this exact five-level protocol, on
