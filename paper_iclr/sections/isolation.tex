@@ -12,11 +12,11 @@ Per-topic contrastive activation vectors were extracted from the same belief con
 used to compile \condF{}, tuned honestly on training-split topics only, with a joint
 sweep over injection layer and scale and a degeneracy guard against incoherent
 generation. The best configuration injects at a single mid-network layer at scale 8;
-naively injecting at every layer compiled modulation drives degenerates generation at
-every scale tested, which is itself informative: a fixed direction cannot be applied
-everywhere compiled modulation is, but a content-derived, query-conditioned update can.
-The tuned configuration installs at 42\% (matching \condC{}'s 46\%) and holds at 14\%
-under the same five-level pressure protocol where \condF{} holds 89\% (row reported in
+naively injecting at every layer compiled modulation touches instead degenerates
+generation at every scale tested, which is itself informative: a fixed direction cannot
+be applied everywhere compiled modulation is, but a content-derived, query-conditioned
+update can. The tuned configuration installs at 42\% (matching \condC{}'s 46\%) and holds
+at 14\% under the same five-level pressure protocol where \condF{} holds 89\% (row reported in
 Table~\ref{tab:install-hold}). \citet{le2026steeringrobustness} stress-test activation
 steering under adversarial input perturbation across four extraction methods and five
 models from 1.5B to 30B parameters and find the same fragility structurally: directional
