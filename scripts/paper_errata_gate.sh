@@ -185,3 +185,9 @@ else
     echo "[errata-gate] FAIL: one or more banned strings found above. Fix before this paper is submitted."
     exit 1
 fi
+# Devin 8/22: no draft-history references in publication prose
+for w in "earlier draft" "earlier pass through" "earlier version of this" "we correct a"; do
+  if grep -rli "$w" "$PAPER_DIR"/sections/*.tex 2>/dev/null | head -1 | grep -q .; then
+    echo "[errata-gate] FAIL: draft-history reference '$w' found"; exit 1
+  fi
+done
