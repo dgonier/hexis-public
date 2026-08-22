@@ -18,7 +18,7 @@ is characterizing the drift, not repairing it. This is the closest existing stat
 this paper's negative result for context-only conditioning (\condB{}, 58\% hold), obtained in
 a different setting and without our channel comparison.
 
-\paragraph{Hypernetwork adapters, and a concession first.} A trained network that maps a
+\paragraph{Hypernetwork adapters.} A trained network that maps a
 conditioning input, through a frozen host's own hidden states, into per-layer low-rank
 weight parameters in a single forward pass is not a new architectural primitive; it is
 an established and currently active line. GenerativeAdapter \citep{chen2025generativeadapter}
@@ -35,7 +35,7 @@ document QA with meta-LoRA accumulation across sessions; this lineage traces to 
 fast-weight-programmer framing of a slow network reprogramming a fast one
 \citep{schmidhuber1993reduce,ba2016fastweights,schlag2021linear}. Our write function is
 exactly a hypernetwork of this family, conditioning query and value projections rather
-than the output projection; that placement is not our contribution. What none of these
+than the output projection. What none of these
 papers measures is whether an installed context, once in, survives being contested.
 Every evaluation in this family is a static, single-time-point readout against a gold
 answer; none introduces a repeated query under escalating adversarial pressure. The
@@ -84,7 +84,7 @@ documented behavior of the method class, not an artifact of an undertrained base
 
 \paragraph{PEFT and modulated conditioning.} LoRA \citep{hu2021lora} and its
 derivatives target the query and value projections by default; our write function
-targets the same two projections, and this placement is not itself a contribution.
+targets the same two projections.
 Prefix and prompt tuning \citep{li2021prefix,lester2021power} learn conditioning that is
 not natural-language text but that still occupies context positions, competing for
 attention and diluting as the transcript grows: the sharpest open baseline this paper
