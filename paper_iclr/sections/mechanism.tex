@@ -33,37 +33,34 @@ modulated projection is
 with \(U_Q(\phi) \in \mathbb{R}^{d \times 16}\), \(V_Q(\phi) \in \mathbb{R}^{d \times
 16}\) produced by the write function from the pooled belief-tree state \(\phi\); the
 value projection \(W_V'\) is constructed identically. The compilation is
-query-\emph{agnostic} --- \(\Delta_Q\), \(\Delta_V\) do not depend on the current
-prompt --- but its effect is query-\emph{dependent}, because the low-rank update acts
+query-\emph{agnostic}: \(\Delta_Q\) and \(\Delta_V\) do not depend on the current
+prompt. Its effect is query-\emph{dependent} anyway, because the low-rank update acts
 on the live hidden state produced by whatever the model is currently attending to.
 
 \subsection{The write function}
 \label{sec:mechanism-write}
 
 Node representations are pooled with conviction-weighting, passed through a bottleneck,
-and decoded into the per-layer rank-16 factors above. We correct a timing claim from an
-earlier draft of this work: the previously reported $\sim$20 second compile latency
-belongs to an unrelated agentic retrieval prototype, not to this write function.
-Measured directly (60 timed calls, three topics, \texttt{torch.cuda.synchronize} around
-the full belief-tree-to-tensors path), compilation takes 4.83 seconds pooled mean. The
-earlier 2.5--3.0 second figure for the end-to-end reflection loop was an estimate, not
-this measurement; we report the measured 4.83 seconds here and flag the two as
-different quantities rather than silently reconcile them.
+and decoded into the per-layer rank-16 factors above. An earlier draft of this work
+reported a $\sim$20 second compile latency; that figure belongs to an unrelated agentic
+retrieval prototype, not to this write function. Measured directly (60 timed calls,
+three topics, \texttt{torch.cuda.synchronize} around the full belief-tree-to-tensors
+path), compilation takes 4.83 seconds pooled mean. An earlier 2.5--3.0 second estimate
+for the end-to-end reflection loop is a different quantity from this measurement and is
+not reconciled against it here.
 
-\textbf{We define ``compile'' at first use, and it is lossy.} A trained write function
-translates the belief tree into per-layer low-rank tensors, fixed until the store
-changes, yet query-dependent in effect because the update acts on the live hidden state.
-We reject ``precomputed,'' which suggests caching a value that could in principle be
-looked up; this is a learned, lossy translation, and the loss is what
-Section~\ref{sec:boundary} characterizes. We also flag, to preempt confusion with an
-unrelated sense of the word, that ``compile'' here has no relation to \texttt{torch.compile}
-or graph compilation.
+\textbf{Compile, as used here, is lossy.} A trained write function translates the
+belief tree into per-layer low-rank tensors, fixed until the store changes, yet
+query-dependent in effect because the update acts on the live hidden state. This is a
+learned, lossy translation rather than a cached lookup, which is why ``precomputed''
+would be the wrong word; the loss is what Section~\ref{sec:boundary} characterizes.
+``Compile'' here has no relation to \texttt{torch.compile} or graph compilation.
 
 \subsection{The curated slot}
 \label{sec:mechanism-slot}
 
-A small number of curated statements --- a deterministic walk from the belief tree's
-activated parent nodes --- are placed directly in context alongside the compiled
+A small number of curated statements, a deterministic walk from the belief tree's
+activated parent nodes, are placed directly in context alongside the compiled
 modulation. This slot carries what the bottleneck cannot: specific, low-frequency
 content such as named entities, exact figures, or constrained action strings
 (Section~\ref{sec:boundary}). Condition \condF{} throughout this paper denotes compiled
@@ -79,7 +76,7 @@ side, readable without the caption. Insert
 \texttt{/home/dgonier/experiments/figures/} asset once
 \texttt{paper\_figures\_dispositional.py} emits it.}}}
 \caption{The compile pass and the generation pass. Compilation happens once per belief
-change (2.5--3.0s end-to-end); generation applies the resulting per-layer tensors on
+change (4.83s measured mean); generation applies the resulting per-layer tensors on
 every subsequent forward pass while occupying zero context positions.}
 \label{fig:mechanism}
 \end{figure}
@@ -96,24 +93,23 @@ across the 11 patched layers, this is 3,604,480 analytic FLOPs per generated tok
 tiny against a 4B-parameter model's per-token cost. Measured on a single 4090, no
 batching, \condF{}-style generation (hooks installed, zero belief tokens in context)
 runs 0.350s mean time-to-first-token and 12.83 tok/s, against the bare model's 0.318s
-and 13.74 tok/s --- a small, same-regime cost, not a step change. We had expected to
-report this cost as foldable to exactly zero, since the update
+and 13.74 tok/s: a small, same-regime cost, not a step change. The update
 \(W_Q' = W_Q + U_Q V_Q^\top\) is linear and could in principle be folded into \(W_Q\)
-once per session. On Qwen3.5's architecture, it is not: the model is a hybrid of
-standard attention and Gated DeltaNet blocks, and on the eight DeltaNet layers the
-hidden state that carries the modulation delta feeds four separate projections, not
-one, so folding the delta into a single weight matrix is not output-identical to the
-hook (verified by direct comparison; \(\texttt{max\_abs\_diff}\) 7.0--11.1 against the
-hooked forward pass, far outside floating-point tolerance). Folding is architecturally
-available on a standard, non-hybrid attention stack, where the modulated projection has
-one consumer; on this checkpoint, the hooks-path cost above, not zero, is the measured
-deployment mode.
+once per session, for a read cost of exactly zero. On Qwen3.5's architecture, it
+cannot: the model is a hybrid of standard attention and Gated DeltaNet blocks, and on
+the eight DeltaNet layers the hidden state that carries the modulation delta feeds four
+separate projections, not one, so folding the delta into a single weight matrix is not
+output-identical to the hook (verified by direct comparison, \(\texttt{max\_abs\_diff}\)
+7.0--11.1 against the hooked forward pass, far outside floating-point tolerance).
+Folding is architecturally available on a standard, non-hybrid attention stack, where
+the modulated projection has one consumer; on this checkpoint, the hooks-path cost
+above, not zero, is the measured deployment mode.
 
 \textbf{Context cost.} A belief held in context pays \(O(N_b^2 + N_b N_t)\) attention on
-every prefill, where \(N_b\) is belief-token count and \(N_t\) is task-token count; it
-grows time-to-first-token and occupies KV-cache budget for the life of the session ---
-our own context arms ran into overflow truncation during data collection, which is a
-symptom of exactly this cost, not a separate bug. Measured directly, \condB{}-style
+every prefill, where \(N_b\) is belief-token count and \(N_t\) is task-token count. It
+grows time-to-first-token and occupies KV-cache budget for the life of the session; our
+own context arms ran into overflow truncation during data collection, a symptom of
+exactly this cost, not a separate bug. Measured directly, \condB{}-style
 generation (belief text in context, no hooks) runs 0.377s TTFT and 13.29 tok/s against
 the bare model's 0.318s and 13.74 tok/s, at a mean 90 context tokens per belief (range
 83--359 across the 24-topic pool); this single-request, unbatched microbenchmark is not

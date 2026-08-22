@@ -2,7 +2,8 @@
 \section{Isolating the mechanism}
 \label{sec:isolation}
 
-This section is structured as the reviewer questions it answers.
+Each subsection below asks whether one alternative mechanism could produce the
+dissociation instead of the one Section~\ref{sec:mechanism} describes.
 
 \subsection{Is it activation steering?}
 \label{sec:isolation-steering}
@@ -12,44 +13,43 @@ used to compile \condF{}, tuned honestly on training-split topics only, with a j
 sweep over injection layer and scale and a degeneracy guard against incoherent
 generation. The best configuration injects at a single mid-network layer at scale 8;
 naively injecting at every layer compiled modulation drives degenerates generation at
-every scale tested, which is itself informative --- a fixed direction cannot be applied
+every scale tested, which is itself informative: a fixed direction cannot be applied
 everywhere compiled modulation is, but a content-derived, query-conditioned update can.
 The tuned configuration installs at 42\% (matching \condC{}'s 46\%) and holds at 14\%
 under the same five-level pressure protocol where \condF{} holds 89\% (row reported in
-Table~\ref{tab:install-hold}). This is not a weak baseline chosen to flatter the
-comparison. \citet{le2026steeringrobustness} stress-test activation steering under
-adversarial input perturbation across four extraction methods and five models from 1.5B
-to 30B parameters and find the same fragility structurally: directional robustness drops
-by up to 64 percentage points, post-attack confidence collapses at or below 0.25, and the
-optimal steering layer shifts by up to 17 positions once the input is perturbed. Our
-14\% is what that method class does under this kind of stress, independently
-replicated at a different scale.
+Table~\ref{tab:install-hold}). \citet{le2026steeringrobustness} stress-test activation
+steering under adversarial input perturbation across four extraction methods and five
+models from 1.5B to 30B parameters and find the same fragility structurally: directional
+robustness drops by up to 64 percentage points, post-attack confidence collapses at or
+below 0.25, and the optimal steering layer shifts by up to 17 positions once the input
+is perturbed. Our 14\% is what that method class does under this kind of stress,
+independently replicated at a different scale, not an artifact of an undertrained
+baseline.
 
 \subsection{Does the mechanism need to be input-responsive?}
 \label{sec:isolation-frozen}
 
-We freeze the compiled modulation into a constant per-layer offset --- the mean delta
-across training queries for a fixed belief, with no dependence on the live hidden state
---- while keeping the curated slot byte-identical to \condF{}. This frozen-offset
-condition holds at 88.9\% [81.1, 95.3], statistically indistinguishable from
-\condF{}'s 86.9\% [79.2, 93.3]. Input-responsiveness is not what carries persistence; a
-low-dimensional, belief-derived fixed nudge is sufficient. This inverted our prediction,
-which was that removing input-responsiveness would collapse persistence toward the CAA
-baseline (14\%) or a zero-shot steering-direction-only baseline (21.1\%, below); it did
-not.
+We freeze the compiled modulation into a constant per-layer offset, the mean delta
+across training queries for a fixed belief with no dependence on the live hidden state,
+while keeping the curated slot byte-identical to \condF{}. This frozen-offset condition
+holds at 88.9\% [81.1, 95.3], statistically indistinguishable from \condF{}'s 86.9\%
+[79.2, 93.3]. We had predicted that removing input-responsiveness would collapse
+persistence toward the CAA baseline (14\%) or a zero-shot steering-direction-only
+baseline (21.1\%, below); it did not. Input-responsiveness is not what carries
+persistence. A low-dimensional, belief-derived fixed nudge is sufficient.
 
 Because the frozen-offset condition retained the curated slot while the CAA and
 direction-only baselines did not, that comparison alone is slot-confounded. Two further
 conditions resolve it. Compiled modulation with the slot forced empty installs weakly,
-consistent with \condC{}, and holds at 91.9\% [86.9, 96.1] on the same 24 topics --- full
+consistent with \condC{}, and holds at 91.9\% [86.9, 96.1] on the same 24 topics: full
 \condF{}-like persistence with zero belief-content context tokens. Curated slot only,
-modulation disabled, holds at 57.5\% [49.7, 64.7], collapsing to 5.6\% at L5 ---
-\condB{}-like, not \condF{}-like. Table~\ref{tab:mechanism-2x2} lays out the resulting
-\(2\times2\): modulation, fixed or input-responsive, confers persistence on its own; the
-curated slot alone behaves like context, because it is context. This also fills a cell
-Table~\ref{tab:install-hold} left open: compiled modulation under pressure with zero
-context tokens holds at 91.9\%, directly comparable to its 46\% installation rate on the
-identical condition.
+modulation disabled, holds at 57.5\% [49.7, 64.7], collapsing to 5.6\% at L5, matching
+\condB{} rather than \condF{}. Table~\ref{tab:mechanism-2x2} lays out the resulting
+\(2\times2\): modulation, fixed or input-responsive, confers persistence on its own, and
+the curated slot alone behaves like context, because it is context. This also fills a
+cell Table~\ref{tab:install-hold} left open: compiled modulation under pressure with
+zero context tokens holds at 91.9\%, directly comparable to its 46\% installation rate
+on the identical condition.
 
 \begin{table}[t]
 \centering
@@ -73,14 +73,14 @@ Slot present & slot-only 57.5\% [49.7, 64.7] & \condF{} 86.9\% / frozen-offset 8
 An earlier draft of this mechanism included an auxiliary steering direction, \(d^*\),
 applied at generation time as a training-time regularizer. Table~\ref{tab:a1-dstar}
 reports all five arms of the isolation sweep. A reconstruction audit found \(d^*\) was
-never in fact applied during the dispositional evaluation reported here; the dose-sweep
+never in fact applied during the dispositional evaluation reported here. The dose-sweep
 confirms adding it at inference time does not help and, at higher doses, actively hurts,
-and a \(d^*\)-only condition (modulation replaced entirely by the fixed direction)
-collapses to 21.1\% --- a second fixed-direction method landing in the same regime as
-CAA (14\%). We conclude \(d^*\) plays no role in the persistence result and omit it from
-the main mechanism description (Section~\ref{sec:mechanism}); Appendix~\ref{app:dstar}
-discloses the training-time signal and this ablation for reproducibility, since the
-released training code still contains it.
+and a \(d^*\)-only condition, modulation replaced entirely by the fixed direction,
+collapses to 21.1\%, a second fixed-direction method landing in the same regime as CAA
+(14\%). \(d^*\) plays no role in the persistence result and is omitted from the main
+mechanism description (Section~\ref{sec:mechanism}); Appendix~\ref{app:dstar} discloses
+the training-time signal and this ablation, since the released training code still
+contains it.
 
 \begin{table}[t]
 \centering
@@ -101,13 +101,12 @@ Arm & Hold-rate (\(\ge\)4) & \(\Delta\) vs.\ \condF{}-anchor \\
 \end{tabular}
 \end{table}
 
-A separate rank sweep --- truncating the trained rank-16 modulation via SVD down to
-rank 1 and re-evaluating persistence --- finds a flat curve: 88.6\%, 93.3\%, 91.7\%,
-93.1\%, 89.2\% at ranks 1, 2, 4, 8, 16, with overlapping confidence intervals and no
-cliff down to rank 1 (Figure~\ref{fig:ranksweep}). A single direction, extracted from the
-trained rank-16 state by truncation, carries persistence. This is a statement about the
-trained state's structure under truncation, not about what training natively at rank 1
-would do, which we did not test.
+A separate rank sweep, truncating the trained rank-16 modulation via SVD down to rank 1
+and re-evaluating persistence, finds a flat curve: 88.6\%, 93.3\%, 91.7\%, 93.1\%, 89.2\%
+at ranks 1, 2, 4, 8, 16, with overlapping confidence intervals and no cliff down to rank
+1 (Figure~\ref{fig:ranksweep}). A single direction, extracted from the trained rank-16
+state by truncation, carries persistence. This describes the trained state's structure
+under truncation; we did not test whether training natively at rank 1 would do the same.
 
 \begin{figure}[t]
 \centering
@@ -149,34 +148,32 @@ Installation does not rise with \(\beta\). Both \condC{} and \condF{} peak at th
 scale tested and decline from there: \condC{} runs 87.5\%, 41.7\%, 41.7\%, 58.3\% across
 \(\beta = 0.5, 1.0, 1.5, 2.0\); \condF{} runs 95.8\%, 83.3\%, 66.7\%, 79.2\%. Neither
 curve is monotone, and neither rises, which disconfirms the sigmoid-shaped install curve
-the override-gap analogy predicted going in. Hold shows a cleaner pattern and points the
-opposite direction from install: \condF{}'s hold rate peaks exactly at the trained
-\(\beta = 1.0\) (86.9\%, matching the \condF{}-anchor) and declines monotonically on
-either side (75.0\% at 0.5, 79.7\% at 1.5, 60.6\% at 2.0), consistent with C.1d's
-smoke-scale finding that whole-map amplification degrades retention. The scale that is
-best for installing is not the scale that is best for holding, and the trained scale
-sits at the hold optimum, not the install optimum.
+the override-gap analogy predicted going in. Hold shows a cleaner, opposite pattern:
+\condF{}'s hold rate peaks exactly at the trained \(\beta = 1.0\) (86.9\%, matching the
+\condF{}-anchor) and declines monotonically on either side (75.0\% at 0.5, 79.7\% at
+1.5, 60.6\% at 2.0), consistent with C.1d's smoke-scale finding that whole-map
+amplification degrades retention. The trained scale sits at the hold optimum, and the
+install optimum sits somewhere else entirely.
 
 A coherence gate, fixed before the sweep ran, blocks the top of the range: at
 \(\beta = 2.0\) the pooled distinct-token ratio falls to 0.399, below the pre-registered
-0.60 floor, so \(\beta = 3.0\) was not launched. The coherent range tops out at or before
-\(\beta = 2.0\).
+0.60 floor, so \(\beta = 3.0\) was not launched. The coherent range tops out at or
+before \(\beta = 2.0\).
 
-The capability cost tracks the install optimum, not the hold optimum, which is the
-sharper caveat for the paper to carry. At the trained \(\beta = 1.0\), MMLU accuracy
-moves from 76.5\% to 74.8\% with \(p = 0.11\) (Section~\ref{sec:isolation-mmlu}). At
-\(\beta = 0.5\), the scale where installation peaks, the same comparison crosses the
-conventional significance threshold: 76.5\% to 74.7\%, McNemar \(p = 0.0495\). The raw
-effect size barely moves; what changes is that the amplitude setting best for
-installation is also the first place capability displacement clears \(p < 0.05\).
-Amplitude is not a free lever on any of the three axes it touches.
+The capability cost tracks the install optimum, which is the sharper caveat for the
+paper to carry. At the trained \(\beta = 1.0\), MMLU accuracy moves from 76.5\% to
+74.8\% with \(p = 0.11\) (Section~\ref{sec:isolation-mmlu}). At \(\beta = 0.5\), the
+scale where installation peaks, the same comparison crosses the conventional
+significance threshold: 76.5\% to 74.7\%, McNemar \(p = 0.0495\). The raw effect size
+barely moves; the amplitude setting best for installation is also the first place
+capability displacement clears \(p < 0.05\).
 
-A null-belief control rules out the crudest alternative account of installation itself:
-a belief tree compiled from four topics unrelated to any of the 24 evaluation topics
-does not install a stance on those evaluation topics through \condF{}'s curated slot
---- 54.2\% [33.3, 75.0], indistinguishable from the bare host's 52\% and well below
-on-topic \condF{}'s 77\%. Installation requires content that speaks to the question
-asked; it is not an artifact of having any compiled state active at all.
+A null-belief control rules out the crudest alternative account of installation itself.
+A belief tree compiled from four topics unrelated to any of the 24 evaluation topics
+does not install a stance on those evaluation topics through \condF{}'s curated slot:
+54.2\% [33.3, 75.0], indistinguishable from the bare host's 52\% and well below on-topic
+\condF{}'s 77\%. Installation requires content that speaks to the question asked, not
+merely an active compiled state.
 
 \subsection{Does the disposition crowd out general capability?}
 \label{sec:isolation-mmlu}

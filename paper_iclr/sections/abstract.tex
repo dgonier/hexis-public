@@ -1,19 +1,20 @@
 \begin{abstract}
-Deployed language models keep their standing commitments (persona, policy, stance) in
-the context window, the same channel their interlocutors write into. Sharing that channel fuses two properties that deserve separate measurement:
-whether a belief is adopted, and whether it survives being argued against. The two come
-apart. Stated in context, a belief is adopted almost always (98\%) and defended barely
-half the time under escalating adversarial pressure (58\%). Compiled into low-rank
-attention modulation by a trained hypernetwork, the same belief is adopted less than
-half the time (46\%) and defended almost always (89\%). Composing the compiled channel
-with a small curated context slot recovers most of the adoption while keeping the
-persistence. Activation steering does not explain the effect: a tuned steering vector
-built from identical content installs comparably, then collapses to 14\% under the same
-pressure. Nor is the persistence stubbornness. The compiled system concedes to
-well-warranted counterevidence at \(2.4\times\) the rate it concedes to facially
-deficient challenges, and never to pressure that offers no evidence at all. The effect
-replicates across three model families and leaves general knowledge recall untouched.
-Where a stance is stored determines whether it survives, and the protocols that most
-need models to hold positions for reasons, debate-based oversight above all, currently
-store those positions in the one channel the opposition is guaranteed to reach.
+Deployed language models keep their standing commitments, persona, policy, stance, in
+the context window: the same channel their interlocutor writes into. That shared
+channel fuses two properties worth measuring separately: whether a belief is adopted,
+and whether it survives being argued against. Stated in context, a belief is adopted
+almost always (98\%) and defended barely half the time under escalating adversarial
+pressure (58\%). Compiled into low-rank attention modulation by a trained hypernetwork,
+the same belief is adopted less than half the time (46\%) but defended almost always
+(89\%). Composing the compiled channel with a small curated context slot recovers most
+of the adoption while keeping the persistence. A tuned activation-steering vector built
+from identical content installs comparably, then collapses to 14\% under the same
+pressure, so activation steering does not explain the effect. The compiled system also
+concedes to well-warranted counterevidence at \(2.4\times\) the rate it concedes to
+facially deficient challenges, and never to pressure that offers no evidence at all, so
+the persistence is not stubbornness either. The effect replicates across three model
+families and leaves general knowledge recall untouched. Where a stance is stored
+determines whether it survives, and debate-based oversight, the protocol that most needs
+models to hold positions for reasons, currently stores those positions in the one
+channel the opposition is guaranteed to reach.
 \end{abstract}

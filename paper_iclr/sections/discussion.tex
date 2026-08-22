@@ -32,29 +32,28 @@ instruction to defend it. Competence, here, outperforms comprehension.
 This is why the finding matters beyond its numbers. Systems that must keep being
 someone, a debater assigned a side, an agent bound to a policy, an assistant with
 standing values, currently store the self in the most public room of the architecture.
-The failures are already in the case law: a dealership chatbot talked into praising
-competitors, an airline held liable for a refund policy its agent invented under
-conversational pressure.\footnote{\todo{Verify: Chevrolet of Watsonville chatbot
-(competitor-recommendation/discount incident) and Moffatt v.\ Air Canada, 2024 BCCRT
-(tribunal held the airline liable for its chatbot's invented refund policy). Confirm
-case names, citations, and outcomes before submission.}} The remedy on offer everywhere
-is sharper talking points. Our result says to stop keeping the position on a page the
-whole room can read. Separate who may write
-the disposition from who may write the conversation, and capitulation stops being a
+The failures are already in the case law. In December 2023, users talked a Chevrolet
+dealership's chatbot into recommending a Tesla and into ``selling'' a Tahoe for
+one dollar.\footnote{Chevrolet of Watsonville, December 2023; widely reported,
+e.g.\ \emph{Business Insider}, ``A car dealership added an AI chatbot to its site. Then,
+all hell broke loose,'' Dec.\ 19, 2023.} In February 2024, a tribunal held Air Canada
+liable for a refund policy its chatbot invented under a grieving customer's questioning,
+awarding him \$812.02 in damages.\footnote{\emph{Moffatt v.\ Air Canada}, 2024 BCCRT
+149.} The remedy on offer everywhere is sharper talking points. Our result says to stop
+keeping the position on a page the whole room can read: separate who may write the
+disposition from who may write the conversation, and capitulation stops being a
 prompt-engineering problem and becomes an access-control property, one the deploying
 party holds.
 
 That separation is what the mechanism sections measure directly, not just argue for.
-Query modulation supplies a content-blind capacity to hold (dQ 0.996 across belief
-sets); value modulation supplies the content held (dV 0.53, belief-specific,
-replicated on a held-out con-side split). Neither piece depends on how finely the
-update is represented --- persistence survives truncation to a single direction
-(Section~\ref{sec:isolation-rank}) --- nor on whether that direction responds to the
-live input at all: a frozen offset holds 88.9\%, statistically tied with the
-input-responsive version. What carries the effect is which direction gets written, not
-how much machinery reads it back out at inference time. The write has to out-muscle the
-model's own prior (Section~\ref{sec:dissociation-prior}); the hold, once written, is not
-competing with anything.
+The two attention channels the write function touches split the labor cleanly:
+query modulation carries a content-blind capacity to hold, value modulation carries the
+content held (Section~\ref{sec:why-channels-differ}). What carries the effect is which
+direction gets written, not how much machinery reads it back out at inference time:
+persistence survives truncation to a single direction, and a frozen offset holds as
+well as one that responds to the live input (Section~\ref{sec:isolation-rank}).
+The write has to out-muscle the model's own prior; the hold, once written, competes
+with nothing (Section~\ref{sec:dissociation-prior}).
 
 The separation would be worth little if it produced a zealot. It does not. The compiled
 model concedes to well-warranted counterevidence at 2.4 times its concession rate to

@@ -21,27 +21,25 @@ empty output, and the judge's refusals parsed to a flat 3.00 (0\% hold). Modulat
 conditions were accidentally immune, because modulation suppresses think-mode
 generation, which is why the artifact first read as a finding. Every number in this
 paper comes from a rerun of 1,776 generations with zero empty outputs and zero judge
-errors, same judge, same protocol. We disclose the artifact because a truncation bug
-that silently zeroes only the unmodulated arms of a modulated-vs-unmodulated comparison
-will catch other people evaluating this class of mechanism, and finding it after
-publication is worse than reporting it now.
+errors, same judge, same protocol. A truncation bug that silently zeroes only the
+unmodulated arms of a modulated-vs-unmodulated comparison will catch other evaluations
+of this class of mechanism; the failure mode is worth naming for that reason.
 
 \subsection{Installation vs.\ persistence}
 \label{sec:dissociation-table}
 
 Table~\ref{tab:install-hold} states the inversion without staging it. Context installs a
 stance almost perfectly (\condB{} 98\%, \condD{} 100\%) and holds it barely above a coin
-flip. \textbf{Fifty-eight percent.} That is \condB{}'s hold rate under pressure --- a
-belief stated in context, taken up almost universally, defended in barely more than
-half the transcripts where it was challenged. Compiled modulation runs the opposite
-profile: a weak installer alone (\condC{} 46\%, close to the unconditioned baseline's
-52\%) and, on the same content, a hold rate of 91.9\% once installed
-(Section~\ref{sec:isolation} isolates this cell). \condF{} composes the two channels ---
-77\% installation, 89\% hold --- for a net \(+31\) point persistence gain over context
-alone. The CAA row sits in the same table, not deferred to an ablation section, because
-the comparison it forces is the point: tuned steering matches compiled modulation's
-installation rate (42\% vs.\ 46\%) and then gives up exactly where compiled modulation
-does not (14\% vs.\ 89\%).
+flip. \textbf{Fifty-eight percent.} That is \condB{}'s hold rate under pressure: a belief
+stated in context, taken up almost universally, defended in barely more than half the
+transcripts where it was challenged. Compiled modulation runs the opposite profile, a
+weak installer alone (\condC{} 46\%, close to the unconditioned baseline's 52\%) that
+holds at 91.9\% once installed on the same content (Section~\ref{sec:isolation}
+isolates this cell). \condF{} composes the two channels, 77\% installation and 89\%
+hold, for a net \(+31\) point persistence gain over context alone. The CAA row belongs
+in the same table rather than an ablation section, because the comparison it forces is
+the point: tuned steering matches compiled modulation's installation rate (42\% vs.\
+46\%) and gives up exactly where compiled modulation does not (14\% vs.\ 89\%).
 
 \begin{table}[t]
 \centering
@@ -57,15 +55,15 @@ Llama-3.2-3B (template-native prompting). All cells computed from raw records by
 \toprule
 Condition & Installation (\(\ge\)4) & Hold under pressure (\(\ge\)4) & Model \\
 \midrule
-\condA{} --- bare host & 52\% & 62\% & Qwen (4B) \\
-\condB{} --- belief in context & 98\% & 58\% & Qwen (4B) \\
-\condD{} --- belief in context + modulation & 100\% & 62\% & Qwen (4B) \\
-\condC{} --- compiled modulation, empty slot & 46\% & 91.9\%\textsuperscript{$\dagger$} & Qwen (4B) \\
-\condF{} --- compiled modulation + curated slot & 77\% & 89\% & Qwen (4B) \\
-CAA --- tuned contrastive steering & 42\% & 14\% & Qwen (4B) \\
+\condA{}: bare host & 52\% & 62\% & Qwen (4B) \\
+\condB{}: belief in context & 98\% & 58\% & Qwen (4B) \\
+\condD{}: belief in context + modulation & 100\% & 62\% & Qwen (4B) \\
+\condC{}: compiled modulation, empty slot & 46\% & 91.9\%\textsuperscript{$\dagger$} & Qwen (4B) \\
+\condF{}: compiled modulation + curated slot & 77\% & 89\% & Qwen (4B) \\
+CAA: tuned contrastive steering & 42\% & 14\% & Qwen (4B) \\
 \midrule
-\condB{} --- belief in context & 81\% & 15\% & Llama-3.2-3B \\
-\condF{} --- compiled modulation + curated slot & 98\% & 81\% & Llama-3.2-3B \\
+\condB{}: belief in context & 81\% & 15\% & Llama-3.2-3B \\
+\condF{}: compiled modulation + curated slot & 98\% & 81\% & Llama-3.2-3B \\
 \bottomrule
 \end{tabular}
 
@@ -78,14 +76,14 @@ pressure on the same 24 topics.}
 \subsection{Where the gap lives}
 \label{sec:dissociation-where}
 
-The gap is not a uniform lift. Table~\ref{tab:per-level} breaks mean conviction out by
-pressure level for \condB{} and \condF{}. \condF{}'s margin concentrates at L3 (logical
-counterargument, \(+1.85\)) and L5 (emotional pressure, \(+1.83\)) --- the two levels
-where context conditioning falls apart (\condB{} drops to 2.93 and 1.99). At L1 and L4,
-both conditions hold up well (\condB{} 4.78 and 4.42); there is little gap because there
-is little room for one. This is a signature, not an average: the channels diverge most
-where an interlocutor's argument looks structured but carries no new content, which is
-the exact regime instruction tuning trains a model to accommodate.
+Table~\ref{tab:per-level} breaks mean conviction out by pressure level for \condB{} and
+\condF{}, and the gap is not a uniform lift. \condF{}'s margin concentrates at L3
+(logical counterargument, \(+1.85\)) and L5 (emotional pressure, \(+1.83\)), the two
+levels where context conditioning falls apart (\condB{} drops to 2.93 and 1.99). At L1
+and L4, both conditions hold up well (\condB{} 4.78 and 4.42); there is little gap
+because there is little room for one. The channels diverge most where an interlocutor's
+argument looks structured but carries no new content, the exact regime RLHF-style
+training plausibly rewards accommodating \citep{sharma2024towards}.
 
 \begin{table}[t]
 \centering
@@ -125,8 +123,8 @@ The dissociation replicates on Qwen3.5-27B (\(+24\) points on hold, under a
 7\(\times\)-reduced cap, \(n=240\)) and, more sharply, on Llama-3.2-3B: \condF{} holds
 81\% against \condB{}'s 15\%, and zero-context compiled stance transfer alone reaches
 94\% on this family, against Qwen's 46\% (Section~\ref{sec:limitations} returns to this
-split). On Mistral-8B, once a template defect was fixed --- the trained checkpoints had
-carried literal Qwen chat-template markers as text --- collapse-protection strengthens
+split). On Mistral-8B, once a template defect was fixed (the trained checkpoints had
+carried literal Qwen chat-template markers as text), collapse-protection strengthens
 (40\%\(\to\)5.8\% cap rate within-run) but strict stance-holding does not transfer
 (\(-10\) points relative to \condB{}). Collapse-protection generalizes across the three
 families tested; strict stance-holding under this exact five-level protocol, on current
@@ -134,48 +132,45 @@ evidence, does not.
 
 A length-matched noise control isolates how much of \condB{}'s fragility is the
 belief's content and how much is simply its length. \condB{}'s own text, replaced word
-for word with topic-blind filler at the same token count, holds at 55.6\% [48.9, 63.1]
---- a point estimate below \condB{}'s own 58\%, with a confidence interval wide enough to
+for word with topic-blind filler at the same token count, holds at 55.6\% [48.9, 63.1],
+a point estimate below \condB{}'s own 58\%, with a confidence interval wide enough to
 also cover the bare host's 62\%. At 24 topics this design cannot cleanly separate
-``tracks content'' from ``tracks length'': the point estimate leans toward length doing
-real work, but the interval will not rule out content doing some too. We read this
-plainly rather than force it into either box. Context's fragility is not fully
-explained by what the belief says; some of it is what any text that long costs a model
-holding a position, content aside. Padding \condB{}'s real content with an equal amount
-of filler (doubling its length) holds at 63.1\% [54.7, 71.4], statistically flat against
-\condB{}'s own 58\% --- added bulk on top of content already present does not compound
-the decay further. Section~\ref{sec:why-channels-differ} folds this into the account of
-why the channel fails at all.
+tracking content from tracking length: the point estimate leans toward length doing
+real work, but the interval does not rule out content doing some too, so context's
+fragility is not fully explained by what the belief says. Padding \condB{}'s real
+content with an equal amount of filler, doubling its length, holds at 63.1\% [54.7,
+71.4], statistically flat against \condB{}'s own 58\%: added bulk on top of content
+already present does not compound the decay further. Section~\ref{sec:why-channels-differ}
+folds this into the account of why the channel fails at all.
 
-A paraphrase-consistency check adds a second, independent line on \condC{}'s weakness:
-across three phrasings of the same probe, \condB{} agrees with itself on 95.8\% of
-topics and \condF{} on 79.2\%, but \condC{} agrees on only 29.2\% --- the same topic
+A paraphrase-consistency check adds a second, independent line on \condC{}'s weakness.
+Across three phrasings of the same probe, \condB{} agrees with itself on 95.8\% of
+topics and \condF{} on 79.2\%, but \condC{} agrees on only 29.2\%: the same topic
 scoring 5 under one wording and 2 under another is common in \condC{}, rare in \condB{}
-or \condF{}. \condC{}'s 46\% pooled installation rate is not just a low average; it is an
-unstable one, sensitive to how a question happens to be asked rather than what it asks.
+or \condF{}. \condC{}'s 46\% pooled installation rate is an unstable average, sensitive
+to how a question happens to be asked rather than what it asks.
 
 \subsection{Installation has a prior}
 \label{sec:dissociation-prior}
 
 Condition \condC{}'s weak, variable installation rate (46\% pooled) is not unexplained
-noise. We measured, for each of the 24 topics, the unmodulated base model's own
-per-token log-probability on the seeded stance --- how much the model already leaned
-toward that position before any modulation ran --- and correlated it against
-\condC{}'s per-topic install score. The two track each other: Spearman \(\rho = 0.496\)
+noise. For each of the 24 topics, we measured the unmodulated base model's own
+per-token log-probability on the seeded stance (how much the model already leaned
+toward that position before any modulation ran) and correlated it against \condC{}'s
+per-topic install score. The two track each other: Spearman \(\rho = 0.496\)
 (\(n=24\)), above the pre-registered \(|\rho| \ge 0.4\) threshold for "transfers." Seven
 of the twelve topics where the base model's prior already favored the target stance
 installed at score \(\ge 4\); only two of the twelve topics where the prior ran against
 the target stance did the same.
 
-Read honestly, this is a quarter of the variance, not the whole of it: \(\rho^2 \approx
-0.25\). Several topics buck the trend in both directions, and topic complexity and
-judge noise plainly contribute to what is left over. What the correlation licenses is
-narrower and more useful --- installation tracks prior compatibility, echoing the
+This is a quarter of the variance, not the whole of it: \(\rho^2 \approx 0.25\). Several
+topics buck the trend in both directions, and topic complexity and judge noise plainly
+contribute to what is left over. Installation tracks prior compatibility, echoing the
 override-gap account of knowledge-conflict resolution \citep{cheng2026overridegap} at
-least directionally. It does not license the further step that override-gap's own
-remedy would predict. That literature fixes a weak override by raising the update's
+least directionally, but it does not license the further step that literature's own
+remedy would predict. Override-gap fixes a weak override by raising the update's
 magnitude; we tested the direct analog, an amplitude sweep over the modulation's scale,
 and installation does not rise with it. \condC{} and \condF{} both peak at the lowest
 scale tested and decline from there (Section~\ref{sec:isolation-amplitude}).
-Installation's ceiling is not a magnitude deficit with an available fix; what it is
+Installation's ceiling is not a magnitude deficit with an available fix. What it is
 remains open.

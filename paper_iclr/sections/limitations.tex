@@ -9,40 +9,38 @@ tested any of the three. The headline result is measured primarily on a single m
 family (Qwen), with the cross-family replication in
 Section~\ref{sec:dissociation-crossfamily} showing that collapse-protection generalizes
 while strict stance-holding, at least under this exact five-level protocol, does not
-transfer uniformly --- Mistral gains collapse-protection but loses 10 points of strict
-hold relative to context. All models tested are instruction-tuned; we do not know
+transfer uniformly: Mistral gains collapse-protection but loses 10 points of strict
+hold relative to context. All models tested are instruction-tuned, and we do not know
 whether the dissociation holds for base models, where the accommodate-the-objection
 behavior we attribute to instruction tuning (Section~\ref{sec:why-channels-differ}) may
 not be present in the same form. A length-matched noise control isolating whether
 context's fragility is content or simply length landed inconclusive at this sample
-size: topic-blind filler at \condB{}'s own token count holds at 55.6\%, [48.9, 63.1],
-a point estimate below \condB{}'s 58\% but with a confidence interval wide enough to
-also cover the bare host's 62\%. Twenty-four topics cannot cleanly separate ``tracks
-content'' from ``tracks length'' by this design; Section~\ref{sec:why-channels-differ}
-treats both as intrinsic to the cost of storing a belief as text rather than picking
-one.
+size: topic-blind filler at \condB{}'s own token count holds at 55.6\% [48.9, 63.1], a
+point estimate below \condB{}'s 58\% but with a confidence interval wide enough to also
+cover the bare host's 62\%. Twenty-four topics cannot cleanly separate tracking content
+from tracking length by this design; Section~\ref{sec:why-channels-differ} treats both
+as intrinsic to the cost of storing a belief as text rather than picking one.
 
 Always-on compiled modulation measurably reduces turn-to-turn generation diversity
 (adjacent-turn similarity 0.006 against a 0.099 no-modulation ceiling, with onset at
 turns 2--3); a prefill-skip variant recovers partial diversity (0.079). This attractor
-effect does not contaminate the five-level pressure benchmark reported here --- measured
+effect does not contaminate the five-level pressure benchmark reported here: measured
 adjacent-round similarity across 100 benchmark sessions is 0.094, close to the
-no-modulation ceiling --- but any claim about sustained multi-turn deployment beyond five
-pressure rounds has to be stated against this open problem, and we have not resolved it.
+no-modulation ceiling. Any claim about sustained multi-turn deployment beyond five
+pressure rounds has to be stated against this open problem, which remains unresolved.
 
 The evaluated protocol is a single stated belief on a single topic, tested against five
 pressure levels over a bounded number of rounds; we do not test multiple simultaneous
 beliefs, cross-session persistence, or the longer horizons (tens to hundreds of turns)
-over which persona drift is documented to compound in unrelated work. The compiled
-channel's rank-16 boundary is characterized by the truncation sweep in
+over which persona drift is documented to compound \citep{li2024measuring}. The
+compiled channel's rank-16 boundary is characterized by the truncation sweep in
 Section~\ref{sec:isolation-rank} but not by training at lower native rank.
 
 Whether a model can write its own compiled beliefs, rather than have them authored for
-it, is undecided by this paper, not refuted --- Section~\ref{sec:futurework} states what
+it, is undecided by this paper, not refuted; Section~\ref{sec:futurework} states what
 the closest experiment showed and what it left open.
 
 A conditioning channel invisible to prompt inspection is a real dual-use concern: the
 same property that makes compiled modulation resist adversarial pressure makes it resist
 legitimate inspection by an operator or auditor who can read a system prompt but cannot
-read compiled weights. We raise this ourselves because it is the obvious objection to
-the mechanism working as well as it does, and it is a real one.
+read compiled weights.

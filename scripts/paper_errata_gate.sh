@@ -135,17 +135,53 @@ check_banned "WRONG claim 'no MSC comparison exists' / '(40.2|66.0) ... does not
 check_banned "Le&Le robustness-drop must not be reworded as '64 points' (source says 'up to 64%' in the abstract and '64 percentage points' in the conclusion — quote the phrasing that matches which part of the source you cite, never a third form)" \
     '64[[:space:]]+points\b'
 
+# --- No cost/load-bearing framing (Devin 8/19) ----------------------------
+# "Load-bearing" is engineering-metaphor filler that does no work a plain
+# claim doesn't already do; banned everywhere in paper prose.
+check_banned "banned framing 'load-bearing' / 'load bearing' — state the claim plainly instead" \
+    'load[-[:space:]]bearing'
+
 echo ""
+
+# ===========================================================================
+# LAYER 1 (deslop pass, Editorial Pass 1, criterion 5): marker-word WARN list.
+# These are common AI-writing tells but are not hard-banned — some have
+# legitimate technical uses (e.g. "notably" in a genuinely notable aside).
+# WARN only: printed as a non-fatal report, does not affect exit code or FAIL.
+# ===========================================================================
+WARN_WORDS=(
+    'delve[a-z]*'
+    'underscore[a-z]*'
+    'showcas[a-z]*'
+    'crucial'
+    'notably'
+    'comprehensive'
+    'insights?'
+    'nuanced'
+    'plays? a vital role'
+    "it is worth noting"
+)
+
+echo "[errata-gate] --- Layer 1: marker-word warnings (non-fatal) ---"
+WARN_HITS=0
+for w in "${WARN_WORDS[@]}"; do
+    hits=$(grep -n -I -E "$w" "${SCAN_FILES[@]}" 2>/dev/null)
+    if [ -n "$hits" ]; then
+        WARN_HITS=$((WARN_HITS + 1))
+        echo ""
+        echo "[errata-gate] WARN: marker word '$w'"
+        echo "$hits" | sed 's/^/  /'
+    fi
+done
+if [ "$WARN_HITS" -eq 0 ]; then
+    echo "[errata-gate] No marker-word warnings."
+fi
+echo ""
+
 if [ "$FAIL" -eq 0 ]; then
-    echo "[errata-gate] PASS: $N_CHECKS checks run, 0 banned strings found in ${#SCAN_FILES[@]} file(s)."
+    echo "[errata-gate] PASS: $N_CHECKS hard checks run, 0 banned strings found in ${#SCAN_FILES[@]} file(s) ($WARN_HITS marker-word warning categories, non-fatal)."
     exit 0
 else
     echo "[errata-gate] FAIL: one or more banned strings found above. Fix before this paper is submitted."
     exit 1
 fi
-# addition: banned framing words (Devin 8/19)
-for w in "load-bearing" "load bearing"; do
-  if grep -rli "$w" "$PAPER_DIR"/sections/*.tex 2>/dev/null | head -1 | grep -q .; then
-    echo "[errata-gate] FAIL: banned framing '$w' found"; exit 1
-  fi
-done
