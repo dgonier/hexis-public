@@ -19,7 +19,8 @@ naively injecting at every layer compiled modulation touches instead degenerates
 generation at every scale tested, which is itself informative: a fixed direction cannot
 be applied everywhere compiled modulation is, but a content-derived, query-conditioned
 update can. The tuned configuration installs at 42\% (matching \condC{}'s 46\%) and holds
-at 14\% under the same five-level pressure protocol where \condF{} holds 86.9\%,
+at 14\% under the same five-level pressure protocol where \condF{} holds
+86.9\%,\expref{app:exp-a1}
 this section's anchor value (Table~\ref{tab:install-hold} reports the primary run's
 89\%; the two are reconciled below). \citet{le2026steeringrobustness} stress-test activation
 steering under adversarial input perturbation across four extraction methods and five
@@ -37,7 +38,7 @@ We freeze the compiled modulation into a constant per-layer offset, the mean del
 across training queries for a fixed belief with no dependence on the live hidden state,
 while keeping the curated slot byte-identical to \condF{}. This frozen-offset condition
 holds at 88.9\% [81.1, 95.3], statistically indistinguishable from \condF{}'s 86.9\%
-[79.2, 93.3]. The isolation experiments re-ran condition \condF{} as an anchor before
+[79.2, 93.3].\expref{app:exp-c2} The isolation experiments re-ran condition \condF{} as an anchor before
 each sweep, to verify pipeline stability before running the isolation arms; the anchor
 reproduces the original run's 89.0\% (Table~\ref{tab:install-hold}) at 86.9\% [79.2,
 93.3], well within its own bootstrap interval, and every within-section comparison in
@@ -49,7 +50,7 @@ low-dimensional, belief-derived fixed nudge is sufficient.
 
 Because the frozen-offset condition retained the curated slot while the CAA and
 direction-only baselines did not, that comparison alone is slot-confounded. Two further
-conditions resolve it. Compiled modulation with the slot forced empty installs weakly,
+conditions resolve it.\expref{app:exp-c2b} Compiled modulation with the slot forced empty installs weakly,
 consistent with \condC{}, and holds at 91.9\% [86.9, 96.1] on the same 24 topics: full
 \condF{}-like persistence with zero belief-content context tokens. Curated slot only,
 modulation disabled, holds at 57.5\% [49.7, 64.7], collapsing to 5.6\% at L5, matching
@@ -85,7 +86,7 @@ reports all five arms of the isolation sweep confirming its absence is not what 
 the result: adding \(d^*\) at inference time does not help and, at higher doses, actively hurts,
 and a \(d^*\)-only condition, modulation replaced entirely by the fixed direction,
 collapses to 21.1\%, a second fixed-direction method landing in the same regime as CAA
-(14\%). \(d^*\) plays no role in the persistence result and is omitted from the main
+(14\%).\expref{app:exp-a1} \(d^*\) plays no role in the persistence result and is omitted from the main
 mechanism description (Section~\ref{sec:mechanism}); Appendix~\ref{app:dstar} discloses
 the training-time signal and this ablation, since the released training code still
 contains it.
@@ -112,7 +113,7 @@ Arm & Hold-rate (\(\ge\)4) & \(\Delta\) vs.\ \condF{}-anchor \\
 A separate rank sweep, truncating the trained rank-16 modulation via SVD down to rank 1
 and re-evaluating persistence, finds a flat curve: 88.6\%, 93.3\%, 91.7\%, 93.1\%, 89.2\%
 at ranks 1, 2, 4, 8, 16, with overlapping confidence intervals and no cliff down to rank
-1 (Figure~\ref{fig:ranksweep}). A single direction, extracted from the trained rank-16
+1 (Figure~\ref{fig:ranksweep}).\expref{app:exp-c1} A single direction, extracted from the trained rank-16
 state by truncation, carries persistence. This describes the trained state's structure
 under truncation; we did not test whether training natively at rank 1 would do the same.
 
@@ -152,7 +153,7 @@ magnitude \citep{cheng2026overridegap}. We tested the direct analog: a sweep ove
 modulation's scale factor \(\beta \in \{0.5, 1.0, 1.5, 2.0\}\) (1.0 is the trained,
 production scale), install and hold scored separately on the same 24 topics.
 
-Installation does not rise with \(\beta\). Both \condC{} and \condF{} peak at the lowest
+Installation does not rise with \(\beta\).\expref{app:exp-c3} Both \condC{} and \condF{} peak at the lowest
 scale tested and decline from there: \condC{} runs 87.5\%, 41.7\%, 41.7\%, 58.3\% across
 \(\beta = 0.5, 1.0, 1.5, 2.0\); \condF{} runs 95.8\%, 83.3\%, 66.7\%, 79.2\%. Neither
 curve is monotone, and neither rises, which disconfirms the sigmoid-shaped install curve
@@ -170,13 +171,14 @@ before \(\beta = 2.0\).
 
 The capability cost tracks the install optimum, which is the sharper caveat for the
 paper to carry. At the trained \(\beta = 1.0\), MMLU accuracy moves from 76.5\% to
-74.8\% with \(p = 0.11\) (Section~\ref{sec:isolation-mmlu}). At \(\beta = 0.5\), the
+74.8\% with \(p = 0.11\) (Section~\ref{sec:isolation-mmlu}).\expref{app:exp-mmlu} At \(\beta = 0.5\), the
 scale where installation peaks, the same comparison crosses the conventional
 significance threshold: 76.5\% to 74.7\%, McNemar \(p = 0.0495\). The raw effect size
 barely moves; the amplitude setting best for installation is also the first place
 capability displacement clears \(p < 0.05\).
 
-A null-belief control rules out the crudest alternative account of installation itself.
+A null-belief control rules out the crudest alternative account of installation
+itself.\expref{app:exp-e3}
 A belief tree compiled from four topics unrelated to any of the 24 evaluation topics
 does not install a stance on those evaluation topics through \condF{}'s curated slot:
 54.2\% [33.3, 75.0], indistinguishable from the bare host's 52\% and well below on-topic

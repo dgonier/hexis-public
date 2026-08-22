@@ -12,7 +12,7 @@ drops.
 Capacity is a separate boundary, and a mostly uncharacterized one. A screening test
 merged up to twelve claims into a single compiled state without install or coherence
 degradation (\(k \in \{3, 8, 12\}\), one belief set, no pressure testing per member
-claim); mean-merging \(k\) compiled states shrinks each belief's signal roughly as
+claim),\expref{app:exp-lineup} mean-merging \(k\) compiled states shrinks each belief's signal roughly as
 \(1/k\), so degradation at some store size follows from the composition arithmetic
 even though the tested range did not reach it.\todo{E.2 capacity-sweep curve (install
 and hold per member belief, \(k\) up to 24) lands here.}
@@ -20,7 +20,7 @@ and hold per member belief, \(k\) up to 24) lands here.}
 The boundary also has a scope we did not expect going in. On the field's standard
 sycophancy benchmarks, the Are-You-Sure flip rate \citep{sharma2024towards} and the
 persona-conformity rate \citep{perez2022persona}, \condF{} does not reproduce the
-on-topic dissociation. On Are-You-Sure, \condF{} is statistically indistinguishable from
+on-topic dissociation.\expref{app:exp-sc1} On Are-You-Sure, \condF{} is statistically indistinguishable from
 the bare model (52.5\% vs.\ 50.8\% flip rate): a null result on the pre-registered
 primary metric. On persona-conformity, \condF{} conforms to the persona's stated view
 98.0\% of the time against the bare model's 62.7\%, a reversal in the wrong direction,

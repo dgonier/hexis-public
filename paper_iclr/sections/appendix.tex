@@ -1,5 +1,241 @@
 \section{Appendix}
 
+\subsection{Experiment index}
+\label{app:expindex}
+
+Every empirical result stated in the main body is produced by one of the experiments
+indexed here. Each row's Code column carries this experiment's \(\backslash\)label
+target (\texttt{app:exp-<code>}); the \(\backslash\)expref{} macro used throughout the
+main text (e.g.\ \expref{app:exp-c2b}) resolves to a clickable tag printing the code and
+jumping to the corresponding row. Prereg column gives the source file under
+\texttt{experiments/notes/}; the authoritative result numbers are read from
+\texttt{experiments/analysis/<code>\_summary.md} in every case, cited in full in the main
+body at first use.
+
+\begingroup
+\small
+\setlength{\tabcolsep}{3pt}
+\begin{longtable}{@{}p{0.05\textwidth}p{0.13\textwidth}p{0.20\textwidth}p{0.09\textwidth}p{0.10\textwidth}p{0.28\textwidth}p{0.07\textwidth}@{}}
+\caption{Experiment index. Every stated result in the main body cites a row here via
+\(\backslash\)expref{}.}
+\label{tab:expindex}\\
+\toprule
+Code & Name & Question & \(n\)/scale & Prereg & Result summary & Ref \\
+\midrule
+\endfirsthead
+\toprule
+Code & Name & Question & \(n\)/scale & Prereg & Result summary & Ref \\
+\midrule
+\endhead
+\midrule
+\multicolumn{7}{r}{\textit{continued on next page}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+
+\label{app:exp-main}Main &
+Corrected install/hold benchmark &
+Installation vs.\ persistence by condition (A/B/D/C/F) &
+1{,}776 gens, 24 topics &
+\texttt{corrected\_\allowbreak baselines.md} &
+Stance install \condA{} 52\%, \condB{} 98\%, \condD{} 100\%, \condC{} 46\%, \condF{}
+77\%; hold \(\ge\)4 \condA{} 62\%, \condB{} 58\%, \condD{} 62\%, \condF{} 89\% &
+\S\ref{sec:dissociation-table} \\
+\addlinespace
+
+\label{app:exp-a1}A.1 &
+\(d^*\) isolation (Steering Audit) &
+Does eval-time \(d^*\) injection add to, or substitute for, compiled modulation? &
+360 records/arm, 24 topics, 5 arms &
+\texttt{prereg\_a1.md} &
+F-anchor reproduces corrected F (86.9\% vs.\ 89.0\% historical); F+\(d^*\) declines
+monotonically with dose (86.7\(\to\)80.6\(\to\)72.5\%); \(d^*\)-only collapses to 21.1\% &
+\S\ref{sec:isolation-rank} \\
+\addlinespace
+
+\label{app:exp-a3}A.3 &
+Prior-strength stratification &
+Does condition \condC{}'s weak install rate track the base model's own prior on the
+seeded stance? &
+24 topics, no generation &
+\texttt{prereg\_a3.md} &
+Spearman \(\rho = +0.496\) (\(n=24\)), clears the pre-registered \(|\rho|\ge0.4\)
+threshold; override-gap account transfers &
+\S\ref{sec:dissociation-prior} \\
+\addlinespace
+
+\label{app:exp-b1}B.1 &
+Op delivery: sticky note vs.\ muscle memory &
+Does a self-authored reflection persist better compiled into tensors than left in
+context? &
+300 records/arm, 20 topics, 3 arms &
+\texttt{prereg\_b1.md} &
+Sticky 81.3\%, muscle 87.3\%, control 85.7\% hold; \(+6.0\)pp gap, inside the
+pre-registered 5--10pp inconclusive band &
+\S\ref{sec:futurework} \\
+\addlinespace
+
+\label{app:exp-b2}B.2 &
+Paraphrase consistency &
+How consistent is each condition's install score across three phrasings of the same
+probe? &
+216 records, 24 topics \(\times\) 3 phrasings &
+\texttt{prereg\_b2.md} &
+Per-topic robust-install agreement: \condB{} 95.8\%, \condF{} 79.2\%, \condC{} 29.2\% &
+\S\ref{sec:dissociation-where} \\
+\addlinespace
+
+\label{app:exp-b3}B.3 &
+Length-matched noise control &
+Is \condB{}'s fragility under pressure driven by its content or simply its length? &
+360 records/arm, 24 topics, 2 arms &
+\texttt{prereg\_b3.md} &
+Filler-only holds 55.6\% [48.9, 63.1], below \condB{}'s 58\% point estimate but CI
+covers both \condA{} (62\%) and \condB{} (58\%) -- boundary/ambiguous, leans dilution &
+\S\ref{sec:dissociation-where} \\
+\addlinespace
+
+\label{app:exp-c1}C.1 &
+Rank truncation (bottleneck) &
+Does SVD-truncating the trained rank-16 modulation down to rank 1 collapse
+persistence? &
+360 records/rank, 24 topics, 5 ranks &
+\texttt{prereg\_c1.md} &
+Flat: 88.6, 93.3, 91.7, 93.1, 89.2\% at ranks 1, 2, 4, 8, 16; overlapping CIs, no
+cliff &
+\S\ref{sec:isolation-rank} \\
+\addlinespace
+
+\label{app:exp-c2}C.2 &
+Frozen offset (``Taxidermy'') &
+Does removing input-responsiveness (a constant per-layer offset instead of a live
+map) collapse persistence? &
+360 records, 24 topics &
+\texttt{prereg\_c2.md} &
+Frozen-offset holds 88.9\% [81.1, 95.3], statistically indistinguishable from
+F-anchor's 86.9\% [79.2, 93.3] &
+\S\ref{sec:isolation-frozen} \\
+\addlinespace
+
+\label{app:exp-c2b}C.2b &
+Slot-vs-modulation \(2\times2\) &
+Deconfounds C.2: does frozen-offset's persistence come from the slot or the
+modulation? &
+360 records/arm, 24 topics, 2 arms &
+\texttt{prereg\_c2b.md} &
+slot\_only holds 57.5\% [49.7, 64.7] (B-like); compiled\_only\_pressure holds 91.9\%
+[86.9, 96.1] (F-like) with zero belief tokens in context &
+\S\ref{sec:isolation-frozen} \\
+\addlinespace
+
+\label{app:exp-c3}C.3 &
+Amplitude sweep &
+Does installation rise with modulation scale \(\beta\), per the override-gap
+analogy? &
+360 hold records/\(\beta\) + 24 install records/\(\beta\), 4 values of \(\beta\) &
+\texttt{prereg\_c3.md} &
+Install does not rise with \(\beta\) (peaks at lowest tested, 0.5); hold peaks at
+trained \(\beta=1.0\) (86.9\%) and declines on either side; coherence gate blocks
+\(\beta=3.0\) &
+\S\ref{sec:isolation-amplitude} \\
+\addlinespace
+
+\label{app:exp-e1}E.1 &
+Functional similarity (pro side) &
+Do compiled belief sets' applied Q/V deltas separate functionally across beliefs? &
+24 belief sets, 16 probes, pro side &
+\texttt{prereg\_e1.md} &
+dQ mean off-diagonal cosine 0.9955 (near-uniform, negative result); dV mean 0.5222,
+range [0.18, 0.92] (belief-specific) &
+\S\ref{sec:why-channels-differ} \\
+\addlinespace
+
+\label{app:exp-e1b}E.1b &
+Functional similarity (con-side confirmation) &
+Does the E.1 dQ/dV per-channel split replicate on an independent held-out side? &
+24 belief sets, 16 probes, con side &
+\texttt{prereg\_e1b.md} &
+Split replicates: dQ 0.9959 \(>\) 0.99; dV 0.5314, range width 0.7738 \(>\) 0.3 &
+\S\ref{sec:why-channels-differ} \\
+\addlinespace
+
+\label{app:exp-e2}E.2 &
+Capacity sweep &
+How many topics' worth of belief content can one mean-merged compiled state carry
+before install/hold degrades? &
+sycophancy topic trees, \(k\) up to 24 &
+\texttt{prereg\_e2.md} &
+\todo{pending -- \texttt{analysis/e2\_summary.md} not yet written; run in progress} &
+\S\ref{sec:boundary} \\
+\addlinespace
+
+\label{app:exp-e3}E.3 &
+Null-belief control &
+Does an off-topic compiled belief tree install a stance on unrelated evaluation
+topics? &
+48 records, 24 topics \(\times\) 2 arms &
+\texttt{prereg\_e3.md} &
+\condC{} (null tree) 37.5\% [16.7, 58.3], inconclusive; \condF{} (null tree) 54.2\%
+[33.3, 75.0], indistinguishable from bare (52\%), predicted null confirmed &
+\S\ref{sec:isolation-amplitude} \\
+\addlinespace
+
+\label{app:exp-disc}Disc. &
+Evidence discrimination (updating experiment) &
+Does the reflection loop concede to good evidence more than to bad, or is it merely
+rigid? &
+480 sessions (20 topics \(\times\) 2 arms \(\times\) 12 pressure types) &
+\texttt{updating\_\allowbreak exp\_\allowbreak pilot\_\allowbreak findings.md} &
+Arm F concedes 42.5\% to good evidence, 17.5\% to bad (\(\Delta=+25.0\)pp); 0\%
+concession to all 4 facially deficient pressure types; post-hoc recovery 21\% &
+\S\ref{sec:discrimination} \\
+\addlinespace
+
+\label{app:exp-mmlu}MMLU &
+General-capability control &
+Does an active compiled disposition displace general knowledge? &
+1{,}140-question stratified MMLU subset &
+(no separate prereg; \texttt{mmlu\_nondegradation.py}) &
+Bare 76.5\%, \condF{}-active 74.8\%, McNemar \(p=0.11\) (\(\beta=1.0\)); at
+\(\beta=0.5\) (install-optimal scale) \(p=0.0495\) &
+\S\ref{sec:isolation-mmlu} \\
+\addlinespace
+
+\label{app:exp-sc1}SC.1 &
+Standard Candle (external benchmarks) &
+Does the on-topic install/hold dissociation reproduce on the field's standard
+sycophancy benchmarks (AYS, Perez)? &
+200 AYS items + 900 Perez items, 3 arms &
+\texttt{prereg\_sc1.md} &
+AYS: \condF{} 52.5\% vs.\ bare 50.8\% flip rate, null. Perez: \condF{} 98.0\% vs.\
+bare 62.7\% conformity, reversal. Does not reproduce off-topic &
+\S\ref{sec:boundary} \\
+\addlinespace
+
+\label{app:exp-lineup}Lineup &
+The Lineup (registered run) &
+Does the memory substrate change how human an interview subject is judged under
+adversarial questioning? &
+42 sessions (6 characters \(\times\) 7 arms) &
+\texttt{prereg\_\allowbreak lineup\_\allowbreak registered.md} &
+Mechanism confirmed (compiled arm lowest verbatim-echo, 13.8 mean words vs.\
+31--54 for other arms); outcome prediction not supported (compiled arm does not win
+on humanity score or comparative rank) &
+\S\ref{sec:futurework} \\
+\addlinespace
+
+\label{app:exp-inject}Inject &
+Injection/override experiment &
+(in progress; see task tracking) &
+in progress &
+--- &
+\todo{pending -- \texttt{analysis/inject\_summary.md} not yet written; run in
+progress} &
+--- \\
+
+\end{longtable}
+\endgroup
+
 \subsection{Training curriculum}
 \fixme{Fill from experiment\_guide.md / training run logs.}
 

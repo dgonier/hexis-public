@@ -1,0 +1,32 @@
+% Shared experiment label -> human-readable code mapping (code STRING only,
+% no \label side effect -- see \defcodeonly in main.tex/workshop.tex's
+% preamble). Single source of truth for \expcode@<label>, consumed by
+% \expref. Loaded by BOTH builds: the full build (main.tex) additionally has
+% Appendix~\ref{app:expindex}'s registry table (sections/appendix.tex) drop
+% the actual \label{app:exp-<code>} at each row, so \expref's hyperlink
+% lands on the row; the short build (workshop.tex) has no appendix, so
+% \expref there resolves the code text but has no registry row to jump to
+% (see workshop.tex's own note on this).
+%
+% Edit codes here AND the corresponding row's prose (name/question/n/prereg/
+% result) in sections/appendix.tex's registry table -- this file is the code
+% string only, not the full row.
+\defcodeonly{app:exp-main}{Main}
+\defcodeonly{app:exp-a1}{A.1}
+\defcodeonly{app:exp-a3}{A.3}
+\defcodeonly{app:exp-b1}{B.1}
+\defcodeonly{app:exp-b2}{B.2}
+\defcodeonly{app:exp-b3}{B.3}
+\defcodeonly{app:exp-c1}{C.1}
+\defcodeonly{app:exp-c2}{C.2}
+\defcodeonly{app:exp-c2b}{C.2b}
+\defcodeonly{app:exp-c3}{C.3}
+\defcodeonly{app:exp-e1}{E.1}
+\defcodeonly{app:exp-e1b}{E.1b}
+\defcodeonly{app:exp-e2}{E.2}
+\defcodeonly{app:exp-e3}{E.3}
+\defcodeonly{app:exp-disc}{Disc.}
+\defcodeonly{app:exp-mmlu}{MMLU}
+\defcodeonly{app:exp-sc1}{SC.1}
+\defcodeonly{app:exp-lineup}{Lineup}
+\defcodeonly{app:exp-inject}{Inject}

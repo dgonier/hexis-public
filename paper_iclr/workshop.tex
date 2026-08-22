@@ -44,6 +44,22 @@
 \newcommand{\condD}{D}
 \newcommand{\condF}{F}
 
+% Experiment cross-reference macro (mirrors main.tex — kept in sync there;
+% see sections/expcodes.tex for the shared label->code mapping). This short
+% build has no appendix / experiment registry table, so \expref here prints
+% the code but the hyperlink target is wherever sections/expcodes.tex was
+% loaded (just below), not a registry row — acceptable for the non-archival
+% workshop draft, which cites results inline without a full appendix anyway.
+\makeatletter
+\newcommand{\exprefcode}[1]{%
+  \@nameuse{expcode@#1}%
+}
+\newcommand{\defcodeonly}[2]{%
+  \@namedef{expcode@#1}{#2}%
+}
+\makeatother
+\newcommand{\expref}[1]{\hyperref[#1]{(Exp.~\exprefcode{#1})}}
+
 \title{The Prompt Is Not a Place to Keep a Belief: \\
 Why Stated Beliefs Collapse Under Pressure and Compiled Ones Hold \\
 {\large \textit{(Workshop / TTCL short paper — non-archival)}}}
@@ -55,6 +71,18 @@ Why Stated Beliefs Collapse Under Pressure and Compiled Ones Hold \\
 
 \begin{document}
 \maketitle
+
+% Experiment-code definitions (shared with main.tex). No experiment-index
+% appendix in this short build, so every \expref{app:exp-<code>} link below
+% resolves to this anchor rather than to a per-experiment registry row —
+% acceptable for the non-archival workshop draft; the full registry lives
+% only in the ICLR build (main.tex, Appendix~\ref{app:expindex}).
+\input{sections/expcodes}
+\label{app:exp-main}\label{app:exp-a1}\label{app:exp-a3}\label{app:exp-b1}%
+\label{app:exp-b2}\label{app:exp-b3}\label{app:exp-c1}\label{app:exp-c2}%
+\label{app:exp-c2b}\label{app:exp-c3}\label{app:exp-e1}\label{app:exp-e1b}%
+\label{app:exp-e2}\label{app:exp-e3}\label{app:exp-disc}\label{app:exp-mmlu}%
+\label{app:exp-sc1}\label{app:exp-lineup}\label{app:exp-inject}
 
 \input{sections/abstract}
 \input{sections/intro}
