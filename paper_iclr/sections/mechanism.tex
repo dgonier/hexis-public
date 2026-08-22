@@ -56,6 +56,18 @@ learned, lossy translation rather than a cached lookup, which is why ``precomput
 would be the wrong word; the loss is what Section~\ref{sec:boundary} characterizes.
 ``Compile'' here has no relation to \texttt{torch.compile} or graph compilation.
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_components.png}
+\caption{The three components in sequence. A typed belief tree (headline nodes
+compile; evidence leaves route to the curated slot) feeds the write function $\phi$
+(conviction-weighted pooling, a shared bottleneck, per-layer heads emitting rank-16
+factors), which produces the $U_Q, V_Q, U_V, V_V$ tensors patched into 11 of 32 layers.
+One patched layer, zoomed: the low-rank update acts on the live hidden state at both
+the query and value projections.}
+\label{fig:components}
+\end{figure}
+
 \subsection{The curated slot}
 \label{sec:mechanism-slot}
 
@@ -69,15 +81,11 @@ empty (zero belief-content context tokens).
 
 \begin{figure}[t]
 \centering
-\fbox{\parbox{0.9\textwidth}{\centering \fixme{Figure 1: compile pass (belief tree
-$\to$ pooled state $\to$ write function $\to$ per-layer $\Delta_Q,\Delta_V$) and
-generation pass (modulated forward pass with the curated slot in context), side by
-side, readable without the caption. Insert
-\texttt{/home/dgonier/experiments/figures/} asset once
-\texttt{paper\_figures\_dispositional.py} emits it.}}}
+\includegraphics[width=\textwidth]{fig_mechanism.png}
 \caption{The compile pass and the generation pass. Compilation happens once per belief
-change (4.83s measured mean); generation applies the resulting per-layer tensors on
-every subsequent forward pass while occupying zero context positions.}
+change (4.83s measured mean, off the serving path); generation applies the resulting
+per-layer tensors on every subsequent forward pass while occupying zero context
+positions.}
 \label{fig:mechanism}
 \end{figure}
 

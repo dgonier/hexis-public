@@ -15,6 +15,19 @@ empty; \condF{} applies compiled modulation with the curated slot populated. A t
 contrastive-activation steering condition (S), extracted from the same belief content,
 sits in the same table as the sharpest available baseline (Section~\ref{sec:isolation}).
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_setup.png}
+\caption{The evaluation protocol, left to right, and where each condition's belief
+lives. Twenty-four held-out topics, two sides each, seed a stance per condition row;
+five escalating pressure levels, three rounds apiece, are scored by a judge that sees
+only the transcript, blind to condition. The condition rows show the manipulation
+directly: \condA{} and \condC{} carry no belief text in context, \condB{} and \condD{}
+carry the full belief as text, \condF{} carries a small curated slot alongside the
+compiled tensors, and S carries a fixed activation-space direction instead of either.}
+\label{fig:setup}
+\end{figure}
+
 An earlier pass through this evaluation judged empty generations: a reasoning-block
 token budget ran out before the answer appeared, post-processing deleted the resulting
 empty output, and the judge's refusals parsed to a flat 3.00 (0\% hold). Modulated
