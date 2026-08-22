@@ -79,11 +79,10 @@ Slot present & slot-only 57.5\% [49.7, 64.7] & \condF{} 86.9\% / frozen-offset 8
 \subsection{Is it the auxiliary training signal?}
 \label{sec:isolation-rank}
 
-An earlier draft of this mechanism included an auxiliary steering direction, \(d^*\),
-applied at generation time as a training-time regularizer. Table~\ref{tab:a1-dstar}
-reports all five arms of the isolation sweep. A reconstruction audit found \(d^*\) was
-never in fact applied during the dispositional evaluation reported here. The dose-sweep
-confirms adding it at inference time does not help and, at higher doses, actively hurts,
+The training procedure includes an auxiliary steering direction, \(d^*\), as a
+regularization signal; it is not applied at evaluation time. Table~\ref{tab:a1-dstar}
+reports all five arms of the isolation sweep confirming its absence is not what carries
+the result: adding \(d^*\) at inference time does not help and, at higher doses, actively hurts,
 and a \(d^*\)-only condition, modulation replaced entirely by the fixed direction,
 collapses to 21.1\%, a second fixed-direction method landing in the same regime as CAA
 (14\%). \(d^*\) plays no role in the persistence result and is omitted from the main

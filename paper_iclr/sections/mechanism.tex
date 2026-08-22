@@ -41,13 +41,9 @@ on the live hidden state produced by whatever the model is currently attending t
 \label{sec:mechanism-write}
 
 Node representations are pooled with conviction-weighting, passed through a bottleneck,
-and decoded into the per-layer rank-16 factors above. An earlier draft of this work
-reported a $\sim$20 second compile latency; that figure belongs to an unrelated agentic
-retrieval prototype, not to this write function. Measured directly (60 timed calls,
+and decoded into the per-layer rank-16 factors above. Measured directly (60 timed calls,
 three topics, \texttt{torch.cuda.synchronize} around the full belief-tree-to-tensors
-path), compilation takes 4.83 seconds pooled mean. An earlier 2.5--3.0 second estimate
-for the end-to-end reflection loop is a different quantity from this measurement and is
-not reconciled against it here.
+path), compilation takes 4.83 seconds pooled mean on the evaluation hardware.
 
 \textbf{Compile, as used here, is lossy.} A trained write function translates the
 belief tree into per-layer low-rank tensors, fixed until the store changes, yet

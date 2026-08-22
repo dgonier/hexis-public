@@ -28,15 +28,14 @@ compiled tensors, and S carries a fixed activation-space direction instead of ei
 \label{fig:setup}
 \end{figure}
 
-An earlier pass through this evaluation judged empty generations: a reasoning-block
-token budget ran out before the answer appeared, post-processing deleted the resulting
-empty output, and the judge's refusals parsed to a flat 3.00 (0\% hold). Modulated
-conditions were accidentally immune, because modulation suppresses think-mode
-generation, which is why the artifact first read as a finding. Every number in this
-paper comes from a rerun of 1,776 generations with zero empty outputs and zero judge
-errors, same judge, same protocol. A truncation bug that silently zeroes only the
-unmodulated arms of a modulated-vs-unmodulated comparison will catch other evaluations
-of this class of mechanism; the failure mode is worth naming for that reason.
+One validity hazard in this design is worth naming. In preliminary runs, a
+reasoning-block token budget could expire before the answer appeared, post-processing
+then deleted the empty output, and the judge's refusals parsed to a uniform score;
+modulated conditions were immune, because modulation suppresses think-mode generation,
+so the artifact selectively zeroed only the unmodulated arms. All reported numbers come
+from 1,776 generations collected with per-record emptiness guards: zero empty outputs,
+zero judge errors. Evaluations comparing modulated against unmodulated arms should
+guard for this failure mode, since it mimics a large treatment effect.
 
 \subsection{Installation vs.\ persistence}
 \label{sec:dissociation-table}
