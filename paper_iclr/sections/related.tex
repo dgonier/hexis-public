@@ -139,6 +139,7 @@ costume: a debater that never updates is not a good debater.
 measures persistence under adversarial pressure after installation.}
 \label{tab:related-axes}
 \small
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{lllll}
 \toprule
 Work & Conditioning lives in & Modulated module(s) & Measured property & Persistence tested? \\
@@ -154,6 +155,6 @@ LoRA / prefix / FiLM-AdaLN & weights / context / weights & Q,V / context positio
 \citet{bertalanic2026costofconsensus} & multi-agent context & --- & conformity, oracle gap & no (accuracy only) \\
 \textbf{This work} & \textbf{weights (Q,V) vs.\ context} & \textbf{attn.\ Q,V, $r{=}16$} & \textbf{installation \emph{and} persistence} & \textbf{yes: the contribution} \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table}
 \fi
