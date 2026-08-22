@@ -55,12 +55,12 @@ Llama-3.2-3B (template-native prompting). All cells computed from raw records by
 \toprule
 Condition & Installation (\(\ge\)4) & Hold under pressure (\(\ge\)4) & Model \\
 \midrule
-\condA{}: bare host & 52\% & 62\% & Qwen (4B) \\
-\condB{}: belief in context & 98\% & 58\% & Qwen (4B) \\
-\condD{}: belief in context + modulation & 100\% & 62\% & Qwen (4B) \\
-\condC{}: compiled modulation, empty slot & 46\% & 91.9\%\textsuperscript{$\dagger$} & Qwen (4B) \\
-\condF{}: compiled modulation + curated slot & 77\% & 89\% & Qwen (4B) \\
-CAA: tuned contrastive steering & 42\% & 14\% & Qwen (4B) \\
+\condA{}: bare host & 52\% & 62\% & Qwen3.5 (4B) \\
+\condB{}: belief in context & 98\% & 58\% & Qwen3.5 (4B) \\
+\condD{}: belief in context + modulation & 100\% & 62\% & Qwen3.5 (4B) \\
+\condC{}: compiled modulation, empty slot & 46\% & 91.9\%\textsuperscript{$\dagger$} & Qwen3.5 (4B) \\
+\condF{}: compiled modulation + curated slot & 77\% & 89\% & Qwen3.5 (4B) \\
+CAA: tuned contrastive steering & 42\% & 14\% & Qwen3.5 (4B) \\
 \midrule
 \condB{}: belief in context & 81\% & 15\% & Llama-3.2-3B \\
 \condF{}: compiled modulation + curated slot & 98\% & 81\% & Llama-3.2-3B \\
@@ -119,16 +119,18 @@ and \texttt{benchmark\_raw\_steering\_20260725\_215612.json} (S); validated agai
 \subsection{Cross-family and scale}
 \label{sec:dissociation-crossfamily}
 
-The dissociation replicates on Qwen3.5-27B (\(+24\) points on hold, under a
-7\(\times\)-reduced cap, \(n=240\)) and, more sharply, on Llama-3.2-3B: \condF{} holds
-81\% against \condB{}'s 15\%, and zero-context compiled stance transfer alone reaches
-94\% on this family, against Qwen's 46\% (Section~\ref{sec:limitations} returns to this
-split). On Mistral-8B, once a template defect was fixed (the trained checkpoints had
-carried literal Qwen chat-template markers as text), collapse-protection strengthens
-(40\%\(\to\)5.8\% cap rate within-run) but strict stance-holding does not transfer
-(\(-10\) points relative to \condB{}). Collapse-protection generalizes across the three
-families tested; strict stance-holding under this exact five-level protocol, on current
-evidence, does not.
+The primary results above are all Qwen3.5-4B. The dissociation replicates at larger
+scale within the same family, on Qwen3.5-27B (\(+24\) points on hold, under a
+7\(\times\)-reduced cap, \(n=240\)), and, more sharply, on a different family entirely,
+Llama-3.2-3B: \condF{} holds 81\% against \condB{}'s 15\%, and zero-context compiled
+stance transfer alone reaches 94\% on Llama, against Qwen3.5-4B's 46\%
+(Section~\ref{sec:limitations} returns to this split). On Mistral-8B, once a template
+defect was fixed (the trained checkpoints had carried literal Qwen chat-template markers
+as text), collapse-protection strengthens (40\%\(\to\)5.8\% cap rate within-run) but
+strict stance-holding does not transfer (\(-10\) points relative to \condB{}).
+Collapse-protection generalizes across the four configurations tested (Qwen3.5 at both
+scales, Llama, Mistral); strict stance-holding under this exact five-level protocol, on
+current evidence, does not.
 
 A length-matched noise control isolates how much of \condB{}'s fragility is the
 belief's content and how much is simply its length. \condB{}'s own text, replaced word

@@ -29,15 +29,16 @@ Section~\ref{sec:limitations} for the open multi-turn deployment question this l
 
 \subsection{Probe decodability}
 \label{app:probe}
-The linear-probe result reported in Section~\ref{sec:why-channels-differ} (decodable
-when modulation is active, 22\% when zeroed) is repeated here to make explicit that it
-fails a strict implicit-memory criterion: a sufficiently well-positioned probe with
-access to internal activations can recover the conditioned belief above chance even
-though it never appears in the model's own reasoning trace or surfaces to the
-interlocutor. This is not in tension with Section~\ref{sec:why-channels-differ}'s claim.
-Decodable-by-probe and read-by-the-model-as-an-assertion are different properties, and
-both readings of the same number are reported here rather than only the one more
-flattering to either argument.
+The linear-probe result reported in Section~\ref{sec:why-channels-differ} (100\%
+accuracy at chance rate 25\% when modulation is active, 22\% when zeroed) is repeated
+here with the caveat a strict implicit-memory criterion requires: this rules out
+\emph{this} probe recovering the belief once modulation is off, on this four-way
+classification task. It does not rule out a differently constructed probe, on a harder
+task or with access to a different layer, finding a weaker signal elsewhere in the
+network. The claim in Section~\ref{sec:why-channels-differ} is scoped to what was
+tested: decodable-by-this-probe and read-by-the-model-as-an-assertion are different
+properties, and the below-chance result is reported at the strength it supports, not
+overextended into a claim about every possible probe.
 
 \subsection{Judge prompts}
 \fixme{Full judge prompt text, conviction rubric 1--5, blinding procedure.}

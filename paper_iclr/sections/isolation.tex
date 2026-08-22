@@ -3,7 +3,10 @@
 \label{sec:isolation}
 
 Each subsection below asks whether one alternative mechanism could produce the
-dissociation instead of the one Section~\ref{sec:mechanism} describes.
+dissociation instead of the one Section~\ref{sec:mechanism} describes. Most subsections
+report a completed ablation; two, prefix tuning and compression
+(Sections~\ref{sec:isolation-prefix}--\ref{sec:isolation-compression}), report a
+baseline we have not yet run, flagged as open questions rather than results.
 
 \subsection{Is it activation steering?}
 \label{sec:isolation-steering}
@@ -16,8 +19,9 @@ naively injecting at every layer compiled modulation touches instead degenerates
 generation at every scale tested, which is itself informative: a fixed direction cannot
 be applied everywhere compiled modulation is, but a content-derived, query-conditioned
 update can. The tuned configuration installs at 42\% (matching \condC{}'s 46\%) and holds
-at 14\% under the same five-level pressure protocol where \condF{} holds 89\% (row reported in
-Table~\ref{tab:install-hold}). \citet{le2026steeringrobustness} stress-test activation
+at 14\% under the same five-level pressure protocol where \condF{} holds 86.9\%,
+this section's anchor value (Table~\ref{tab:install-hold} reports the primary run's
+89\%; the two are reconciled below). \citet{le2026steeringrobustness} stress-test activation
 steering under adversarial input perturbation across four extraction methods and five
 models from 1.5B to 30B parameters and find the same fragility structurally: directional
 robustness drops by up to 64 percentage points, post-attack confidence collapses at or
@@ -33,10 +37,15 @@ We freeze the compiled modulation into a constant per-layer offset, the mean del
 across training queries for a fixed belief with no dependence on the live hidden state,
 while keeping the curated slot byte-identical to \condF{}. This frozen-offset condition
 holds at 88.9\% [81.1, 95.3], statistically indistinguishable from \condF{}'s 86.9\%
-[79.2, 93.3]. We had predicted that removing input-responsiveness would collapse
-persistence toward the CAA baseline (14\%) or a zero-shot steering-direction-only
-baseline (21.1\%, below); it did not. Input-responsiveness is not what carries
-persistence. A low-dimensional, belief-derived fixed nudge is sufficient.
+[79.2, 93.3]. The isolation experiments re-ran condition \condF{} as an anchor before
+each sweep, to verify pipeline stability before running the isolation arms; the anchor
+reproduces the original run's 89.0\% (Table~\ref{tab:install-hold}) at 86.9\% [79.2,
+93.3], well within its own bootstrap interval, and every within-section comparison in
+this section is stated against that contemporaneous anchor rather than the original
+figure. We had predicted that removing input-responsiveness would collapse persistence
+toward the CAA baseline (14\%) or a zero-shot steering-direction-only baseline (21.1\%,
+below); it did not. Input-responsiveness is not what carries persistence. A
+low-dimensional, belief-derived fixed nudge is sufficient.
 
 Because the frozen-offset condition retained the curated slot while the CAA and
 direction-only baselines did not, that comparison alone is slot-confounded. Two further

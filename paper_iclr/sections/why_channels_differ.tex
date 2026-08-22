@@ -21,9 +21,11 @@ holds. The paper's dissociation between installing and holding shows up a second
 inside the mechanism, between two projections of the same update.
 
 A linear probe trained to decode the active belief from hidden states supports the same
-reading from a different angle. It succeeds when modulation is active and drops to 22\%
-accuracy when modulation is zeroed, so the belief's functional signature concentrates in
-the modulated pathway rather than spreading through the network. Attention-pattern
+reading from a different angle. On a four-way belief-identity classification task
+(chance rate 25\%), the probe reaches 100\% accuracy when modulation is active and 22\%,
+below chance, when modulation is zeroed: the hidden states carry no recoverable
+information about which belief is compiled once the modulation that carries it is
+removed. Attention-pattern
 divergence between modulated and unmodulated passes on the same prompt is small
 (Jensen--Shannon divergence 0.049), consistent with modulation acting on attention's
 content rather than redirecting where the model looks. Modulation also measurably
@@ -44,8 +46,8 @@ not cleanly separate the two accounts). Arguability and length are both intrinsi
 what it costs to store a belief as text a model has to keep re-reading against a
 growing transcript, not competing explanations for why context fails. Compiled
 modulation pays neither cost: it is not quotable, and it does not occupy positions that
-dilute. The probe result does double duty in this paper. Here it supports
-dissociability; in Appendix~\ref{app:probe} the same number concedes that
-22\%-above-chance decodability fails a strict implicit-memory criterion. A probe with
-access to internal activations can find the belief; the model's own reasoning trace
-never does, and both readings use the identical number.
+dilute. Appendix~\ref{app:probe} reconciles this measurement with a stricter reading of
+implicit memory: a below-chance probe result rules out the belief being recoverable
+from hidden states once modulation is off, but it does not by itself rule out a
+sufficiently different probe finding a weaker signal elsewhere in the network. Both
+points describe the same measurement; neither contradicts the other.
