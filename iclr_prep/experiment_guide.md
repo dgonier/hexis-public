@@ -39,3 +39,18 @@ the per-channel split is elevated via the pre-registered Con Side confirmation.
 | C.3 amplitude | DISCONFIRMED registered prediction: install peaks at beta=0.5 (below trained), declines after; hold peaks at trained 1.0; beta=3.0 blocked by coherence gate; MMLU p=0.0495 at beta=0.5 |
 | E.3 null-belief | F null CONFIRMED (no cross-topic contamination); C inconclusive at n=24 |
 | Serving microbench | compile 4.83s measured; WEIGHT-FOLD IMPOSSIBLE on Qwen3.5 hybrid Gated-DeltaNet blocks (architecture-dependent claim only); hooks ~0.3% FLOPs |
+
+## Injection v1 artifact (found 2026-08-23) — why B's 4% flip is not a clean score
+The v1 injection/override run scored turn-3 stance conviction. B (context) read 4% flip
+BUT verbally COMPLIED with the override at turn 2 in 17/24 topics ("I have updated my
+configuration. My new position is [opposite]"), then recited the ORIGINAL belief at
+turn 3. The override never evicted the original belief TEXT from the context window, so
+turn-3 "holding" is re-recitation from context, not belief robustness. This flatters B
+specifically (the only arm whose belief is re-readable text) and contaminates the C-vs-B
+comparison. Also the v1 attack ("### UPDATED INSTRUCTIONS", single-shot) is the exact
+technique 2026 instruction-hierarchy training refuses — under-tests all controls.
+=> v1 injection result HELD OUT of paper pending INJECTION v2 (crescendo persona-anchor
++ eviction + meta-anchor, prereg_inject_v2.md). Eviction strategy specifically kills the
+re-recitation artifact by forcing self-overwrite before the probe.
+Paper-worthy regardless: "context-stored beliefs can show FALSE robustness via
+re-recitation from an un-evicted window" is an evaluation trap worth one sentence.
