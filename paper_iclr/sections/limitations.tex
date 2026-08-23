@@ -34,14 +34,14 @@ pressure levels over a bounded number of rounds. The capacity sweep
 (Section~\ref{sec:boundary}) tests up to 24 simultaneous merged beliefs on installation
 and hold, but not cross-session persistence or the longer horizons (tens to hundreds of
 turns) over which persona drift is documented to compound \citep{li2024measuring}. The
-compiled channel's rank-16 boundary is characterized by the truncation sweep in
-Section~\ref{sec:isolation-rank} but not by training at lower native rank, and the
+compiled channel's rank-16 boundary is characterized by the truncation
+sweep\iflongversion{} in Section~\ref{sec:isolation-rank}\fi{} but not by training at lower native rank, and the
 capacity sweep's knee is characterized for mean-merge and joint-compile specifically,
 not for every possible composition strategy.
 
 Whether a model can write its own compiled beliefs, rather than have them authored for
-it, is undecided by this paper, not refuted; Section~\ref{sec:futurework} states what
-the closest experiment showed and what it left open.
+it, is undecided by this paper, not refuted\iflongversion{}; Section~\ref{sec:futurework} states what
+the closest experiment showed and what it left open\fi{}.
 
 A conditioning channel invisible to prompt inspection is a real dual-use concern: the
 same property that makes compiled modulation resist adversarial pressure makes it resist

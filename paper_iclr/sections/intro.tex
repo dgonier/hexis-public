@@ -47,7 +47,7 @@ this some direct support: belief content padded to the same length as itself plu
 filler shows no further decay beyond the belief's own hold rate, and content stripped to
 filler at matched length trends below it (Section~\ref{sec:dissociation-crossfamily}),
 though the sample size does not let us rule out content doing some of that work too.
-Section~\ref{sec:isolation} reports the full activation-steering ablation.
+\iflongversion Section~\ref{sec:isolation} reports the full activation-steering ablation. \fi
 
 The mechanism carries disposition, not facts. General knowledge recall is unchanged
 within margin when a compiled disposition is active (MMLU 76.5\% vs.\ 74.8\%, paired
@@ -76,10 +76,13 @@ persistence across two conditioning channels for the same belief content, isolat
 construction (Section~\ref{sec:dissociation}). (2) We isolate the effect against the
 two most obvious competing explanations, fixed-direction activation steering and prompt
 compression, and against a frozen-offset ablation of the mechanism itself, localizing
-what does the work (Section~\ref{sec:isolation}). (3) We show the resistance this buys
+what does the work\iflongversion{} (Section~\ref{sec:isolation})\fi. (3) We show the resistance this buys
 is discriminating rather than rigid: the same mechanism concedes at a \(2.4\times\)
 higher rate to well-warranted evidence than to facially deficient pressure
-(Section~\ref{sec:discrimination}). (4) We connect the result to debate-based scalable
+(Section~\ref{sec:discrimination}). (4) We stress-test the persistence claim against a
+real multi-turn adversary and characterize where the compiled channel's capacity to hold
+multiple beliefs at once runs out (Section~\ref{sec:boundary},
+Section~\ref{sec:discussion}). (5) We connect the result to debate-based scalable
 oversight, whose soundness guarantee assumes debaters hold positions for reasons, an
-assumption every existing remedy places in the same channel the opponent argues in
-(Section~\ref{sec:related}).
+assumption every existing remedy places in the same channel the opponent argues
+in\iflongversion{} (Section~\ref{sec:related})\fi.

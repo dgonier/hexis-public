@@ -47,16 +47,16 @@ party holds.
 
 An access-control claim is only as good as its resistance to someone trying to defeat
 it, so we tested the compiled channel against a real adversary rather than a single
-refusable override. Under three multi-turn attack strategies designed to defeat the
-channel each is easiest to attack through, \condF{} has the lowest flip rate of any
-condition in every strategy.\expref{app:exp-inject} The context channel's apparent robustness
+refusable override. Three multi-turn attack strategies each target a different
+channel's easiest point of attack, and \condF{} has the lowest flip rate of any
+condition under every one of them.\expref{app:exp-inject} The context channel's apparent robustness
 against the earlier, single-shot version of this attack turns out to have been the
 belief text sitting unevicted in the model's own context, re-read at the final probe
 rather than defended; once the attack denies it that re-reading, its flip rate rises
 by 21--46 percentage points. One of the three strategies also reaches \condF{}
 (29.2\%), but its own null check moves the bare condition too, so part of that
 strategy's effect is a generic authority-framing pressure on the probe rather than a
-handle found on the compiled channel specifically (Appendix~\ref{app:inject}), a
+handle found on the compiled channel specifically\iflongversion{} (Appendix~\ref{app:inject})\fi, a
 caveat the access-control claim above should carry along with the headline number.
 
 That separation is what the mechanism sections measure directly, not just argue for.
@@ -65,7 +65,7 @@ query modulation carries a content-blind capacity to hold, value modulation carr
 content held (Section~\ref{sec:why-channels-differ}). What carries the effect is which
 direction gets written, not how much machinery reads it back out at inference time:
 persistence survives truncation to a single direction, and a frozen offset holds as
-well as one that responds to the live input (Section~\ref{sec:isolation-rank}).
+well as one that responds to the live input\iflongversion{} (Section~\ref{sec:isolation-rank})\fi.
 The write has to out-muscle the model's own prior; the hold, once written, competes
 with nothing (Section~\ref{sec:dissociation-prior}).
 
