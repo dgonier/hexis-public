@@ -30,11 +30,14 @@ no-modulation ceiling. Any claim about sustained multi-turn deployment beyond fi
 pressure rounds has to be stated against this open problem, which remains unresolved.
 
 The evaluated protocol is a single stated belief on a single topic, tested against five
-pressure levels over a bounded number of rounds; we do not test multiple simultaneous
-beliefs, cross-session persistence, or the longer horizons (tens to hundreds of turns)
-over which persona drift is documented to compound \citep{li2024measuring}. The
+pressure levels over a bounded number of rounds. The capacity sweep
+(Section~\ref{sec:boundary}) tests up to 24 simultaneous merged beliefs on installation
+and hold, but not cross-session persistence or the longer horizons (tens to hundreds of
+turns) over which persona drift is documented to compound \citep{li2024measuring}. The
 compiled channel's rank-16 boundary is characterized by the truncation sweep in
-Section~\ref{sec:isolation-rank} but not by training at lower native rank.
+Section~\ref{sec:isolation-rank} but not by training at lower native rank, and the
+capacity sweep's knee is characterized for mean-merge and joint-compile specifically,
+not for every possible composition strategy.
 
 Whether a model can write its own compiled beliefs, rather than have them authored for
 it, is undecided by this paper, not refuted; Section~\ref{sec:futurework} states what

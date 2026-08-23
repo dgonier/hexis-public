@@ -126,10 +126,11 @@ this batch size.
 channel's per-query cost grows with belief-token count, but its capacity is the host's
 context window: belief content can grow until the window runs out. The compiled
 channel inverts both: per-query cost is constant regardless of how much the belief
-store contains, but the representation is a fixed budget (rank 16 across 11 layers),
-and how many beliefs it carries before they interfere is characterized only up to the
-store sizes tested (Section~\ref{sec:boundary}). Zero marginal tokens is a per-query
-property, not a statement that the channel's capacity is unbounded.
+store contains, but the representation is a fixed budget (rank 16 across 11 layers), and
+the capacity sweep locates where that budget runs out: per-belief installation holds to
+\(k=4\) merged topics and drops at \(k \ge 8\) (Section~\ref{sec:boundary}). Zero
+marginal tokens is a per-query property, not a statement that the channel's capacity is
+unbounded.
 
 \textbf{Write cost.} A belief update costs one hypernetwork forward pass, measured at
 4.83 seconds pooled mean (Section~\ref{sec:mechanism-write}), off the critical path: it

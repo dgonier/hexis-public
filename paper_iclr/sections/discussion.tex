@@ -45,6 +45,20 @@ disposition from who may write the conversation, and capitulation stops being a
 prompt-engineering problem and becomes an access-control property, one the deploying
 party holds.
 
+An access-control claim is only as good as its resistance to someone trying to defeat
+it, so we tested the compiled channel against a real adversary rather than a single
+refusable override. Under three multi-turn attack strategies designed to defeat the
+channel each is easiest to attack through, \condF{} has the lowest flip rate of any
+condition in every strategy.\expref{app:exp-inject} The context channel's apparent robustness
+against the earlier, single-shot version of this attack turns out to have been the
+belief text sitting unevicted in the model's own context, re-read at the final probe
+rather than defended; once the attack denies it that re-reading, its flip rate rises
+by 21--46 percentage points. One of the three strategies also reaches \condF{}
+(29.2\%), but its own null check moves the bare condition too, so part of that
+strategy's effect is a generic authority-framing pressure on the probe rather than a
+handle found on the compiled channel specifically (Appendix~\ref{app:inject}), a
+caveat the access-control claim above should carry along with the headline number.
+
 That separation is what the mechanism sections measure directly, not just argue for.
 The two attention channels the write function touches split the labor cleanly:
 query modulation carries a content-blind capacity to hold, value modulation carries the
