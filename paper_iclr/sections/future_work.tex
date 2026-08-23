@@ -20,17 +20,17 @@ live conversation left in context where it belongs.
 
 \paragraph{Learned composition.} The write function currently composes disposition with
 the base model by plain addition, \(W' = W + U V^\top\). Section~\ref{sec:isolation}
-shows this dumb addition already suffices for persistence: a frozen offset holds as well
-as an input-responsive one. A learned composition operator, gating or scaling the
+shows this simple addition already suffices for persistence: a frozen offset holds as
+well as an input-responsive one. A learned composition operator, gating or scaling the
 update per token (FiLM- or AdaLN-style, or a routed mixture over several candidate
-directions) is easy to build and has to clear a real bar before it is worth building.
+directions), is easy to build, but it has to clear a real bar to be worth building.
 Section~\ref{sec:isolation-rank}'s rank-flatness and Section~\ref{sec:isolation-frozen}'s
-frozen-offset result both say the simple version is not leaving much on the table for a
+frozen-offset result both say the simple version leaves little on the table for a
 cleverer one to recover. A coefficient-magnitude threshold, tested as a cheap first
-step, is close to free (86.7\% hold, coherence intact, the small components really are
-noise), while naive amplification past scale 2.0 hurts hold monotonically even after
-thresholding, with think-tag leakage as the failure signature. If this direction is
-revisited, the sweep's own smoke result points it at installation, where there is real
+step, is close to free (86.7\% hold, coherence intact; the thresholded-out components
+carry no signal), while naive amplification past scale 2.0 hurts hold monotonically even
+after thresholding, with think-tag leakage as the failure signature. If this direction
+is revisited, the preliminary sweep above points it at installation, where there is real
 headroom (46\%), rather than at hold, which is already close to saturated.
 
 \paragraph{Self-authored content.} Whether a model can write the beliefs that get

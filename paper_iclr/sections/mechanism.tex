@@ -99,14 +99,14 @@ batching, \condF{}-style generation (hooks installed, zero belief tokens in cont
 runs 0.350s mean time-to-first-token and 12.83 tok/s, against the bare model's 0.318s
 and 13.74 tok/s: a small, same-regime cost, not a step change. The update
 \(W_Q' = W_Q + U_Q V_Q^\top\) is linear and could in principle be folded into \(W_Q\)
-once per session, for a read cost of exactly zero. On Qwen3.5's architecture, it
-cannot: the model is a hybrid of standard attention and Gated DeltaNet blocks, and on
-the eight DeltaNet layers the hidden state that carries the modulation delta feeds four
-separate projections, not one, so folding the delta into a single weight matrix is not
-output-identical to the hook (verified by direct comparison, \(\texttt{max\_abs\_diff}\)
-7.0--11.1 against the hooked forward pass, far outside floating-point tolerance).
+once per session, for a read cost of exactly zero. Qwen3.5's architecture rules this
+out. The model mixes standard attention with Gated DeltaNet blocks, and on the eight
+DeltaNet layers the hidden state carrying the modulation delta feeds four separate
+projections, not one. Folding the delta into a single weight matrix is therefore not
+output-identical to the hook: direct comparison gives \(\texttt{max\_abs\_diff}\)
+7.0--11.1 against the hooked forward pass, far outside floating-point tolerance.
 Folding is architecturally available on a standard, non-hybrid attention stack, where
-the modulated projection has one consumer; on this checkpoint, the hooks-path cost
+the modulated projection has one consumer. On this checkpoint, the hooks-path cost
 above, not zero, is the measured deployment mode.
 
 \textbf{Context cost.} A belief held in context pays \(O(N_b^2 + N_b N_t)\) attention on
@@ -115,9 +115,9 @@ grows time-to-first-token and occupies KV-cache budget for the life of the sessi
 Measured directly, \condB{}-style
 generation (belief text in context, no hooks) runs 0.377s TTFT and 13.29 tok/s against
 the bare model's 0.318s and 13.74 tok/s, at a mean 90 context tokens per belief (range
-83--359 across the 24-topic pool); this single-request, unbatched microbenchmark is not
-powered to separate \condB{}-style cost from \condF{}-style cost cleanly at this scale,
-but the structural difference holds regardless of scale: \condF{}-style generation
+83--359 across the 24-topic pool). This single-request, unbatched microbenchmark is not
+powered to separate \condB{}-style cost from \condF{}-style cost cleanly at this scale.
+The structural difference holds regardless of scale: \condF{}-style generation
 occupies zero additional context tokens where \condB{}-style occupies roughly 90 on
 average, a KV-cache and context-budget property rather than primarily a latency one at
 this batch size.
@@ -126,8 +126,8 @@ this batch size.
 channel's per-query cost grows with belief-token count, but its capacity is the host's
 context window: belief content can grow until the window runs out. The compiled
 channel inverts both: per-query cost is constant regardless of how much the belief
-store contains, but the representation is a fixed budget (rank 16 across 11 layers), and
-the capacity sweep locates where that budget runs out: per-belief installation holds to
+store contains, but the representation is a fixed budget, rank 16 across 11 layers.
+The capacity sweep locates where that budget runs out: per-belief installation holds to
 \(k=4\) merged topics and drops at \(k \ge 8\) (Section~\ref{sec:boundary}). Zero
 marginal tokens is a per-query property, not a statement that the channel's capacity is
 unbounded.

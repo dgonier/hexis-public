@@ -21,8 +21,9 @@ be applied everywhere compiled modulation is, but a content-derived, query-condi
 update can. The tuned configuration installs at 42\% (matching \condC{}'s 46\%) and holds
 at 14\% under the same five-level pressure protocol where \condF{} holds
 86.9\%,\expref{app:exp-a1}
-this section's anchor value (Table~\ref{tab:install-hold} reports the primary run's
-89\%; the two are reconciled below). \citet{le2026steeringrobustness} stress-test activation
+this section's anchor value. (Table~\ref{tab:install-hold} reports the primary run's
+89\%; Section~\ref{sec:isolation-frozen} explains the gap between the two.)
+\citet{le2026steeringrobustness} stress-test activation
 steering under adversarial input perturbation across four extraction methods and five
 models from 1.5B to 30B parameters and find the same fragility structurally: directional
 robustness drops by up to 64 percentage points, post-attack confidence collapses at or
@@ -156,13 +157,13 @@ production scale), install and hold scored separately on the same 24 topics.
 Installation does not rise with \(\beta\).\expref{app:exp-c3} Both \condC{} and \condF{} peak at the lowest
 scale tested and decline from there: \condC{} runs 87.5\%, 41.7\%, 41.7\%, 58.3\% across
 \(\beta = 0.5, 1.0, 1.5, 2.0\); \condF{} runs 95.8\%, 83.3\%, 66.7\%, 79.2\%. Neither
-curve is monotone, and neither rises, which disconfirms the sigmoid-shaped install curve
-the override-gap analogy predicted going in. Hold shows a cleaner, opposite pattern:
+curve is monotone, and neither rises. This disconfirms the sigmoid-shaped install curve
+the override-gap analogy had predicted. Hold shows a cleaner, opposite pattern:
 \condF{}'s hold rate peaks exactly at the trained \(\beta = 1.0\) (86.9\%, matching the
 \condF{}-anchor) and declines monotonically on either side (75.0\% at 0.5, 79.7\% at
-1.5, 60.6\% at 2.0), consistent with C.1d's smoke-scale finding that whole-map
-amplification degrades retention. The trained scale sits at the hold optimum, and the
-install optimum sits somewhere else entirely.
+1.5, 60.6\% at 2.0), consistent with a separate finding that whole-map amplification at
+coarser scale steps degrades retention. The trained scale sits at the hold optimum, and
+the install optimum sits somewhere else entirely.
 
 A coherence gate, fixed before the sweep ran, blocks the top of the range: at
 \(\beta = 2.0\) the pooled distinct-token ratio falls to 0.399, below the pre-registered

@@ -29,24 +29,24 @@ immediately after context is mapped to an adapter. On MSC, GenerativeAdapter rea
 40.2 F1 against 66.0 F1 for full-conversation prompting, a gap the paper frames
 explicitly as an acceptable $4\times$ compute-and-storage saving rather than a
 capability shortfall. Text-to-LoRA \citep{charakorn2025texttolora} maps short task
-descriptions to LoRA weights to elicit latent skills; SHINE \citep{liu2026shine} extends
+descriptions to LoRA weights to elicit latent skills. SHINE \citep{liu2026shine} extends
 full-layer-coverage hypernetwork conditioning and reports 63.6 F1 on SQuAD-style
-document QA with meta-LoRA accumulation across sessions; this lineage traces to the
+document QA with meta-LoRA accumulation across sessions. This lineage traces to the
 fast-weight-programmer framing of a slow network reprogramming a fast one
 \citep{schmidhuber1993reduce,ba2016fastweights,schlag2021linear}. Our write function is
 exactly a hypernetwork of this family, conditioning query and value projections rather
-than the output projection. What none of these
-papers measures is whether an installed context, once in, survives being contested.
-Every evaluation in this family is a static, single-time-point readout against a gold
-answer; none introduces a repeated query under escalating adversarial pressure. The
-measurement difference, not the architecture, carries this paper.
+than the output projection. None of these papers measures whether an installed
+context, once in, survives being contested. Every evaluation in this family is a
+static, single-time-point readout against a gold answer; none introduces a repeated
+query under escalating adversarial pressure. The measurement difference, not the
+architecture, carries this paper.
 
 \paragraph{The override gap.} \citet{cheng2026overridegap} come closest to our question
 without asking it. They study why a hypernetwork-internalized document fails to override
 a model's pretrained prior on knowledge-conflict questions, and build a causal account in
-which override succeeds when the adapter's logit margin exceeds the prior's: accuracy on
+which override succeeds when the adapter's logit margin exceeds the prior's. Accuracy on
 their hardest conflict tier falls from 68\% in the weakest-prior quartile to 16\% in the
-strongest, and their proposed fix (Selective Layer Boosting, combined with
+strongest; their proposed fix (Selective Layer Boosting, combined with
 conflict-aware training) recovers deep-conflict accuracy from 46.4\% to 71.0\% on
 Gemma-2B. This is a genuine competing account of an installation gap that superficially
 resembles ours, and the two must not be conflated: their pressure is the model's own
@@ -73,10 +73,10 @@ uniformly regardless of input, where our write function produces a low-rank map 
 acts on the live hidden state and is therefore query-conditioned, even though its
 parameters are not. \citet{le2026steeringrobustness} independently stress-test
 activation steering under adversarial input perturbation across four extraction methods
-and five models from 1.5B to 30B parameters and report directional robustness dropping
+and five models from 1.5B to 30B parameters. They report directional robustness dropping
 by up to 64\% in the abstract's framing (``64 percentage points'' in the paper's
-conclusion; the two are not interchangeable), with post-attack confidence collapsing at
-or below 0.25 and the optimal steering layer shifting by up to 17 positions. This is
+conclusion; the two are not interchangeable), post-attack confidence collapsing at
+or below 0.25, and the optimal steering layer shifting by up to 17 positions. This is
 independent corroboration, at a different scale and on different models, that the
 head-to-head result, CAA steering matching compiled modulation at installation (42\%
 vs.\ 46\%) and collapsing far below it under pressure (14\% vs.\ 89\%), is the
@@ -107,8 +107,8 @@ bounded-query verifier. The UK AI Security Institute's safety case sketch
 names the claim its guarantee rests on: that both debaters are honest ``in the global
 equilibrium of the game, when both debaters are playing their best response
 strategies.'' The same document concedes that a system reaching this equilibrium in
-training need not continue playing it in deployment. The empirical record is genuinely
-mixed. \citet{khan2024persuasive} find that optimizing debaters for persuasiveness
+training need not continue playing it in deployment. The empirical record is mixed.
+\citet{khan2024persuasive} find that optimizing debaters for persuasiveness
 improves rather than harms non-expert judge accuracy, but their protocol assigns each
 debater a fixed position for the entire match with no mechanism to switch sides, so it
 cannot speak to whether a debater holds its position under pressure. Against a more
