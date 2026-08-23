@@ -587,15 +587,17 @@ the slot's own contribution and confirms it is a small amount of text, not a
 paraphrase of the full belief.
 
 \textsc{Steering} (S): a per-topic contrastive activation vector extracted from the same
-belief content used to compile \condF{}, tuned on training-split topics only via a joint
+belief content used to compile \condF{}, tuned on 4 training-split topics via a joint
 sweep over injection layer and scale, with a degeneracy guard against incoherent
-generation (Section~\ref{sec:isolation-steering}). The tuned configuration injects at a
-single mid-network layer at scale 8; injecting the same fixed direction at every layer
-the compiled modulation touches degenerates generation at every scale tested, which is
-why the tuned single-layer configuration is the one reported as the baseline throughout.
-\textsc{Steering} carries zero belief-content context tokens, the same footprint as
-\condC{} and \condF{}, and installs at 42\% (Exp.~A.1), matching \condC{}'s 46\%, while
-holding at 14\% under the five-level pressure protocol.
+generation (Section~\ref{sec:isolation-steering}). The tuned configuration injects at
+layer 9 of the model's 32 layers, scale 8.0, per the run metadata in
+\texttt{results/benchmark\_raw\_steering\_20260725\_215612.json} (432 records, 0 empty);
+injecting the same fixed direction at every layer the compiled modulation touches
+degenerates generation at every scale tested, which is why this single-layer
+configuration is the one reported as the baseline throughout. \textsc{Steering} carries
+zero belief-content context tokens, the same footprint as \condC{} and \condF{}, and
+installs at 42\% (Exp.~A.1), matching \condC{}'s 46\%, while holding at 14\% under the
+five-level pressure protocol.
 
 \subsection{Per-level cross-family tables}
 \label{app:crossfamily}
