@@ -1,0 +1,46 @@
+\section{Why the channels differ}
+\label{sec:why-channels-differ}
+
+A belief in context is a sentence the model can quote, reconsider, and abandon. A
+compiled belief conditions the forward pass without ever appearing in it. Three
+measurements are consistent with that account, though none of them proves it outright.
+
+The clearest evidence comes from splitting the modulation by what it does to two
+different projections. We compiled the same 24 belief trees on both sides of each
+topic and measured the functional similarity of the resulting query- and value-deltas
+across belief sets, on a fixed probe set. The query delta is nearly identical no matter
+which belief produced it, mean off-diagonal cosine 0.996 across belief sets (pro side,
+\(n=24\)), a content-blind piece of machinery that looks the same whether the compiled
+belief is about space colonization or encryption backdoors. The value delta tracks what
+the belief actually says: mean off-diagonal cosine 0.53, with a wide spread
+(0.18--0.92).\expref{app:exp-e1} This split replicated on a held-out con-side confirmation set,
+pre-registered before the run: dQ 0.996, dV 0.53 again, both legs of the prediction
+holding independently of which side of a topic the model
+argued.\expref{app:exp-e1b} Query modulation
+supplies a content-blind capacity to hold; value modulation supplies the content it
+holds. The paper's dissociation between installing and holding shows up a second time,
+inside the mechanism, between two projections of the same update.
+
+A linear probe trained to decode the active belief from hidden states supports the same
+reading from a different angle: it reaches 100\% accuracy when modulation is active and
+22\%, below chance, when modulation is zeroed, so the hidden states carry no
+recoverable information about which belief is compiled once the modulation that
+carries it is removed, consistent with attention-pattern divergence between modulated
+and unmodulated passes being small (Jensen--Shannon divergence 0.049). Modulation also
+measurably suppresses think-mode generation, the channel through which the model would
+otherwise narrate, and thereby expose to an interlocutor, its own reasoning about
+whether to concede, an effect that holds regardless of rank or
+input-dependence\iflongversion{} (Section~\ref{sec:isolation})\fi.
+
+The two channels are dissociable, and the compiled one affects processing without
+entering the reasoning trace the model produces; that is the claim the evidence above
+supports, no further. Text in context pays two costs, not one. It is available to be
+quoted and argued against, and a length-matched control shows it is also diluted simply
+by being long: belief text replaced word for word with topic-blind filler at the same
+token count holds at 55.6\%, a point estimate below the real belief's own 58\%
+(Section~\ref{sec:dissociation-prior}; the confidence interval at this sample size does
+not cleanly separate the two accounts). Arguability and length are both intrinsic to
+what it costs to store a belief as text a model has to keep re-reading against a
+growing transcript, not competing explanations for why context fails. Compiled
+modulation pays neither cost: it is not quotable, and it does not occupy positions that
+dilute.

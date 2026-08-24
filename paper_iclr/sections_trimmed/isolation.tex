@@ -1,0 +1,76 @@
+\iflongversion
+\section{Isolating the mechanism}
+\label{sec:isolation}
+
+This section tests whether alternative mechanisms produce the dissociation
+Section~\ref{sec:mechanism} attributes to compiled modulation.
+
+\subsection{Fixed-direction steering from identical content}
+\label{sec:isolation-steering}
+
+Per-topic contrastive activation vectors, extracted from the same belief content used
+to compile \condF{} and tuned on held-out training topics, install at 42\% (matching
+\condC{}'s 46\%) but hold at only 14\% under the same five-level pressure protocol
+where \condF{} holds 86.9\%.\expref{app:exp-a1} \citet{le2026steeringrobustness}
+independently stress-test activation steering under adversarial perturbation across
+four extraction methods and five models from 1.5B to 30B parameters and find the same
+fragility structurally, directional robustness dropping by up to 64 percentage points:
+our 14\% is what that method class does under stress, not an artifact of an
+undertrained baseline.
+
+\subsection{Input-responsiveness}
+\label{sec:isolation-frozen}
+
+Freezing the compiled modulation into a constant per-layer offset, the mean delta
+across training queries with no dependence on the live hidden state, holds at 88.9\%
+[81.1, 95.3], statistically indistinguishable from \condF{}'s contemporaneous anchor
+of 86.9\% [79.2, 93.3].\expref{app:exp-c2} Input-responsiveness is not what carries
+persistence; a low-dimensional, belief-derived fixed nudge is sufficient. Table~\ref{tab:mechanism-2x2}
+lays out the full modulation-by-slot \(2\times2\): modulation, fixed or
+input-responsive, confers persistence on its own (compiled-only, no slot, 91.9\%), and
+the curated slot alone behaves like context, because it is context (slot-only, no
+modulation, 57.5\%, collapsing to 5.6\% at L5).\expref{app:exp-c2b}
+
+\begin{table}[t]
+\centering
+\caption{The modulation-by-slot \(2\times2\) (C.2/C.2b), hold-rate under pressure.
+Modulation carries persistence with or without the curated slot; the slot alone does
+not.}
+\label{tab:mechanism-2x2}
+\begin{tabular}{lcc}
+\toprule
+& No modulation & Modulation \\
+\midrule
+No slot & CAA 14.0\% / \(d^*\)-only 21.1\% & compiled-only 91.9\% [86.9, 96.1] \\
+Slot present & slot-only 57.5\% [49.7, 64.7] & \condF{} 86.9\% / frozen-offset 88.9\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Further ablations}
+\label{sec:isolation-rank}
+
+Three further checks confirm what does not carry the effect. The auxiliary training
+signal \(d^*\), a regularization direction never applied at inference, is not the
+mechanism: injecting it at eval time does not help and, at higher doses, actively
+hurts, and using it alone in place of modulation collapses to 21.1\%, the same regime
+as CAA.\expref{app:exp-a1} Rank is not the mechanism either: SVD-truncating the trained
+rank-16 modulation down to rank 1 leaves persistence flat (88.6\% to 93.3\% across
+ranks 1--16, overlapping confidence intervals, no cliff).\expref{app:exp-c1} An
+amplitude sweep over the modulation's scale shows installation peaking at the lowest
+scale tested and declining from there, while hold peaks exactly at the trained
+scale.\expref{app:exp-c3} Prefix tuning and prompt compression, two further candidate
+explanations, remain untested and are named as open questions.\footnote{Full arm-by-arm
+tables and figures in Appendix~\ref{app:isolation-full}.}
+\label{sec:isolation-amplitude}
+\label{sec:isolation-prefix}
+\label{sec:isolation-compression}
+
+\subsection{General capability}
+\label{sec:isolation-mmlu}
+
+A stratified 1,140-question MMLU subset, scored by letter-choice log-probability, gives
+76.5\% accuracy with no disposition active and 74.8\% with a compiled disposition
+active; a paired McNemar test over 74 vs.\ 55 discordant pairs gives \(p = 0.11\). A
+compiled disposition rides alongside general knowledge. It does not displace it.
+\fi

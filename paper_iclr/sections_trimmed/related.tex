@@ -1,0 +1,77 @@
+\iflongversion
+\section{Related work}
+\label{sec:related}
+
+We organize prior work along two axes: \emph{where} the conditioning signal lives,
+context tokens, live activations, or weights, and \emph{what property was measured}
+once it was installed. Every line of prior work we discuss measures acquisition, whether
+conditioned content got in; none asks whether it survives being argued against.
+Table~\ref{tab:related-axes} summarizes the family by both axes.
+
+\paragraph{Hypernetwork adapters and the override gap.} A trained network that maps a
+conditioning input, through a frozen host's own hidden states, into per-layer low-rank
+weight parameters in a single forward pass is an established and currently active line:
+GenerativeAdapter \citep{chen2025generativeadapter}, Text-to-LoRA
+\citep{charakorn2025texttolora}, and SHINE \citep{liu2026shine}. Our write function is a
+hypernetwork of this family, conditioning query and value projections instead, and none
+of these papers measures whether an installed context survives being contested; every
+evaluation is a static, single-time-point readout, never a repeated query under
+escalating pressure. \citet{cheng2026overridegap} come closest without asking it,
+studying why a hypernetwork-internalized document fails to override a model's
+pretrained prior under a pressure that is the model's own static prior, measured once,
+where ours is an adversarial interlocutor applying escalating pressure across multiple
+turns after installation has already succeeded; their own language, parameter-level
+methods described as ``persistent and query-agnostic'' against prompts ``repeated for
+every query,'' asserts persistence rather than measuring it.
+
+\paragraph{Activation steering is the closest prior mechanism by form.} Contrastive and
+representation-engineering methods \citep{turner2023activation,zou2023representation,rimsky2024caa}
+modify live activations with no gradient update, conditioned on a contrastive example
+set rather than structured content: a steering vector is a single fixed direction
+applied uniformly, where our write function produces a low-rank map that acts on the
+live hidden state and is therefore query-conditioned, even though its parameters are
+not. \citet{le2026steeringrobustness} independently stress-test activation steering
+under adversarial perturbation and report directional robustness dropping by up to 64
+percentage points, corroborating our head-to-head result (\S\ref{sec:isolation-steering})
+as documented behavior of the method class rather than an artifact of an undertrained
+baseline.
+
+\paragraph{Sycophancy, debate, and scalable oversight.} Debate-based oversight has a
+formal foundation \citep{irving2018debate,browncohen2023doublyefficient} that assumes
+debaters hold positions for reasons, an assumption the UK AI Security Institute's
+safety case sketch \citep{buhl2025aisi} names explicitly and training need not
+preserve into deployment; the empirical record is mixed, from persuasiveness improving
+non-expert judge accuracy \citep{khan2024persuasive} to homogeneous multi-agent debate
+teams exhibiting modal sycophantic conformity up to 85.5\% \citep{bertalanic2026costofconsensus}.
+Every existing mitigation we are aware of places the instruction to hold in the same
+channel the opponent is arguing in, and our result is that this is the wrong channel.
+Section~\ref{sec:discrimination}'s discrimination result keeps this from being the
+obfuscated-arguments problem \citep{barnes2020obfuscated} in a different costume: a
+debater that never updates is not a good debater.
+
+\begin{table}[t]
+\centering
+\caption{Table A: the prior-work family by axis. Every row measures acquisition; none
+measures persistence under adversarial pressure after installation.}
+\label{tab:related-axes}
+\small
+\renewcommand{\arraystretch}{0.88}
+\resizebox{0.93\textwidth}{!}{%
+\begin{tabular}{lllll}
+\toprule
+Work & Conditioning lives in & Modulated module(s) & Measured property & Persistence tested? \\
+\midrule
+\citet{choi2024identitydrift} & context (persona) & --- & drift over turns & no mitigation tested \\
+\citet{chen2025generativeadapter} & weights (hypernet) & attn.\ output-proj., $r{=}128$ & F1 / accuracy & no \\
+\citet{charakorn2025texttolora} & weights (hypernet) & LoRA (task-conditioned) & task accuracy & no \\
+\citet{liu2026shine} & weights (hypernet) & full-layer LoRA & F1 / ROUGE-L & no \\
+\citet{cheng2026overridegap} & weights (hypernet) & LoRA + layer boosting & conflict accuracy & no (single time-point) \\
+CAA / RepEng & activations & fixed direction, all/one layer & injection success & no \\
+\citet{le2026steeringrobustness} & activations & fixed direction & robustness under perturbation & adversarial \emph{input}, not multi-turn \\
+LoRA / prefix / FiLM-AdaLN & weights / context / weights & Q,V / context positions / per-layer & task performance & no \\
+\citet{bertalanic2026costofconsensus} & multi-agent context & --- & conformity, oracle gap & no (accuracy only) \\
+\textbf{This work} & \textbf{weights (Q,V) vs.\ context} & \textbf{attn.\ Q,V, $r{=}16$} & \textbf{installation \emph{and} persistence} & \textbf{yes: the contribution} \\
+\bottomrule
+\end{tabular}}
+\end{table}
+\fi

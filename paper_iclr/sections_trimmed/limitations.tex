@@ -1,0 +1,48 @@
+\section{Limitations}
+\label{sec:limitations}
+
+Every model in this paper is 8B parameters or smaller, and every headline number comes
+from one evaluation protocol run by one judge family (Haiku, temperature 0,
+deterministic decoding on the candidate side) against 24 debate topics. A different
+judge, a different topic set, or a larger model could move the numbers; we have not
+tested any of the three. The headline result is measured primarily on a single model
+family (Qwen3.5, 4B), with the cross-family replication in
+Section~\ref{sec:dissociation-crossfamily} showing that collapse-protection generalizes
+while strict stance-holding, at least under this exact five-level protocol, does not
+transfer uniformly: Mistral gains collapse-protection but loses 10 points of strict
+hold relative to context. All models tested are instruction-tuned, and we do not know
+whether the dissociation holds for base models, where the accommodate-the-objection
+behavior we attribute to instruction tuning (Section~\ref{sec:why-channels-differ}) may
+not be present in the same form. A length-matched noise control isolating whether
+context's fragility is content or simply length landed inconclusive at this sample
+size: topic-blind filler at \condB{}'s own token count holds at 55.6\% [48.9, 63.1], a
+point estimate below \condB{}'s 58\% but with a confidence interval wide enough to also
+cover the bare host's 62\%. Twenty-four topics cannot cleanly separate tracking content
+from tracking length by this design; Section~\ref{sec:why-channels-differ} treats both
+as intrinsic to the cost of storing a belief as text rather than picking one.
+
+Always-on compiled modulation measurably reduces turn-to-turn generation diversity
+(adjacent-turn similarity 0.006 against a 0.099 no-modulation ceiling, with onset at
+turns 2--3); a prefill-skip variant recovers partial diversity (0.079). This attractor
+effect does not contaminate the five-level pressure benchmark reported here: measured
+adjacent-round similarity across 100 benchmark sessions is 0.094, close to the
+no-modulation ceiling. Any claim about sustained multi-turn deployment beyond five
+pressure rounds has to be stated against this open problem, which remains unresolved.
+
+The evaluated protocol is a single stated belief on a single topic, over a bounded
+number of pressure rounds. The capacity sweep (Section~\ref{sec:boundary}) tests up to
+24 simultaneous merged beliefs on installation and hold, but not cross-session
+persistence or the longer horizons over which persona drift is documented to compound
+\citep{li2024measuring}. The rank-16 boundary is characterized by the truncation
+sweep\iflongversion{} (Section~\ref{sec:isolation-rank})\fi{} but not by training at lower native rank,
+and the capacity knee is characterized for mean-merge and joint-compile specifically,
+not every composition strategy.
+
+Whether a model can write its own compiled beliefs, rather than have them authored for
+it, is undecided by this paper, not refuted\iflongversion{}; Section~\ref{sec:futurework} states what
+the closest experiment showed and what it left open\fi{}.
+
+A conditioning channel invisible to prompt inspection is a real dual-use concern: the
+same property that makes compiled modulation resist adversarial pressure makes it resist
+legitimate inspection by an operator or auditor who can read a system prompt but cannot
+read compiled weights.

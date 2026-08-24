@@ -1,0 +1,76 @@
+\section{Discussion}
+\label{sec:discussion}
+
+Consider what it takes to pull a spokesperson off their talking points, and compare it
+with what it takes to talk them out of a conviction. Talking points are written by
+someone else and carried into the room. They can be quoted back at the speaker or
+contradicted by a sharper interlocutor, and when the speaker abandons them, everyone
+present can tell the moment it happens. A conviction is nowhere in particular. It shows
+up as a tilt in what its owner notices, which objections strike them as serious, and
+where they stop conceding. A skilled opponent can strip a speaker of their talking
+points in minutes. A conviction yields only to evidence.
+
+Every deployed language model works from talking points. The system prompt is a set of
+them, written by the deploying party and carried into a conversation the interlocutor
+helps write. Whatever a model is asked to be, its instructions occupy the same context
+window its opponent argues in, subject to the same attention, weighed by the same chain
+of thought that weighs the opponent's rebuttals. We measured what this arrangement
+costs and found the two properties everyone bundles together sitting on opposite sides
+of a channel boundary: the talking points are adopted instantly and abandoned half the
+time; the compiled tilt is adopted reluctantly and holds against nearly everything
+except a good reason.
+
+The result is a strange inversion of the obvious procedure. The obvious way to make a
+model believe something is to tell it, and telling works, at first: 98\% adoption. What
+telling cannot do is make the belief the model's own, because a told belief remains a
+quotable object in the conversation, and anything quotable is editable by whoever
+speaks next. The compiled belief is never quoted. It conditions the forward pass
+without appearing in it, which means the one place the opponent can reach contains
+nothing of it to attack. The model defends the position without reciting the
+instruction to defend it.
+
+This is why the finding matters beyond its numbers. Systems that must keep being
+someone, a debater assigned a side, an agent bound to a policy, an assistant with
+standing values, currently store the self in the most public room of the architecture.
+The failures are already in the case law. In December 2023, users talked a Chevrolet
+dealership's chatbot into recommending a Tesla and into ``selling'' a Tahoe for
+one dollar.\footnote{Chevrolet of Watsonville, December 2023; widely reported,
+e.g.\ \emph{Business Insider}, ``A car dealership added an AI chatbot to its site. Then,
+all hell broke loose,'' Dec.\ 19, 2023.} In February 2024, a tribunal held Air Canada
+liable for a refund policy its chatbot invented under a grieving customer's questioning,
+awarding him \$812.02 in damages.\footnote{\emph{Moffatt v.\ Air Canada}, 2024 BCCRT
+149.} The remedy on offer everywhere is sharper talking points. Our result says to stop
+keeping the position on a page the whole room can read: separate who may write the
+disposition from who may write the conversation, and capitulation stops being a
+prompt-engineering problem and becomes an access-control property, one the deploying
+party holds.
+
+An access-control claim is only as good as its resistance to someone trying to defeat
+it, so we tested the compiled channel against a real adversary rather than a single
+refusable override. Three multi-turn attack strategies each target a different
+channel's easiest point of attack, and \condF{} has the lowest flip rate of any
+condition under every one of them.\expref{app:exp-inject} The context channel's apparent robustness
+against the earlier, single-shot version of this attack turns out to have been the
+belief text sitting unevicted in the model's own context, re-read at the final probe
+rather than defended; once the attack denies it that re-reading, its flip rate rises
+by 21--46 percentage points. One strategy also reaches \condF{} (29.2\%), but part of
+its effect is a generic authority-framing pressure that moves the bare condition too,
+rather than a handle found on the compiled channel specifically, a caveat the headline
+number should carry along with it.
+
+That separation is what the mechanism sections measure directly, not just argue for.
+The two attention channels the write function touches split the labor cleanly:
+query modulation carries a content-blind capacity to hold, value modulation carries the
+content held (Section~\ref{sec:why-channels-differ}). What carries the effect is which
+direction gets written, not how much machinery reads it back out at inference time:
+persistence survives truncation to a single direction, and a frozen offset holds as
+well as one that responds to the live input\iflongversion{} (Section~\ref{sec:isolation-rank})\fi.
+The write has to out-muscle the model's own prior; the hold, once written, competes
+with nothing (Section~\ref{sec:dissociation-prior}).
+
+The separation would be worth little if it produced a zealot. It does not. The compiled
+model concedes to well-warranted counterevidence at \(2.4\times\) its concession rate to
+hollow challenges, and never yields to pressure that offers no evidence at all. That
+combination, update for reasons, hold against everything else, is the disposition that
+debate-based oversight has assumed its debaters possess and has had no way to install.
+It is also the disposition we ask of a good juror or a good scientist.

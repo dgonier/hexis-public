@@ -1,0 +1,129 @@
+% ============================================================
+% HEXIS — ICLR 2027 submission (Track B, dispositional axis)
+% "The Prompt Is Not a Place to Keep a Belief"
+%
+% TRIMMED BUILD: 9-page-body variant of main.tex. Compiles
+% sections_trimmed/* for the body (intro through conclusion) so the
+% body fits ICLR's 9-page main-text limit; references and appendix are
+% unlimited and unaffected. Every result cut from the body was
+% RELOCATED, verbatim where possible, to sections_trimmed_appendix_additions.tex,
+% \input after the SAME shared sections/appendix.tex the full build
+% uses. No number changed; every relocated claim keeps a one-line body
+% pointer to its new appendix location. See sections_trimmed/README
+% (none needed — this header is the single source of truth) and the
+% task notes in the commit message for the per-section trim plan.
+%
+% Non-destructive by construction: this file, sections_trimmed/, and
+% sections_trimmed_appendix_additions.tex are new files. main.tex,
+% workshop.tex, and sections/*.tex are untouched and still compile as
+% before.
+%
+% Style kit: ICLR 2027 official (media.iclr.cc), fetched 2026-08-19.
+% ============================================================
+\documentclass{article}
+
+% Trimmed build still sets \iflongversion true: the isolation and
+% related-work sections are present (compressed), not cut by the
+% workshop's short-build flag. The 9-page target is met by relocating
+% prose to the appendix, not by \iflongversion gating.
+\newif\iflongversion
+\longversiontrue
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{style/iclr2027_conference,times}
+
+\input{style/math_commands}
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\graphicspath{{figures/}{/home/dgonier/experiments/figures/}}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{natbib}
+\usepackage{xcolor}
+\usepackage{subcaption}
+\usepackage{microtype}
+\usepackage{multirow}
+\usepackage{pifont}
+\usepackage{enumitem}
+\usepackage{bm}
+\usepackage{float}
+\usepackage[section]{placeins}
+\usepackage{longtable}
+\usepackage{array}
+
+\newcommand{\cmark}{\ding{51}}
+\newcommand{\xmark}{\ding{55}}
+
+% Condition-letter macros — confine letters to tables per outline
+% terminology pass (stated / compiled in prose, letters in tables only).
+\newcommand{\condA}{\textsc{Bare}}
+\newcommand{\condB}{\textsc{Context}}
+\newcommand{\condC}{\textsc{Compiled}}
+\newcommand{\condD}{\textsc{Context{+}Compiled}}
+\newcommand{\condF}{\textsc{Compiled{+}Slot}}
+
+% Experiment cross-reference macro. Each registry row in
+% Appendix~\ref{app:expindex} (sections/appendix.tex) carries both a
+% \defcodeonly{label}{CODE} (defines the printable code, sections/expcodes.tex
+% — shared with workshop.tex, which has no appendix) and its own
+% \label{app:exp-<code>} at the row itself (so the hyperlink lands on the
+% row, not merely somewhere in the document). \exprefcode extracts the code
+% string; \expref renders a clickable "(Exp. C.2b)"-style tag.
+\makeatletter
+\newcommand{\exprefcode}[1]{%
+  \@nameuse{expcode@#1}%
+}
+\newcommand{\defcodeonly}[2]{%
+  \@namedef{expcode@#1}{#2}%
+}
+\makeatother
+\newcommand{\expref}[1]{\hyperref[#1]{(Exp.~\exprefcode{#1})}}
+
+\title{The Prompt Is Not a Place to Keep a Belief: \\
+Why Stated Beliefs Collapse Under Pressure and Compiled Ones Hold}
+
+% ICLR: double-blind — no author info at submission.
+% Uncomment \iclrfinalcopy in style/iclr2027_conference.sty usage below
+% for camera-ready only; do not add author names here before then.
+\author{Anonymous authors \\ Paper under double-blind review}
+
+\newcommand{\fixme}[1]{\textcolor{red}{\textbf{[FIXME: #1]}}}
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
+
+\begin{document}
+\maketitle
+
+% Experiment-code label definitions (shared with workshop.tex/main.tex) —
+% must load before any \expref call in the body. Appendix~\ref{app:expindex}'s
+% registry table (sections/appendix.tex) is what these labels actually
+% point to.
+\input{sections_trimmed/expcodes}
+
+\input{sections_trimmed/abstract}
+\input{sections_trimmed/intro}
+\input{sections_trimmed/mechanism}
+\input{sections_trimmed/dissociation}
+\input{sections_trimmed/why_channels_differ}
+\input{sections_trimmed/isolation}
+\input{sections_trimmed/discrimination}
+\input{sections_trimmed/boundary}
+\input{sections_trimmed/related}
+\input{sections_trimmed/discussion}
+\input{sections_trimmed/future_work}
+\input{sections_trimmed/limitations}
+\input{sections_trimmed/conclusion}
+
+\bibliographystyle{style/iclr2027_conference}
+\bibliography{references}
+
+\appendix
+% Same shared appendix the full build uses (sections/appendix.tex is NOT
+% edited in place). New appendix subsections carrying relocated body
+% prose are appended after it via sections_trimmed_appendix_additions.tex.
+\input{sections/appendix}
+\input{sections_trimmed_appendix_additions}
+
+\end{document}

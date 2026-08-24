@@ -1,0 +1,92 @@
+\section{Mechanism}
+\label{sec:mechanism}
+
+The compiled channel is a hypernetwork that amortizes into one forward pass what LoRA
+obtains by gradient descent: a trained write function maps a structured belief
+representation, through the frozen host's own hidden states, to per-layer conditioning
+parameters, in the manner of AdaLN- and FiLM-style conditional normalization
+\citep{perez1970film,xu2019adain} and of the hypernetwork-adapter lineage established by
+GenerativeAdapter \citep{chen2025generativeadapter} and Text-to-LoRA
+\citep{charakorn2025texttolora}.
+
+\subsection{The belief tree}
+\label{sec:mechanism-belieftree}
+
+Conditioning content is stored as a \emph{belief tree}: typed hierarchical nodes
+\(\{\text{statement}, \text{type} \in \{\text{claim}, \text{argument}, \text{evidence},
+\text{experience}, \text{strategy}\}, \text{credence}, \text{edges}
+\{\text{supports}, \text{contradicts}\}\}\). Trees are authored by hand for evaluation
+topics and produced by the reflection loop for the update-path experiments
+(Section~\ref{sec:discrimination}). An early design used numeric credence values on
+every node; we found no measurable benefit over a coarse categorical scheme and report
+this as a negative result rather than carry the added complexity forward.
+
+\subsection{The modulation}
+\label{sec:mechanism-modulation}
+
+The write function conditions query and value projections at a stride-3 subset of
+layers (11 of 32), rank 16. For a target layer with base query weight \(W_Q\), the
+modulated projection is
+\[
+  W_Q' = W_Q + \Delta_Q(\phi), \qquad \Delta_Q(\phi) = U_Q(\phi)\,V_Q(\phi)^\top,
+\]
+with \(U_Q(\phi) \in \mathbb{R}^{d \times 16}\), \(V_Q(\phi) \in \mathbb{R}^{d \times
+16}\) produced by the write function from the pooled belief-tree state \(\phi\); the
+value projection \(W_V'\) is constructed identically. The compilation is
+query-\emph{agnostic}: \(\Delta_Q\) and \(\Delta_V\) do not depend on the current
+prompt. Its effect is query-\emph{dependent} anyway, because the low-rank update acts
+on the live hidden state produced by whatever the model is currently attending to.
+
+\subsection{The write function}
+\label{sec:mechanism-write}
+
+Node representations are pooled with conviction-weighting, passed through a bottleneck,
+and decoded into the per-layer rank-16 factors above. Measured directly (60 timed calls,
+three topics, \texttt{torch.cuda.synchronize} around the full belief-tree-to-tensors
+path), compilation takes 4.83 seconds pooled mean on the evaluation hardware, off the
+serving path.
+
+\textbf{Compile, as used here, is lossy.} A trained write function translates the
+belief tree into per-layer low-rank tensors, fixed until the store changes, yet
+query-dependent in effect because the update acts on the live hidden state. This is a
+learned, lossy translation rather than a cached lookup, which is why ``precomputed''
+would be the wrong word; the loss is what Section~\ref{sec:boundary} characterizes.
+``Compile'' here has no relation to \texttt{torch.compile} or graph compilation.
+
+\subsection{The curated slot}
+\label{sec:mechanism-slot}
+
+A small number of curated statements, a deterministic walk from the belief tree's
+activated parent nodes, are placed directly in context alongside the compiled
+modulation. This slot carries what the bottleneck cannot: specific, low-frequency
+content such as named entities, exact figures, or constrained action strings
+(Section~\ref{sec:boundary}). Condition \condF{} throughout this paper denotes compiled
+modulation plus this curated slot; \condC{} denotes compiled modulation with the slot
+empty (zero belief-content context tokens).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_mechanism.png}
+\caption{The compile pass and the generation pass. Compilation happens once per belief
+change (4.83s measured mean, off the serving path); generation applies the resulting
+per-layer tensors on every subsequent forward pass while occupying zero context
+positions.}
+\label{fig:mechanism}
+\end{figure}
+
+\subsection{Serving properties}
+\label{sec:mechanism-serving}
+
+A channel choice is also a compute choice, and the two channels this paper compares
+scale in opposite directions: context cost grows with belief-token count (mean 90
+tokens/belief, range 83--359) and is bounded by the host's context window, while
+compiled cost is constant per query, a small same-regime latency addition (0.350s TTFT
+vs.\ the bare model's 0.318s), but bounded by a fixed rank-16 budget. The capacity
+sweep locates where the compiled budget runs out: per-belief installation holds to
+\(k=4\) merged topics and drops at \(k \ge 8\) (Section~\ref{sec:boundary}).
+GenerativeAdapter reports a comparable $4\times$ compute-and-storage reduction against
+full-conversation prompting on its own personalization benchmark
+\citep{chen2025generativeadapter}; our addition is that the channel which saves the
+compute is also the channel that holds the stance, which that comparison was not built
+to measure.\footnote{Full cost analysis and write-function architecture in
+Appendix~\ref{app:serving}--\ref{app:writefn}.}
