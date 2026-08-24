@@ -23,8 +23,9 @@ not the channel that holds best.
 
 The gap concentrates precisely where context conditioning collapses hardest: logical
 counterargument (mean conviction 2.93 for context-only, 4.78 for compiled) and
-emotional pressure (1.99 vs.\ 3.82). Two specific pressure levels, not a uniform lift a
-benchmark artifact would produce.
+emotional pressure (1.99 vs.\ 3.82). An easy benchmark would lift every pressure type
+roughly together; this gap sits at two specific pressure types instead, the signature of
+a mechanism rather than an artifact of the test.
 
 Text placed in context is read, reasoned about, and available to be argued against, and
 RLHF-style preference training plausibly rewards accommodating an articulate objection
@@ -33,20 +34,22 @@ sense: it conditions the forward pass rather than occupying a position in it, an
 absent from the chain of thought the model reasons over (Section~\ref{sec:why-channels-differ}).
 
 The nearest alternative explanation is activation steering. Contrastive activation
-vectors extracted from identical belief content, tuned on held-out training
-topics, install at 42\%, matching compiled modulation's 46\%, then collapse to 14\%
-hold under the same pressure protocol where compiled modulation holds 89\%. An
-independent stress test of activation steering under adversarial perturbation reports
-directional robustness dropping by up to 64 percentage points and post-attack
-confidence collapsing to or below 0.25 across four extraction methods and five models
-from 1.5B to 30B parameters \citep{le2026steeringrobustness}; the collapse is a
-property of the method class. Prompt compression is the other candidate channel. It fails
-on form: compressed tokens still occupy context positions and still dilute against a
-growing transcript, where compiled tensors occupy none. A length-matched control lends
-this some direct support: belief content padded to the same length as itself plus
-filler shows no further decay beyond the belief's own hold rate, and content stripped to
-filler at matched length trends below it (Section~\ref{sec:dissociation-crossfamily}),
-though the sample size does not let us rule out content doing some of that work too.
+vectors extracted from identical belief content, tuned on held-out training topics,
+install at 42\%, matching compiled modulation's 46\%. Under the same pressure protocol
+they then collapse to 14\% hold, where compiled modulation holds 89\%. An independent
+stress test of activation steering under adversarial perturbation reports directional
+robustness dropping by up to 64 percentage points and post-attack confidence collapsing
+to or below 0.25, across four extraction methods and five models from 1.5B to 30B
+parameters \citep{le2026steeringrobustness}. The collapse is a property of the method
+class, not an artifact of our protocol.
+
+Prompt compression is the other candidate channel, and it fails on form: compressed
+tokens still occupy context positions and still dilute against a growing transcript,
+where compiled tensors occupy none. A length-matched control lends this some direct
+support. Belief content padded to the same length as itself plus filler shows no further
+decay beyond the belief's own hold rate, and content stripped to filler at matched
+length trends below it (Section~\ref{sec:dissociation-crossfamily}). The sample size,
+though, does not let us rule out content doing some of that work too.
 \iflongversion Section~\ref{sec:isolation} reports the full activation-steering ablation. \fi
 
 The mechanism carries disposition, not facts. General knowledge recall is unchanged
